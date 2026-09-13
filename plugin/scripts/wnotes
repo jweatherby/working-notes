@@ -1,7 +1,8 @@
 #!/bin/sh
-# Working Notes plugin shim. Claude Code puts this directory on PATH while the
-# plugin is enabled. It finds the user's clone of the app and runs that clone's
-# CLI, so the skill always matches the procedures the clone has.
+# Working Notes plugin shim, started by .mcp.json as `sh <plugin>/scripts/wnotes mcp`.
+# It finds the user's clone of the app and runs that clone's CLI, so the tools always
+# match the procedures the clone has. It isn't in bin/: claude.ai-hosted plugins
+# (Cowork) reject bin/ executables.
 # The clone comes from $WORKING_NOTES_HOME, or the app-path file `bun run setup` writes.
 set -e
 

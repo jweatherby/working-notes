@@ -11,7 +11,7 @@
 </script>
 
 {#if clickable}
-  <button class="status-toggle" data-plain title="Advance status" {onclick}>
+  <button type="button" class="status-toggle" title="Advance status" aria-label="Advance status" {onclick}>
     <span class="dot" data-status={status}></span>
   </button>
 {:else}
@@ -22,38 +22,26 @@
 
 <style lang="scss">
   .status-toggle {
-    all: unset;
-    cursor: pointer;
-    font-size: 0.85rem;
-    width: 1.1rem;
-    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
-    color: var(--color-muted);
-    &:hover {
-      color: var(--color-primary);
-    }
-    &.static {
-      cursor: default;
-      &:hover {
-        color: var(--color-muted);
-      }
-    }
+    border-radius: var(--r-full);
+    &:hover .dot { border-color: var(--accent); }
+    &.static { cursor: default; &:hover .dot { border-color: var(--border-strong); } }
   }
   .dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
+    display: block;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    border: 2px solid var(--color-muted);
+    border: 1.5px solid var(--border-strong);
     background: transparent;
-    vertical-align: middle;
-    &[data-status="ACTIVE"] {
-      background: var(--orange-3);
-      border-color: var(--orange-3);
-    }
-    &[data-status="COMPLETE"] {
-      background: var(--green-7);
-      border-color: var(--green-7);
-    }
+    transition: border-color var(--ease), background var(--ease);
+    &[data-status='ACTIVE'] { background: var(--warning); border-color: var(--warning); }
+    &[data-status='COMPLETE'] { background: var(--success); border-color: var(--success); }
+    &[data-status='CANCELLED'] { background: var(--border-strong); border-color: var(--border-strong); }
   }
 </style>

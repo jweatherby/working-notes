@@ -131,11 +131,11 @@
         </p>
       </div>
       <div class="actions">
-        <button onclick={handleDownload}>Download</button>
+        <button type="button" class="btn sm" onclick={handleDownload}>Download</button>
         {#if onUpload}
-          <button onclick={handleUpload}>Upload</button>
+          <button type="button" class="btn primary sm" onclick={handleUpload}>Upload</button>
         {/if}
-        <button class="outline" onclick={(e) => { e.stopPropagation(); reset(); }}>Clear</button>
+        <button type="button" class="btn ghost sm" onclick={(e) => { e.stopPropagation(); reset(); }}>Clear</button>
       </div>
     </div>
   {:else}
@@ -146,16 +146,16 @@
 
 <style lang="scss">
   .drop-zone {
-    border: 2px dashed var(--color-muted-border);
-    border-radius: var(--radius, 8px);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-lg);
     padding: 2rem;
     text-align: center;
     cursor: pointer;
     transition: border-color 150ms ease, background 150ms ease;
 
     &.drag-over {
-      border-color: var(--color-primary);
-      background: rgba(0, 0, 0, 0.03);
+      border-color: var(--accent);
+      background: var(--accent-soft);
     }
 
     &.has-preview {
@@ -165,12 +165,12 @@
   }
 
   .placeholder {
-    color: var(--color-muted);
+    color: var(--text-3);
     margin: 0;
   }
 
   .placeholder-sub {
-    color: var(--color-muted);
+    color: var(--text-3);
     font-size: 0.8rem;
     margin: 0.25rem 0 0;
   }
@@ -199,16 +199,11 @@
 
   .label {
     font-weight: 600;
-    color: var(--color-muted);
+    color: var(--text-3);
   }
 
   .actions {
     display: flex;
-    gap: 0.5rem;
-
-    button {
-      padding: 0.35rem 1rem;
-      margin: 0;
-    }
+    gap: var(--sp-2);
   }
 </style>

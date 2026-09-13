@@ -87,12 +87,12 @@
   const radius = (type: GraphNodeType): number => (type === 'PROJECT' ? 14 : 7);
 </script>
 
-<section class="graph-section">
-  <header>
+<section class="graph-section section">
+  <header class="section-header">
     <h2>Relations</h2>
     <div class="legend">
       {#each GRAPH_NODE_TYPES as t}
-        <button type="button" data-plain class="chip" class:off={!enabled[t]} data-type={t} onclick={() => toggle(t)}>
+        <button type="button" class="chip" class:off={!enabled[t]} data-type={t} onclick={() => toggle(t)}>
           <span class="swatch"></span>{TYPE_LABEL[t]}
         </button>
       {/each}
@@ -141,51 +141,40 @@
         </g>
       </svg>
     </div>
-    <p class="hint">Hover to see connections, click to open, drag to rearrange.</p>
+    <p class="hint text-sm muted">Hover to see connections, click to open, drag to rearrange.</p>
 </section>
 
 <style lang="scss">
   .graph-section {
-    --node-project: var(--indigo-6, #4f46e5);
-    --node-doc: var(--teal-6, #0d9488);
-    --node-report: var(--pink-6, #db2777);
-    --node-todo: var(--orange-6, #ea580c);
-    margin-top: 2rem;
+    --node-project: var(--viz-1);
+    --node-doc: var(--viz-2);
+    --node-report: var(--viz-3);
+    --node-todo: var(--viz-4);
   }
-  header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-  h2 {
-    font-size: 1.1rem;
-    margin: 0;
-  }
+  h2 { font-size: var(--fs-base); }
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
+    gap: var(--sp-1);
   }
   .chip {
-    all: unset;
-    cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    padding: 0.15rem 0.55rem;
-    border: 1px solid var(--color-muted-border);
-    border-radius: 999px;
-    &.off {
-      opacity: 0.4;
-    }
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: var(--fs-xs);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    background: var(--surface);
+    transition: opacity var(--ease);
+    &:hover { border-color: var(--border-strong); }
+    &.off { opacity: 0.4; }
   }
   .swatch {
-    width: 0.6rem;
-    height: 0.6rem;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--c);
   }
@@ -196,8 +185,9 @@
 
   .scroll {
     overflow-x: auto;
-    border: 1px solid var(--color-muted-border);
-    border-radius: var(--radius, 8px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
   }
   svg {
     display: block;
@@ -208,17 +198,17 @@
     user-select: none;
   }
   line {
-    stroke: var(--color-muted);
+    stroke: var(--text-3);
     stroke-opacity: 0.45;
     stroke-width: 1.2;
     transition: stroke-opacity 0.15s;
     &[data-kind='SUBPROJECT'] { stroke-dasharray: 4 3; }
-    &.lit { stroke: var(--color-primary); stroke-opacity: 1; }
+    &.lit { stroke: var(--accent); stroke-opacity: 1; }
     &.dim { stroke-opacity: 0.1; }
   }
   .edge-label {
     font-size: 11px;
-    fill: var(--color-primary);
+    fill: var(--accent);
     text-anchor: middle;
     pointer-events: none;
   }
@@ -228,23 +218,19 @@
     outline: none;
     circle, rect {
       fill: var(--c);
-      stroke: var(--color-bg, #fff);
+      stroke: var(--surface);
       stroke-width: 2;
     }
     text {
       font-size: 11px;
-      fill: currentColor;
+      fill: var(--text-2);
       text-anchor: middle;
       pointer-events: none;
     }
     &:hover circle, &:hover rect, &:focus-visible circle, &:focus-visible rect {
-      stroke: var(--color-primary);
+      stroke: var(--accent);
     }
     &.dim { opacity: 0.2; }
   }
-  .hint {
-    color: var(--color-muted);
-    font-size: 0.8rem;
-    margin-top: 0.4rem;
-  }
+  .hint { margin-top: var(--sp-2); }
 </style>

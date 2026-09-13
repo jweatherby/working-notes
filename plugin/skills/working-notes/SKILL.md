@@ -22,7 +22,7 @@ wnotes person.list
 wnotes person.create --name "Dana Park" --title "Senior Engineer"
 ```
 
-- If the shell says `wnotes: command not found`, this Claude Code version doesn't put plugin commands on PATH. Call the clone's CLI through the pointer file that setup writes, and use it wherever this skill says `wnotes`:
+- `bun run setup` puts `wnotes` on PATH. If the shell says `wnotes: command not found`, call the clone's CLI through the pointer file that setup writes, and use it wherever this skill says `wnotes`:
   - macOS: `"$(cat "$HOME/Library/Application Support/Working Notes/app-path")/bin/wnotes"`
   - Linux: `"$(cat "${XDG_DATA_HOME:-$HOME/.local/share}/working-notes/app-path")/bin/wnotes"`
 - If neither the tools nor `wnotes` work, or they say Working Notes isn't set up, tell the user what you saw and stop. Setup is theirs to run: clone the Working Notes repo, then `bun install` and `bun run setup` in it.

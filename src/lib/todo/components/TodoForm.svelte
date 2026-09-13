@@ -1,10 +1,14 @@
 <script lang="ts">
   import { trpc } from '$shared/trpc/client';
   import type { EntityType, TodoStatus } from '../utils';
+  import Field from '$lib/ui/Field.svelte';
+  import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import { submit } from '$lib/ui/submit';
 
   interface Props {
-    readonly entityType: EntityType;
-    readonly entityId: string;
+    /** Omit both entity props to let the form ask which entity the todo belongs to. */
+    readonly entityType?: EntityType;
+    readonly entityId?: string;
     readonly editId?: string | null;
     readonly onSuccess: () => Promise<void> | void;
     readonly onCancel?: () => void;
@@ -13,14 +17,16 @@
   const { entityType, entityId, editId = null, onSuccess, onCancel }: Props = $props();
 
   const isEdit = $derived(!!editId);
+  const needsEntity = $derived(!isEdit && !(entityType && entityId));
 
   let title = $state('');
   let description = $state('');
   let priority = $state(0);
   let targetDate = $state('');
   let status = $state<TodoStatus>('PENDING');
+  let pickedEntityType = $state<EntityType>(entityType ?? 'PROJECT');
+  let pickedEntityId = $state(entityId ?? '');
   let submitting = $state(false);
-  let deleting = $state(false);
   let error = $state('');
   let loaded = $state(!editId);
 
@@ -50,6 +56,8 @@
       description = todo.description ?? '';
       priority = todo.priority;
       status = todo.status;
+      pickedEntityType = todo.entityType;
+      pickedEntityId = todo.entityId;
       targetDate = todo.targetDate ? new Date(todo.targetDate).toISOString().slice(0, 10) : '';
       error = '';
       loaded = true;
@@ -64,135 +72,126 @@
       error = 'Title is required.';
       return;
     }
+    const targetType = entityType ?? pickedEntityType;
+    const targetId = (entityId ?? pickedEntityId).trim();
+    if (!isEdit && !targetId) {
+      error = 'Choose what this todo belongs to.';
+      return;
+    }
     submitting = true;
     error = '';
-    try {
-      if (isEdit && editId) {
-        await trpc().todo.update.mutate({
+    const outcome = isEdit && editId
+      ? await submit(() => trpc().todo.update.mutate({
           id: editId,
           title: title.trim(),
           description: description.trim() || null,
           priority,
           status,
           targetDate: targetDate ? new Date(targetDate) : null,
-        });
-      } else {
-        await trpc().todo.create.mutate({
+        }))
+      : await submit(() => trpc().todo.create.mutate({
           title: title.trim(),
           description: description.trim() || undefined,
           priority,
-          entityType,
-          entityId,
+          entityType: targetType,
+          entityId: targetId,
           targetDate: targetDate ? new Date(targetDate) : undefined,
-        });
-      }
-      await onSuccess();
-    } catch (e: unknown) {
-      error = e instanceof Error ? e.message : 'Failed to save todo.';
-    } finally {
-      submitting = false;
+        }));
+    submitting = false;
+    if (!outcome.ok) {
+      error = outcome.error;
+      return;
     }
+    await onSuccess();
   };
 
   const handleDelete = async () => {
     if (!editId) return;
-    deleting = true;
-    try {
-      await trpc().todo.delete.mutate({ id: editId });
-      await onSuccess();
-    } catch (e: unknown) {
-      error = e instanceof Error ? e.message : 'Failed to delete todo.';
-    } finally {
-      deleting = false;
+    const outcome = await submit(() => trpc().todo.delete.mutate({ id: editId }));
+    if (!outcome.ok) {
+      error = outcome.error;
+      return;
     }
+    await onSuccess();
   };
 </script>
 
 {#if loaded}
-  <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-    <label>
-      Title
-      <input type="text" bind:value={title} placeholder="What needs doing?" autofocus />
-    </label>
+  <form class="form-grid" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+    <Field label="Title">
+      {#snippet children({ id })}
+        <input {id} type="text" bind:value={title} placeholder="What needs doing?" />
+      {/snippet}
+    </Field>
 
-    <label>
-      Description
-      <textarea bind:value={description} rows={3} placeholder="Optional details…"></textarea>
-    </label>
+    <Field label="Description">
+      {#snippet children({ id })}
+        <textarea {id} bind:value={description} rows={3} placeholder="Optional details…"></textarea>
+      {/snippet}
+    </Field>
 
-    <div class="row">
-      <label class="half">
-        Priority
-        <select bind:value={priority}>
-          <option value={0}>None</option>
-          <option value={1}>Low</option>
-          <option value={2}>Medium</option>
-          <option value={3}>High</option>
-        </select>
-      </label>
-      <label class="half">
-        Target date
-        <input type="date" bind:value={targetDate} />
-      </label>
+    <div class="form-row" class:thirds={isEdit}>
+      <Field label="Priority">
+        {#snippet children({ id })}
+          <select {id} bind:value={priority}>
+            <option value={0}>None</option>
+            <option value={1}>Low</option>
+            <option value={2}>Medium</option>
+            <option value={3}>High</option>
+          </select>
+        {/snippet}
+      </Field>
+      <Field label="Target date">
+        {#snippet children({ id })}
+          <input {id} type="date" bind:value={targetDate} />
+        {/snippet}
+      </Field>
+      {#if isEdit}
+        <Field label="Status">
+          {#snippet children({ id })}
+            <select {id} bind:value={status}>
+              <option value="PENDING">Pending</option>
+              <option value="ACTIVE">Active</option>
+              <option value="COMPLETE">Complete</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          {/snippet}
+        </Field>
+      {/if}
     </div>
 
-    {#if isEdit}
-      <label>
-        Status
-        <select bind:value={status}>
-          <option value="PENDING">Pending</option>
-          <option value="ACTIVE">Active</option>
-          <option value="COMPLETE">Complete</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
-      </label>
+    {#if needsEntity}
+      <div class="form-row">
+        <Field label="Belongs to">
+          {#snippet children({ id })}
+            <select {id} bind:value={pickedEntityType}>
+              <option value="PROJECT">Project</option>
+              <option value="PERSON">Person</option>
+              <option value="TEAM">Team</option>
+              <option value="DEPARTMENT">Department</option>
+            </select>
+          {/snippet}
+        </Field>
+        <Field label="Entity id" hint="Open the entity page and add the todo there to skip this.">
+          {#snippet children({ id })}
+            <input {id} type="text" bind:value={pickedEntityId} placeholder="Entity id" />
+          {/snippet}
+        </Field>
+      </div>
     {/if}
 
-    {#if error}
-      <p class="error">{error}</p>
-    {/if}
+    {#if error}<p class="form-error">{error}</p>{/if}
 
     <div class="form-actions">
-      <button type="submit" disabled={submitting || !title.trim()}>
-        {#if submitting}Saving…{:else}{isEdit ? 'Save' : 'Create Todo'}{/if}
+      <button type="submit" class="btn primary" disabled={submitting || !title.trim()} aria-busy={submitting}>
+        {isEdit ? 'Save' : 'Create todo'}
       </button>
       {#if onCancel}
-        <button type="button" class="outline" data-plain onclick={onCancel}>Cancel</button>
+        <button type="button" class="btn ghost" onclick={onCancel}>Cancel</button>
       {/if}
       {#if isEdit}
-        <button type="button" class="danger-btn" onclick={handleDelete} disabled={deleting}>
-          {#if deleting}Deleting…{:else}Delete{/if}
-        </button>
+        <span class="ml-auto"><ConfirmButton label="Delete" confirmLabel="Delete todo" variant="button" onConfirm={handleDelete} /></span>
       {/if}
     </div>
   </form>
 {/if}
-
-<style lang="scss">
-  .row {
-    display: flex;
-    gap: 0.75rem;
-  }
-  .half { flex: 1; }
-  .error {
-    color: var(--color-danger);
-    font-size: 0.85rem;
-    margin: 0.25rem 0;
-  }
-  textarea { resize: vertical; }
-  .form-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-  }
-  .danger-btn {
-    background: transparent;
-    color: var(--color-danger);
-    border: 1px solid var(--color-danger);
-    margin-left: auto;
-    &:hover {
-      background: var(--color-danger);
-      color: white;
-    }
-  }
-</style>

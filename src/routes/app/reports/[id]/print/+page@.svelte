@@ -11,8 +11,8 @@
 </svelte:head>
 
 <div class="print-toolbar no-print">
-  <a href="/app/reports/{report.id}">← Back to editor</a>
-  <button onclick={() => window.print()}>Print / Save as PDF</button>
+  <a href="/app/reports/{report.id}" class="btn ghost sm">← Back to editor</a>
+  <button type="button" class="btn primary sm" onclick={() => window.print()}>Print / Save as PDF</button>
 </div>
 
 <main class="print-page">
@@ -26,15 +26,13 @@
     align-items: center;
     max-width: 900px;
     margin: 0 auto;
-    padding: 1rem 1.5rem 0;
-    button {
-      margin: 0;
-    }
+    padding: var(--sp-4) var(--sp-5) 0;
   }
   .print-page {
     max-width: 900px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 3rem;
+    padding: var(--sp-8) var(--sp-5) var(--sp-10);
+    background: var(--surface);
   }
   @media print {
     .print-page {

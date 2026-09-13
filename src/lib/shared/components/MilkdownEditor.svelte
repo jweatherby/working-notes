@@ -64,8 +64,9 @@
 
 <style lang="scss">
   .milkdown-wrap {
-    border: 1px solid var(--color-muted-border);
-    border-radius: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
     min-height: 400px;
 
     :global(.milkdown) {
@@ -87,17 +88,17 @@
     :global(table) {
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid var(--color-muted-border);
+      border: 1px solid var(--border);
       margin: 1.5rem 0;
     }
     :global(th) {
-      background: var(--editor-th-bg, var(--color-text));
-      color: var(--editor-th-color, var(--color-bg));
+      background: var(--editor-th-bg, var(--text));
+      color: var(--editor-th-color, var(--surface));
       font-weight: 600;
       text-align: left;
       padding: 0.35rem 0.5rem;
-      border: 1px solid var(--editor-th-bg, var(--color-text));
-      font-size: $font-sm;
+      border: 1px solid var(--editor-th-bg, var(--text));
+      font-size: var(--fs-sm);
       text-transform: uppercase;
       letter-spacing: 0.03em;
 
@@ -108,19 +109,19 @@
     }
     :global(td) {
       padding: 0.25rem 0.5rem;
-      border: 1px solid var(--color-muted-border);
+      border: 1px solid var(--border);
     }
 
     :global(code) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
+      background: var(--surface-inset);
+      color: var(--text);
       padding: 0.15rem 0.3rem;
       border-radius: 3px;
       font-size: 0.85em;
     }
     :global(pre) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
+      background: var(--surface-inset);
+      color: var(--text);
       padding: 1rem;
       border-radius: 4px;
       overflow-x: auto;
@@ -134,9 +135,9 @@
       padding-left: 1.5rem;
     }
     :global(blockquote) {
-      border-left: 3px solid var(--color-muted-border);
+      border-left: 3px solid var(--border);
       padding-left: 1rem;
-      color: var(--color-muted);
+      color: var(--text-2);
     }
   }
 </style>

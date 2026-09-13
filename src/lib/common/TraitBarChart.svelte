@@ -65,7 +65,7 @@
 
 <style lang="scss">
   .selected-label {
-    margin-top: $space-sm;
-    font-size: $font-md;
+    margin-top: var(--sp-2);
+    font-size: var(--fs-md);
   }
 </style>

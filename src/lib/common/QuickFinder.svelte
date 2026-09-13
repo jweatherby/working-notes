@@ -1,7 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
   import { trpc } from '$shared/trpc/client';
+  import { quickFinderOpen } from '$lib/stores/quick-finder';
+  import { openPopup } from '$lib/ui/popup-url';
+
   interface FinderItem {
     readonly label: string;
     readonly href?: string;
@@ -14,29 +16,25 @@
   const CACHE_TTL = 24 * 60 * 60 * 1000;
 
   const STATIC_ROUTES: readonly FinderItem[] = [
-    { label: 'Reviews', href: '/app/reviews', section: 'Pages' },
-    { label: 'Projects', href: '/app/projects', section: 'Pages' },
+    { label: 'Home', href: '/app', section: 'Pages' },
     { label: 'People', href: '/app/people', section: 'Pages' },
     { label: 'Teams', href: '/app/teams', section: 'Pages' },
     { label: 'Departments', href: '/app/departments', section: 'Pages' },
+    { label: 'Projects', href: '/app/projects', section: 'Pages' },
+    { label: 'Org Map', href: '/app/orgmap', section: 'Pages' },
     { label: 'Todos', href: '/app/todos', section: 'Pages' },
+    { label: 'Reports', href: '/app/reports', section: 'Pages' },
     { label: 'Branding', href: '/app/branding', section: 'Pages' },
-    { label: 'Account', href: '/app/account', section: 'Pages' },
   ];
 
   const COMMANDS: readonly FinderItem[] = [
     {
       label: '/todos — New todo',
       section: 'Commands',
-      action: () => {
-        const url = new URL($page.url);
-        url.searchParams.set('popup', 'todo');
-        goto(url.toString(), { replaceState: true, noScroll: true });
-      }
+      action: () => { openPopup('todo'); }
     },
   ];
 
-  let open = $state(false);
   let query = $state('');
   let selectedIndex = $state(0);
   let dynamicItems = $state<readonly FinderItem[]>([]);
@@ -60,19 +58,23 @@
   const handleKeydown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
-      open = !open;
-      if (open) {
-        query = '';
-        selectedIndex = 0;
-        loadDynamic(false);
-      }
+      quickFinderOpen.set(!$quickFinderOpen);
     }
   };
+
+  // Reset and load whenever the finder opens, from the shortcut or the nav button.
+  $effect(() => {
+    if ($quickFinderOpen) {
+      query = '';
+      selectedIndex = 0;
+      loadDynamic(false);
+    }
+  });
 
   const handleModalKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      open = false;
+      quickFinderOpen.set(false);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
@@ -88,7 +90,7 @@
   };
 
   const select = (item: FinderItem) => {
-    open = false;
+    quickFinderOpen.set(false);
     if (item.action) {
       item.action();
     } else if (item.href) {
@@ -169,7 +171,7 @@
   };
 
   $effect(() => {
-    if (open && inputEl) {
+    if ($quickFinderOpen && inputEl) {
       inputEl.focus();
     }
   });
@@ -191,9 +193,9 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="backdrop" onclick={() => (open = false)} onkeydown={handleModalKeydown}>
+{#if $quickFinderOpen}
+  <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+  <div class="backdrop" onclick={() => quickFinderOpen.set(false)} onkeydown={handleModalKeydown}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="finder" onclick={(e) => e.stopPropagation()}>
       <div class="finder-header">
@@ -205,16 +207,17 @@
           autocomplete="off"
           spellcheck="false"
         />
-        <button class="refresh-btn" onclick={handleRefresh} title="Refresh data" disabled={loading}>
+        <button type="button" class="btn icon sm" onclick={handleRefresh} title="Refresh data" aria-label="Refresh data" disabled={loading}>
           {#if loading}…{:else}↻{/if}
         </button>
       </div>
       <div class="results">
         {#each currentSection as section}
-          <div class="section-label">{section}</div>
+          <div class="section-label eyebrow">{section}</div>
           {#each filtered.filter((f) => f.section === section) as item, _i}
             {@const globalIndex = filtered.indexOf(item)}
             <button
+              type="button"
               class="result-item"
               class:selected={globalIndex === selectedIndex}
               class:indented={item.indent}
@@ -242,121 +245,87 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    background: var(--scrim);
+    backdrop-filter: blur(2px);
+    z-index: var(--z-finder);
     display: flex;
     justify-content: center;
-    padding-top: 15vh;
+    align-items: flex-start;
+    padding: 15vh var(--sp-4) 0;
   }
 
   .finder {
-    background: var(--color-surface, #fff);
-    border: 1px solid var(--color-muted-border);
-    border-radius: var(--radius, 8px);
-    width: min(520px, 90vw);
-    max-height: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    width: min(560px, 100%);
+    max-height: 440px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-3);
     height: fit-content;
+    animation: finder-in 140ms ease;
   }
 
   .finder-header {
     display: flex;
     align-items: center;
-    border-bottom: 1px solid var(--color-muted-border);
-    padding: 0.5rem;
-    gap: 0.5rem;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--border);
 
     input {
       flex: 1;
+      height: 36px;
       border: none;
-      outline: none;
-      font-size: 1rem;
-      padding: 0.5rem;
+      box-shadow: none;
+      font-size: var(--fs-base);
+      padding: 0;
       background: transparent;
-      color: inherit;
-    }
-  }
-
-  .refresh-btn {
-    background: none;
-    border: 1px solid var(--color-muted-border);
-    border-radius: var(--radius, 4px);
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 0.25rem 0.5rem;
-    color: inherit;
-    line-height: 1;
-
-    &:hover:not(:disabled) {
-      background: var(--color-muted-bg, #f0f0f0);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: default;
+      &:focus { box-shadow: none; }
     }
   }
 
   .results {
     overflow-y: auto;
     flex: 1;
-    padding: 0.25rem 0;
+    padding: var(--sp-1) 0;
   }
 
   .section-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-muted, #888);
-    padding: 0.5rem 0.75rem 0.25rem;
-    font-weight: 600;
+    padding: var(--sp-2) var(--sp-3) var(--sp-1);
   }
 
   .result-item {
     display: block;
     width: 100%;
+    height: var(--control-h);
+    padding: 0 var(--sp-3);
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: inherit;
-    border-radius: 0;
-
-    &.selected {
-      background: var(--color-muted-bg, #f0f0f0);
-    }
-
-    &.indented {
-      padding-left: 1.75rem;
-    }
+    font-size: var(--fs-md);
+    color: var(--text);
+    &.selected { background: var(--surface-hover); }
+    &.indented { padding-left: var(--sp-6); color: var(--text-2); }
+    &:focus-visible { box-shadow: none; background: var(--surface-hover); }
   }
 
   .empty {
-    padding: 1.5rem;
+    padding: var(--sp-6);
     text-align: center;
-    color: var(--color-muted, #888);
-    font-size: 0.9rem;
   }
 
   .finder-footer {
-    border-top: 1px solid var(--color-muted-border);
-    padding: 0.4rem 0.75rem;
+    border-top: 1px solid var(--border);
+    padding: var(--sp-2) var(--sp-3);
     display: flex;
-    gap: 1rem;
-    font-size: 0.75rem;
-    color: var(--color-muted, #888);
+    gap: var(--sp-4);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+  }
 
-    kbd {
-      background: var(--color-muted-bg, #f0f0f0);
-      border: 1px solid var(--color-muted-border);
-      border-radius: 3px;
-      padding: 0.1rem 0.3rem;
-      font-size: 0.7rem;
-      font-family: inherit;
-    }
+  @keyframes finder-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>

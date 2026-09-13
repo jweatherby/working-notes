@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import Self from './OrgLevel.svelte';
   import { countDescendants, type OrgTreeNode } from '$lib/org/org-tree';
+  import PencilIcon from '$lib/ui/PencilIcon.svelte';
 
   interface Props {
     // One row of peers: the roots, or the reports of the lead opened in the row above.
@@ -15,8 +16,11 @@
   const { nodes, groupsByPerson, onEdit, parentGroups = [], isRoot = false }: Props = $props();
 
   // Big teams wrap into a boxed grid so the chart doesn't grow endlessly sideways.
+  // The grid is as wide as the team allows, up to MAX_COLS across.
   const WRAP_AFTER = 4;
+  const MAX_COLS = 7;
   const wrap = $derived(nodes.length > WRAP_AFTER);
+  const cols = $derived(Math.min(MAX_COLS, Math.ceil(nodes.length / Math.ceil(nodes.length / MAX_COLS))));
 
   // At most one peer is open per row; its reports render as the next row, below all peers.
   // The top row starts with its first lead open.
@@ -35,11 +39,11 @@
 </script>
 
 <div class="level" class:root={isRoot}>
-  <ul class:wrap style:--cols={WRAP_AFTER}>
+  <ul class:wrap style:--cols={cols}>
     {#each nodes as node (node.person.id)}
       {@const open = openNode?.person.id === node.person.id}
       <li>
-        <div class="card" class:open>
+        <div class="node" class:open>
           <a class="name" href="/app/people/{node.person.id}">{node.person.name}</a>
           {#if node.person.title}<span class="title">{node.person.title}</span>{/if}
           {#if visibleGroups(node.person.id).length > 0}
@@ -47,9 +51,7 @@
               {#each visibleGroups(node.person.id) as g}<span class="chip">{g}</span>{/each}
             </span>
           {/if}
-          <button type="button" class="edit" aria-label="Edit {node.person.name}" onclick={() => onEdit(node.person.id)}
-            >Edit</button
-          >
+          <button type="button" class="edit" aria-label="Edit {node.person.name}" title="Edit" onclick={() => onEdit(node.person.id)}><PencilIcon /></button>
         </div>
         {#if node.children.length > 0}
           <button type="button" class="count" class:open aria-expanded={open} onclick={() => toggle(node.person.id)}>
@@ -72,8 +74,8 @@
 </div>
 
 <style lang="scss">
-  $gap: 1.25rem;
-  $line: 1px solid var(--color-muted-border);
+  $gap: 20px;
+  $line: 1px solid var(--border-strong);
 
   .level {
     display: flex;
@@ -94,9 +96,7 @@
 
     &.root {
       padding-top: 0;
-      &::before {
-        display: none;
-      }
+      &::before { display: none; }
     }
   }
 
@@ -113,7 +113,7 @@
     flex-direction: column;
     align-items: center;
     position: relative;
-    padding: $gap 0.35rem 0;
+    padding: $gap 5px 0;
 
     // Bar across the row plus a drop into each card.
     &::before,
@@ -125,145 +125,131 @@
       height: $gap;
       border-top: $line;
     }
-    &::before {
-      right: 50%;
-    }
-    &::after {
-      left: 50%;
-      border-left: $line;
-    }
+    &::before { right: 50%; }
+    &::after { left: 50%; border-left: $line; }
     &:first-child::before,
     &:last-child::after,
-    &:only-child::after {
-      border-top: none;
-    }
-    &:last-child::before {
-      border-right: $line;
-    }
-    &:last-child:not(:only-child)::after {
-      border-left: none;
-    }
+    &:only-child::after { border-top: none; }
+    &:last-child::before { border-right: $line; }
+    &:last-child:not(:only-child)::after { border-left: none; }
   }
 
   .root > ul > li {
     padding-top: 0;
     &::before,
-    &::after {
-      display: none;
-    }
+    &::after { display: none; }
   }
 
   // Wrapped team: a light box, cards in even rows, no per-card connectors.
   ul.wrap {
     display: grid;
-    grid-template-columns: repeat(var(--cols), 8.5rem);
+    grid-template-columns: repeat(var(--cols), 148px);
     align-items: stretch;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border: $line;
-    border-radius: var(--radius, 8px);
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-lg);
 
     > li {
       padding: 0;
       align-items: stretch;
       &::before,
-      &::after {
-        display: none;
-      }
+      &::after { display: none; }
     }
 
-    .card {
+    .node {
       min-width: 0;
       max-width: none;
       height: 100%;
     }
   }
 
-  .card {
+  .node {
     position: relative;
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.15rem;
-    min-width: 8rem;
-    max-width: 11rem;
-    padding: 0.5rem 0.65rem;
-    border: $line;
-    border-radius: var(--radius, 8px);
-    background: var(--color-card-bg);
+    gap: 2px;
+    min-width: 128px;
+    max-width: 172px;
+    padding: var(--sp-2) 26px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
     text-align: center;
+    transition: border-color var(--ease), box-shadow var(--ease);
 
-    &.open {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 1px var(--color-primary);
-    }
+    &:hover { border-color: var(--border-strong); }
+    &.open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
     &:hover .edit,
-    &:focus-within .edit {
-      opacity: 1;
-    }
+    &:focus-within .edit { opacity: 1; }
   }
 
   .name {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--fs-md);
+    color: var(--text);
+    &:hover { color: var(--accent); text-decoration: none; }
   }
 
   .title {
-    color: var(--color-muted);
-    font-size: 0.8rem;
+    color: var(--text-3);
+    font-size: var(--fs-xs);
+    line-height: 1.3;
   }
 
   .chips {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 2px;
+    margin-top: 2px;
   }
 
   .chip {
-    font-size: 0.65rem;
-    padding: 0 0.35rem;
-    border: $line;
-    border-radius: 999px;
-    color: var(--color-muted);
+    font-size: 10px;
+    line-height: 14px;
+    padding: 0 5px;
+    border-radius: var(--r-full);
+    background: var(--surface-2);
+    color: var(--text-2);
   }
 
   // Edit stays off the card face until hover or keyboard focus.
   .edit {
-    @include unstyled-button;
     position: absolute;
-    top: 0.2rem;
-    right: 0.35rem;
-    margin: 0;
+    top: 3px;
+    right: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--r-sm);
     opacity: 0;
-    color: var(--color-primary);
-    font-size: 0.7rem;
-    cursor: pointer;
+    color: var(--text-3);
+    transition: opacity var(--ease), color var(--ease), background var(--ease);
+    &:hover { color: var(--accent); background: var(--accent-soft); }
   }
 
   // Reports badge: direct reports · everyone below, when different.
   .count {
-    @include unstyled-button;
     position: relative;
     z-index: 1;
     align-self: center;
-    margin: -0.55rem 0 0;
-    padding: 0 0.45rem;
-    border: $line;
-    border-radius: 999px;
-    background: var(--color-card-bg);
-    color: var(--color-muted);
-    font-size: 0.7rem;
-    line-height: 1.1rem;
-    cursor: pointer;
-
+    margin: -8px 0 0;
+    padding: 0 7px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-full);
+    background: var(--surface);
+    color: var(--text-2);
+    font-size: 10px;
+    line-height: 15px;
+    font-weight: 500;
+    transition: color var(--ease), border-color var(--ease);
     &:hover,
-    &.open {
-      color: var(--color-primary);
-      border-color: var(--color-primary);
-    }
+    &.open { color: var(--accent); border-color: var(--accent); }
   }
 
   .next {
@@ -275,7 +261,7 @@
   }
 
   .next-label {
-    color: var(--color-muted);
-    font-size: 0.75rem;
+    color: var(--text-3);
+    font-size: var(--fs-xs);
   }
 </style>

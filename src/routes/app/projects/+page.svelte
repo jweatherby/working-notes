@@ -1,9 +1,11 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';  import type { PageData } from './$types';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import type { PageData } from './$types';
   import Popup from '$lib/common/Popup.svelte';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
+  import { openPopup, closePopup } from '$lib/ui/popup-url';
+  import { statusBadgeClass } from '$lib/project/utils';
 
   const { data } = $props<{ data: PageData }>();
   const allProjects = $derived(data.projects.ok ? data.projects.value : []);
@@ -35,89 +37,70 @@
     return roots;
   });
 
-  const openPopup = (id: string) => {
-    const url = new URL($page.url);
-    url.searchParams.set('popup', id);
-    goto(url.toString(), { replaceState: true, noScroll: true });
-  };
-
-  const handleCreated = async () => {
-    const url = new URL($page.url);
-    url.searchParams.delete('popup');
-    await goto(url.toString(), { replaceState: true, noScroll: true, invalidateAll: true });
-  };
+  const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
 <svelte:head><title>Projects</title></svelte:head>
 
-<CenteredLayout>
-<hgroup>
-  <h1>Projects</h1>
-  <p>Track project health, documentation, and feedback.</p>
-</hgroup>
+<div class="page">
+  <PageHeader title="Projects" description="Track project health, documentation, and feedback.">
+    <button type="button" class="btn primary" onclick={() => openPopup('new-project')}>Add project</button>
+  </PageHeader>
 
-<button onclick={() => openPopup('new-project')}>Add Project</button>
-
-{#if projectTree.length > 0}
-  <table role="grid">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Children</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each projectTree as project}
-        {@render projectRow(project, 0)}
-      {/each}
-    </tbody>
-  </table>
-{:else}
-  <p>No projects yet. Add one to get started.</p>
-{/if}
-</CenteredLayout>
+  {#if projectTree.length > 0}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Sub-projects</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each projectTree as project (project.id)}
+            {@render projectRow(project, 0)}
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {:else}
+    <EmptyState message="No projects yet." boxed>
+      <button type="button" class="btn sm" onclick={() => openPopup('new-project')}>Add project</button>
+    </EmptyState>
+  {/if}
+</div>
 
 {#snippet projectRow(project: ProjectNode, depth: number)}
   <tr>
     <td>
-      <span style="padding-left: {depth * 1.25}rem" class="project-name">
-        {#if depth > 0}<span class="tree-indent">&#x2514;</span>{/if}
+      <span class="project-name" style="padding-left: {depth * 1.25}rem">
+        {#if depth > 0}<span class="tree-indent">└</span>{/if}
         <a href="/app/projects/{project.id}">{project.name}</a>
       </span>
     </td>
-    <td>{project.status ?? '-'}</td>
-    <td>{project.childCount}</td>
-    <td><a href="/app/projects/{project.id}">View</a></td>
+    <td>
+      {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+    </td>
+    <td class="text-2">{project.childCount || ''}</td>
   </tr>
-  {#each project.children as child}
+  {#each project.children as child (child.id)}
     {@render projectRow(child, depth + 1)}
   {/each}
 {/snippet}
 
-<Popup id="new-project" title="Add Project">
-  <ProjectForm onSuccess={handleCreated} />
+<Popup id="new-project" title="Add project">
+  <ProjectForm onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>
 
 <style lang="scss">
   .project-name {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: var(--sp-1);
   }
   .tree-indent {
-    color: var(--color-muted-border);
-    font-size: 0.8rem;
-  }
-  .badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    background: var(--color-primary-bg);
-    color: var(--color-primary-inverse);
-    margin-left: 0.4rem;
-    vertical-align: middle;
+    color: var(--border-strong);
+    font-size: var(--fs-sm);
   }
 </style>

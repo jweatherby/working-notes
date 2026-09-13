@@ -9,22 +9,17 @@
 </script>
 
 {#if priority > 0}
-  <span class="priority" data-level={priority}>{priorityLabel(priority)}</span>
+  <span class="priority" data-level={priority} title="Priority {priority}">{priorityLabel(priority)}</span>
 {/if}
 
 <style lang="scss">
   .priority {
-
+    font-size: var(--fs-xs);
     font-weight: 700;
-    margin-left: 8px;
-    &[data-level="1"] {
-      color: var(--orange-2);
-    }
-    &[data-level="2"] {
-      color: var(--orange-5);
-    }
-    &[data-level="3"] {
-      color: var(--orange-7);
-    }
+    letter-spacing: -0.05em;
+    flex-shrink: 0;
+    &[data-level='1'] { color: var(--text-3); }
+    &[data-level='2'] { color: var(--warning); }
+    &[data-level='3'] { color: var(--danger); }
   }
 </style>

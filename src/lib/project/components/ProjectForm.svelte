@@ -1,5 +1,8 @@
 <script lang="ts">
   import { trpc } from '$shared/trpc/client';
+  import Field from '$lib/ui/Field.svelte';
+  import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import { submit } from '$lib/ui/submit';
 
   interface ProjectData {
     readonly id?: string;
@@ -13,13 +16,14 @@
     readonly parentId?: string;
   }
 
-  const {
-    initial = {} as ProjectData,
-    onSuccess,
-  }: {
-    initial?: ProjectData;
-    onSuccess: (result: { readonly id: string }) => void;
-  } = $props();
+  interface Props {
+    readonly initial?: ProjectData;
+    readonly onSuccess: (result: { readonly id: string }) => void;
+    readonly onCancel?: () => void;
+    readonly onDelete?: () => Promise<void> | void;
+  }
+
+  const { initial = {}, onSuccess, onCancel, onDelete }: Props = $props();
 
   const isEdit = $derived(!!initial.id);
 
@@ -37,6 +41,7 @@
   let daysLikely = $state<number | undefined>(initial.daysLikely ?? undefined);
   let daysPessimistic = $state<number | undefined>(initial.daysPessimistic ?? undefined);
   let submitting = $state(false);
+  let error = $state('');
 
   // Re-sync when initial changes (e.g. navigating to a different entity)
   $effect(() => {
@@ -51,23 +56,21 @@
 
   const handleSubmit = async () => {
     submitting = true;
-    try {
-      if (isEdit) {
-        const result = await trpc().project.update.mutate({
+    error = '';
+    const outcome = isEdit
+      ? await submit(() => trpc().project.update.mutate({
           id: initial.id!,
-          name,
-          description: description || null,
+          name: name.trim(),
+          description: description.trim() || null,
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
           daysOptimistic: daysOptimistic ?? null,
           daysLikely: daysLikely ?? null,
           daysPessimistic: daysPessimistic ?? null,
-        });
-        if (result.ok) onSuccess(result.value);
-      } else {
-        const result = await trpc().project.create.mutate({
-          name,
-          description: description || undefined,
+        }))
+      : await submit(() => trpc().project.create.mutate({
+          name: name.trim(),
+          description: description.trim() || undefined,
           status: 'planning',
           startDate: startDate ? new Date(startDate) : undefined,
           endDate: endDate ? new Date(endDate) : undefined,
@@ -75,67 +78,77 @@
           daysLikely,
           daysPessimistic,
           parentId: initial.parentId,
-        });
-        if (result.ok) {
-          name = '';
-          description = '';
-          startDate = '';
-          endDate = '';
-          daysOptimistic = undefined;
-          daysLikely = undefined;
-          daysPessimistic = undefined;
-          onSuccess(result.value);
-        }
-      }
-    } finally {
-      submitting = false;
+        }));
+    submitting = false;
+    if (!outcome.ok) {
+      error = outcome.error;
+      return;
     }
+    if (!isEdit) {
+      name = '';
+      description = '';
+      startDate = '';
+      endDate = '';
+      daysOptimistic = undefined;
+      daysLikely = undefined;
+      daysPessimistic = undefined;
+    }
+    onSuccess(outcome.value);
   };
 </script>
 
-<form onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleSubmit(); }}>
-  <label>
-    Name
-    <input type="text" bind:value={name} required placeholder="Project name" />
-  </label>
-  <label>
-    Description (optional)
-    <textarea bind:value={description} rows={3} placeholder="Brief description"></textarea>
-  </label>
+<form class="form-grid" onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleSubmit(); }}>
+  <Field label="Name">
+    {#snippet children({ id })}
+      <input {id} type="text" bind:value={name} required placeholder="Project name" />
+    {/snippet}
+  </Field>
+  <Field label="Description">
+    {#snippet children({ id })}
+      <textarea {id} bind:value={description} rows={3} placeholder="Brief description"></textarea>
+    {/snippet}
+  </Field>
   <div class="form-row">
-    <label>
-      Start date
-      <input type="date" bind:value={startDate} />
-    </label>
-    <label>
-      Target date (optional)
-      <input type="date" bind:value={endDate} />
-    </label>
+    <Field label="Start date">
+      {#snippet children({ id })}
+        <input {id} type="date" bind:value={startDate} />
+      {/snippet}
+    </Field>
+    <Field label="Target date">
+      {#snippet children({ id })}
+        <input {id} type="date" bind:value={endDate} />
+      {/snippet}
+    </Field>
   </div>
   <div class="form-row thirds">
-    <label>
-      Optimistic (days)
-      <input type="number" min="0" bind:value={daysOptimistic} placeholder="-" />
-    </label>
-    <label>
-      Likely (days)
-      <input type="number" min="0" bind:value={daysLikely} placeholder="-" />
-    </label>
-    <label>
-      Pessimistic (days)
-      <input type="number" min="0" bind:value={daysPessimistic} placeholder="-" />
-    </label>
+    <Field label="Optimistic" hint="days">
+      {#snippet children({ id })}
+        <input {id} type="number" min="0" bind:value={daysOptimistic} placeholder="–" />
+      {/snippet}
+    </Field>
+    <Field label="Likely" hint="days">
+      {#snippet children({ id })}
+        <input {id} type="number" min="0" bind:value={daysLikely} placeholder="–" />
+      {/snippet}
+    </Field>
+    <Field label="Pessimistic" hint="days">
+      {#snippet children({ id })}
+        <input {id} type="number" min="0" bind:value={daysPessimistic} placeholder="–" />
+      {/snippet}
+    </Field>
   </div>
-  <button type="submit" disabled={submitting || !name.trim()} aria-busy={submitting}>
-    {isEdit ? 'Save' : 'Add Project'}
-  </button>
-</form>
 
-<style lang="scss">
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    &.thirds { grid-template-columns: 1fr 1fr 1fr; }
-  }
-</style>
+  {#if error}<p class="form-error">{error}</p>{/if}
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary" disabled={submitting || !name.trim()} aria-busy={submitting}>
+      {isEdit ? 'Save' : 'Add project'}
+    </button>
+    {#if onCancel}
+      <button type="button" class="btn ghost" onclick={onCancel}>Cancel</button>
+    {/if}
+    {#if isEdit && onDelete}
+      <span class="ml-auto"><ConfirmButton label="Delete" confirmLabel="Delete project" variant="button" onConfirm={onDelete} /></span>
+    {/if}
+  </div>
+</form>

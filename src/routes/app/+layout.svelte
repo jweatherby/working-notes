@@ -13,7 +13,7 @@
 <CreateTodoPopup />
 
 <AppShell
-  showInfoPanel={true}
+  showInfoPanel={!$layoutConfig.hideInfoPanel}
   collapseInfoPanelOnMedium={$layoutConfig.collapseInfoPanel}
   brandIconUrl={data.defaultBrandingIconUrl ?? null}
 >

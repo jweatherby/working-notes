@@ -1,11 +1,14 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';  import type { PageData } from './$types';
-  import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import type { PageData } from './$types';
+  import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import StatusDot from '$lib/todo/components/StatusDot.svelte';
   import PriorityBadge from '$lib/todo/components/PriorityBadge.svelte';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { openPopup } from '$lib/ui/popup-url';
   import { nextStatus, formatTodoDate, type TodoStatus, type EntityType } from '$lib/todo/utils';
+
   const { data } = $props<{ data: PageData }>();
   const todos = $derived(data.todos);
 
@@ -55,12 +58,7 @@
   const activeGroups = $derived(groupByEntity(filtered.filter((t: TodoItem) => t.status !== 'COMPLETE' && t.status !== 'CANCELLED')));
   const completedTodos = $derived(filtered.filter((t: TodoItem) => t.status === 'COMPLETE' || t.status === 'CANCELLED'));
 
-  const openEdit = (id: string) => {
-    const url = new URL($page.url);
-    url.searchParams.set('popup', 'todo');
-    url.searchParams.set('todo', id);
-    goto(url.toString(), { replaceState: true, noScroll: true });
-  };
+  const openEdit = (id: string) => openPopup('todo', { todo: id });
 
   const handleStatusChange = async (id: string, status: TodoStatus) => {
     await trpc().todo.update.mutate({ id, status });
@@ -90,162 +88,89 @@
 
 <svelte:head><title>Todos</title></svelte:head>
 
-<CenteredLayout>
-<h1>Todos</h1>
+<div class="page">
+  <PageHeader title="Todos" description="Everything open, grouped by what it belongs to.">
+    <button type="button" class="btn primary" onclick={() => openPopup('todo')}>New todo</button>
+  </PageHeader>
 
-<div class="filters">
-  <select bind:value={statusFilter}>
-    <option value="ALL">All statuses</option>
-    <option value="PENDING">Pending</option>
-    <option value="ACTIVE">Active</option>
-    <option value="COMPLETE">Complete</option>
-    <option value="CANCELLED">Cancelled</option>
-  </select>
-  <select bind:value={entityFilter}>
-    <option value="ALL">All types</option>
-    <option value="PROJECT">Projects</option>
-    <option value="PERSON">People</option>
-    <option value="TEAM">Teams</option>
-    <option value="DEPARTMENT">Departments</option>
-  </select>
-</div>
+  <div class="toolbar filters">
+    <select class="sm" bind:value={statusFilter} aria-label="Status filter">
+      <option value="ALL">All statuses</option>
+      <option value="PENDING">Pending</option>
+      <option value="ACTIVE">Active</option>
+      <option value="COMPLETE">Complete</option>
+      <option value="CANCELLED">Cancelled</option>
+    </select>
+    <select class="sm" bind:value={entityFilter} aria-label="Type filter">
+      <option value="ALL">All types</option>
+      <option value="PROJECT">Projects</option>
+      <option value="PERSON">People</option>
+      <option value="TEAM">Teams</option>
+      <option value="DEPARTMENT">Departments</option>
+    </select>
+  </div>
 
-{#if activeGroups.length > 0}
-  {#each activeGroups as group}
-    <div class="entity-group">
-      <h3 class="group-heading">
-        <span class="entity-type">{entityTypeLabel(group.entityType)}</span>
-        <a href={entityPath(group.entityType, group.entityId)}>{group.entityLabel}</a>
-      </h3>
-      <ul class="todo-list">
-        {#each group.todos as todo}
-          <li class="todo-item">
-            <StatusDot
-              status={todo.status}
-              clickable
-              onclick={() => handleStatusChange(todo.id, nextStatus(todo.status))}
-            />
-            <button class="todo-title-btn" data-plain onclick={() => openEdit(todo.id)}>
+  {#if activeGroups.length > 0}
+    {#each activeGroups as group (`${group.entityType}:${group.entityId}`)}
+      <section class="section group">
+        <div class="section-header">
+          <h3>
+            <span class="eyebrow">{entityTypeLabel(group.entityType)}</span>
+            <a href={entityPath(group.entityType, group.entityId)}>{group.entityLabel}</a>
+          </h3>
+        </div>
+        <ul class="list">
+          {#each group.todos as todo (todo.id)}
+            <li class="list-row">
+              <StatusDot status={todo.status} clickable onclick={() => handleStatusChange(todo.id, nextStatus(todo.status))} />
+              <button type="button" class="grow truncate todo-title" onclick={() => openEdit(todo.id)}>{todo.title}</button>
               <PriorityBadge priority={todo.priority} />
-              {todo.title}
-            </button>
-            {#if todo.targetDate}
-              <span class="date-cell">{formatTodoDate(todo.targetDate)}</span>
-            {/if}
+              {#if todo.targetDate}<span class="meta">{formatTodoDate(todo.targetDate)}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/each}
+  {:else}
+    <EmptyState message="No active todos." boxed />
+  {/if}
+
+  {#if completedTodos.length > 0}
+    <details class="section completed">
+      <summary>Completed ({completedTodos.length})</summary>
+      <ul class="list">
+        {#each completedTodos as todo (todo.id)}
+          <li class="list-row done">
+            <StatusDot status={todo.status} />
+            <button type="button" class="grow truncate todo-title" onclick={() => openEdit(todo.id)}>{todo.title}</button>
+            <a href={entityPath(todo.entityType, todo.entityId)} class="meta entity-link">{todo.entityLabel ?? todo.entityId}</a>
+            <span class="meta">{formatTodoDate(todo.completedAt)}</span>
           </li>
         {/each}
       </ul>
-    </div>
-  {/each}
-{:else}
-  <p class="empty">No active todos.</p>
-{/if}
-
-{#if completedTodos.length > 0}
-  <details class="completed-section">
-    <summary>Completed ({completedTodos.length})</summary>
-    <table role="grid">
-      <tbody>
-        {#each completedTodos as todo}
-          <tr class="done-row">
-            <td class="col-status"><StatusDot status="COMPLETE" /></td>
-            <td>
-              <button class="todo-title-btn struck" data-plain onclick={() => openEdit(todo.id)}>
-                {todo.title}
-              </button>
-            </td>
-            <td>
-              <a href={entityPath(todo.entityType, todo.entityId)} class="entity-link">
-                <span class="entity-type">{entityTypeLabel(todo.entityType)}</span>
-                {todo.entityLabel ?? todo.entityId}
-              </a>
-            </td>
-            <td class="date-cell">{formatTodoDate(todo.completedAt)}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </details>
-{/if}
-</CenteredLayout>
+    </details>
+  {/if}
+</div>
 
 <style lang="scss">
-  h1 {
-    font-size: 1.4rem;
-    margin-bottom: 1rem;
-  }
   .filters {
+    margin-bottom: var(--sp-5);
+    select { width: auto; min-width: 140px; }
+  }
+  .group { margin-top: var(--sp-5); }
+  .group h3 {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    select {
-      font-size: 0.85rem;
-      padding: 0.3rem 0.5rem;
-      margin: 0;
-    }
-  }
-  .entity-group {
-    margin-bottom: 1.5rem;
-  }
-  .group-heading {
-    font-size: 0.9rem;
-    margin: 0 0 0.5rem;
-    a { text-decoration: none; &:hover { text-decoration: underline; } }
-  }
-  .todo-list {
-    list-style: none;
-    padding: 0;
+    align-items: baseline;
+    gap: var(--sp-2);
     margin: 0;
+    font-size: var(--fs-base);
   }
-  .todo-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0;
-    font-size: 0.85rem;
+  .todo-title {
+    text-align: left;
+    &:hover { color: var(--accent); }
   }
-  .todo-title-btn {
-    all: unset;
-    cursor: pointer;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    &:hover {
-      color: var(--color-primary);
-    }
-  }
-  .entity-type {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-muted);
-    margin-right: 0.3rem;
-  }
-  .date-cell {
-    font-size: 0.78rem;
-    color: var(--color-muted);
-    white-space: nowrap;
-  }
-  .struck {
-    text-decoration: line-through;
-    opacity: 0.5;
-  }
-  .done-row {
-    opacity: 0.6;
-  }
-  .empty {
-    color: var(--color-muted);
-    font-size: 0.85rem;
-  }
-  .completed-section {
-    margin-top: 1.5rem;
-    summary {
-      font-size: 0.85rem;
-      color: var(--color-muted);
-      cursor: pointer;
-      margin-bottom: 0.5rem;
-    }
-  }
+  .done .todo-title { color: var(--text-3); text-decoration: line-through; }
+  .entity-link:hover { color: var(--text); text-decoration: none; }
+  .completed { margin-top: var(--sp-6); }
+  .completed .list { margin-top: var(--sp-2); }
 </style>

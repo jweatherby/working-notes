@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { onDestroy } from 'svelte';
-  import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import DetailLayout from '$lib/common/DetailLayout.svelte';
   import DocsManager from '$lib/common/DocsManager.svelte';
@@ -15,6 +14,8 @@
   import { createDocHandlers } from '$lib/common/use-doc-handlers';
   import { createNoteHandlers } from '$lib/common/use-note-handlers';
   import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
+  import PencilIcon from '$lib/ui/PencilIcon.svelte';
+  import { openPopup, closePopup } from '$lib/ui/popup-url';
 
   interface DocItem {
     readonly id: string;
@@ -49,6 +50,7 @@
 
   interface EditFormCtx {
     readonly onSuccess: () => Promise<void>;
+    readonly onCancel: () => void;
   }
 
   interface OverviewCtx {
@@ -210,36 +212,19 @@
     await docHandlers.handleUploadPdf(file);
   };
 
-  // ----- Popup -----
-  const openEdit = () => {
-    const url = new URL($page.url);
-    url.searchParams.set('popup', editPopupId);
-    goto(url.toString(), { replaceState: true, noScroll: true });
-  };
+  // ----- Edit popup -----
+  const openEdit = () => { openPopup(editPopupId); };
+  const handleEditSuccess = () => closePopup({ invalidate: true });
+  const handleEditCancel = () => { closePopup(); };
 
-  const handleEditSuccess = async () => {
-    const url = new URL($page.url);
-    url.searchParams.delete('popup');
-    await goto(url.toString(), {
-      replaceState: true,
-      noScroll: true,
-      invalidateAll: true,
-    });
-  };
+  const todoEntityType = $derived(entityType as 'PROJECT' | 'PERSON' | 'TEAM' | 'DEPARTMENT');
 </script>
 
 <svelte:head><title>{entityName}</title></svelte:head>
 
-<nav aria-label="breadcrumb">
-  <ul>
-    <li><a href={breadcrumbHref}>{breadcrumbLabel}</a></li>
-    <li>{entityName}</li>
-  </ul>
-</nav>
-
 <DetailLayout {leftOpen} onToggleLeft={toggleLeft}>
   {#snippet sidebar()}
-    <div class="section-block">
+    <div class="section">
       <DocsManager
         {docs}
         {activeDocId}
@@ -249,7 +234,7 @@
         onReorder={docHandlers.handleReorderDocs}
       />
     </div>
-    <div class="section-block">
+    <div class="section">
       <TodoWidget
         {entityType}
         {entityId}
@@ -258,16 +243,26 @@
         onEditTodo={openEditTodo}
       />
     </div>
-    <div class="section-block">
+    <div class="section">
       <ReportsWidget {entityType} {entityId} {reports} />
     </div>
   {/snippet}
 
-  {#if activeDoc}
-    <div class="center-pane">
-      <div class="center-header">
+  <div class="center-pane">
+    <div class="center-header">
+      <nav aria-label="breadcrumb">
+        <ul>
+          <li><a href={breadcrumbHref}>{breadcrumbLabel}</a></li>
+          <li>{entityName}</li>
+        </ul>
+      </nav>
+      <div class="asset-header-row">
         <div class="asset-header-content">{@render renderAssetHeader()}</div>
+        <button type="button" class="btn icon sm edit-btn" onclick={openEdit} aria-label="Edit {entityName}" title="Edit"><PencilIcon /></button>
       </div>
+    </div>
+
+    {#if activeDoc}
       <DocEditor
         title={activeDoc.title}
         content={activeDoc.content}
@@ -280,36 +275,21 @@
         onResolveImages={docHandlers.handleResolveImages}
         onClose={closeCenter}
       />
-    </div>
-  {:else if activeNote}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
-      </div>
+    {:else if activeNote}
       <NoteEditor
         noteId={activeNote.id}
         content={activeNote.content}
         onSave={handleSaveNote}
         onClose={closeCenter}
       />
-    </div>
-  {:else if center.type === 'newNote'}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
-      </div>
+    {:else if center.type === 'newNote'}
       <NoteEditor
         noteId="__new__"
         content=""
         onSave={handleCreateNote}
         onClose={closeCenter}
       />
-    </div>
-  {:else if center.type === 'newDoc'}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
-      </div>
+    {:else if center.type === 'newDoc'}
       <DocEditor
         title={newDocTitleDraft}
         content=""
@@ -319,94 +299,78 @@
         onClose={closeCenter}
         autoEditTitle
       />
-    </div>
-  {:else if center.type === 'newTodo'}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
+    {:else if center.type === 'newTodo'}
+      <section class="card pane-card">
+        <div class="pane-header">
+          <h2>New todo</h2>
+          <button type="button" class="btn icon" aria-label="Close" onclick={closeCenter}>&times;</button>
+        </div>
+        <TodoForm entityType={todoEntityType} {entityId} onSuccess={handleTodoSuccess} onCancel={closeCenter} />
+      </section>
+    {:else if center.type === 'editTodo'}
+      <section class="card pane-card">
+        <div class="pane-header">
+          <h2>Edit todo</h2>
+          <button type="button" class="btn icon" aria-label="Close" onclick={closeCenter}>&times;</button>
+        </div>
+        <TodoForm entityType={todoEntityType} {entityId} editId={center.id} onSuccess={handleTodoSuccess} onCancel={closeCenter} />
+      </section>
+    {:else}
+      <div class="overview">
+        {@render renderOverview({ openEdit })}
       </div>
-      <h3 class="pane-title">New Todo</h3>
-      <TodoForm
-        entityType={entityType as 'PROJECT' | 'PERSON' | 'TEAM' | 'DEPARTMENT'}
-        {entityId}
-        onSuccess={handleTodoSuccess}
-        onCancel={closeCenter}
-      />
-    </div>
-  {:else if center.type === 'editTodo'}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
-      </div>
-      <h3 class="pane-title">Edit Todo</h3>
-      <TodoForm
-        entityType={entityType as 'PROJECT' | 'PERSON' | 'TEAM' | 'DEPARTMENT'}
-        {entityId}
-        editId={center.id}
-        onSuccess={handleTodoSuccess}
-        onCancel={closeCenter}
-      />
-    </div>
-  {:else}
-    <div class="center-pane">
-      <div class="center-header">
-        <div class="asset-header-content">{@render renderAssetHeader()}</div>
-      </div>
-      {@render renderOverview({ openEdit })}
-    </div>
-  {/if}
+    {/if}
+  </div>
 </DetailLayout>
 
 <Popup id={editPopupId} title={editPopupTitle}>
-  {@render renderEditForm({ onSuccess: handleEditSuccess })}
+  {@render renderEditForm({ onSuccess: handleEditSuccess, onCancel: handleEditCancel })}
 </Popup>
 
 <style lang="scss">
-  .section-block {
-    margin-top: 2rem;
-  }
-  .section-block:first-child { margin-top: 0; }
   .center-pane {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--sp-4);
   }
   .center-header {
     position: sticky;
-    top: 0.5rem;
-    z-index: 10;
+    top: 0;
+    z-index: var(--z-sticky);
+    padding-bottom: var(--sp-3);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    nav[aria-label='breadcrumb'] ul { margin-bottom: var(--sp-1); }
+  }
+  .asset-header-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 0.9rem;
-    margin-bottom: 0.75rem;
-    background: var(--color-surface-alt, var(--gray-1, #f4f4f7));
-    border: 1px solid var(--color-muted-border);
-    border-left: 3px solid var(--color-primary);
-    border-radius: $radius-md;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    gap: var(--sp-2);
+    .edit-btn { opacity: 0; transition: opacity var(--ease); }
+    &:hover .edit-btn, .edit-btn:focus-visible { opacity: 1; }
   }
   .asset-header-content {
     flex: 1;
-    min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    min-width: 0;
+    :global(.asset-h-name) { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; }
+    :global(.asset-h-meta) { font-size: var(--fs-md); color: var(--text-2); }
   }
-  .pane-title {
-    margin: 0 0 0.75rem;
-    font-size: 1rem;
+  .pane-card { max-width: 640px; }
+  .pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--sp-3);
+    h2 { margin: 0; font-size: var(--fs-base); }
   }
-  .placeholder {
-    color: var(--color-muted);
-    font-size: 0.9rem;
-  }
-  .close-btn {
-    all: unset;
-    cursor: pointer;
-    font-size: 1.25rem;
-    color: var(--color-muted);
-    padding: 0 0.25rem;
-    &:hover { color: var(--color-primary); }
+  .overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+    max-width: 720px;
   }
 </style>

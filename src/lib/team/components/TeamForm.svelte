@@ -1,5 +1,8 @@
 <script lang="ts">
   import { trpc } from '$shared/trpc/client';
+  import Field from '$lib/ui/Field.svelte';
+  import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import { submit } from '$lib/ui/submit';
 
   interface TeamData {
     readonly id?: string;
@@ -7,19 +10,21 @@
     readonly description?: string | null;
   }
 
-  const {
-    initial = {} as TeamData,
-    onSuccess,
-  }: {
-    initial?: TeamData;
-    onSuccess: (result: { readonly id: string }) => void;
-  } = $props();
+  interface Props {
+    readonly initial?: TeamData;
+    readonly onSuccess: (result: { readonly id: string }) => void;
+    readonly onCancel?: () => void;
+    readonly onDelete?: () => Promise<void> | void;
+  }
+
+  const { initial = {}, onSuccess, onCancel, onDelete }: Props = $props();
 
   const isEdit = $derived(!!initial.id);
 
   let name = $state(initial.name ?? '');
   let description = $state(initial.description ?? '');
   let submitting = $state(false);
+  let error = $state('');
 
   $effect(() => {
     name = initial.name ?? '';
@@ -28,41 +33,53 @@
 
   const handleSubmit = async () => {
     submitting = true;
-    try {
-      if (isEdit) {
-        const result = await trpc().team.update.mutate({
+    error = '';
+    const outcome = isEdit
+      ? await submit(() => trpc().team.update.mutate({
           id: initial.id!,
-          name,
-          description: description || null,
-        });
-        if (result.ok) onSuccess(result.value);
-      } else {
-        const result = await trpc().team.create.mutate({
-          name,
-          description: description || undefined,
-        });
-        if (result.ok) {
-          name = '';
-          description = '';
-          onSuccess(result.value);
-        }
-      }
-    } finally {
-      submitting = false;
+          name: name.trim(),
+          description: description.trim() || null,
+        }))
+      : await submit(() => trpc().team.create.mutate({
+          name: name.trim(),
+          description: description.trim() || undefined,
+        }));
+    submitting = false;
+    if (!outcome.ok) {
+      error = outcome.error;
+      return;
     }
+    if (!isEdit) {
+      name = '';
+      description = '';
+    }
+    onSuccess(outcome.value);
   };
 </script>
 
-<form onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleSubmit(); }}>
-  <label>
-    Name
-    <input type="text" bind:value={name} required placeholder="Team name" />
-  </label>
-  <label>
-    Description (optional)
-    <textarea bind:value={description} rows={3} placeholder="What does this team do?"></textarea>
-  </label>
-  <button type="submit" disabled={submitting || !name.trim()} aria-busy={submitting}>
-    {isEdit ? 'Save' : 'Add Team'}
-  </button>
+<form class="form-grid" onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleSubmit(); }}>
+  <Field label="Name">
+    {#snippet children({ id })}
+      <input {id} type="text" bind:value={name} required placeholder="Team name" />
+    {/snippet}
+  </Field>
+  <Field label="Description">
+    {#snippet children({ id })}
+      <textarea {id} bind:value={description} rows={3} placeholder="What does this team do?"></textarea>
+    {/snippet}
+  </Field>
+
+  {#if error}<p class="form-error">{error}</p>{/if}
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary" disabled={submitting || !name.trim()} aria-busy={submitting}>
+      {isEdit ? 'Save' : 'Add team'}
+    </button>
+    {#if onCancel}
+      <button type="button" class="btn ghost" onclick={onCancel}>Cancel</button>
+    {/if}
+    {#if isEdit && onDelete}
+      <span class="ml-auto"><ConfirmButton label="Delete" confirmLabel="Delete team" variant="button" onConfirm={onDelete} /></span>
+    {/if}
+  </div>
 </form>

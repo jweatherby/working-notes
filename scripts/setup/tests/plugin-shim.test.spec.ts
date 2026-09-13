@@ -2,11 +2,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { platform, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-const SHIM = resolve('plugin/bin/wnotes');
+const SHIM = resolve('plugin/scripts/wnotes');
 
 const fakeApp = (withDeps = true): string => {
   const app = mkdtempSync(join(tmpdir(), 'wnotes-app-'));
@@ -55,5 +55,9 @@ describe('plugin wnotes shim', () => {
     const noDeps = run({ WORKING_NOTES_HOME: app });
     expect(noDeps.status).toBe(1);
     expect(noDeps.stderr).toContain(`Run \`bun install\` in ${app}`);
+  });
+
+  it('keeps the plugin free of a top-level bin/, which claude.ai-hosted plugins reject', () => {
+    expect(existsSync(resolve('plugin/bin'))).toBe(false);
   });
 });

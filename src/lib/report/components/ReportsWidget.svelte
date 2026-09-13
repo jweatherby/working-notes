@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import type { EntityType } from '$shared/types/enums';
+  import { submit } from '$lib/ui/submit';
 
   interface ReportItem {
     readonly id: string;
@@ -23,17 +24,14 @@
   const createReport = async (): Promise<void> => {
     creating = true;
     error = '';
-    try {
-      const result = await trpc().report.create.mutate({
-        entityType: entityType as EntityType,
-        entityId,
-        title: 'Untitled report'
-      });
-      if (result.ok) await goto(`/app/reports/${result.value.id}`);
-      else error = result.error.message;
-    } finally {
-      creating = false;
-    }
+    const outcome = await submit(() => trpc().report.create.mutate({
+      entityType: entityType as EntityType,
+      entityId,
+      title: 'Untitled report',
+    }));
+    creating = false;
+    if (outcome.ok) await goto(`/app/reports/${outcome.value.id}`);
+    else error = outcome.error;
   };
 
   const formatDate = (d: Date | string): string =>
@@ -41,80 +39,23 @@
 </script>
 
 <div class="reports-widget">
-  <div class="widget-header">
-    <h4>Reports</h4>
-    <button class="add-btn" data-plain onclick={createReport} disabled={creating} aria-label="New report" title="New report">+</button>
+  <div class="section-header">
+    <h4>Reports <span class="count">{reports.length}</span></h4>
+    <button type="button" class="btn icon sm" onclick={createReport} disabled={creating} aria-busy={creating} aria-label="New report" title="New report">+</button>
   </div>
   {#if error}
-    <p class="error">{error}</p>
+    <p class="form-error">{error}</p>
   {/if}
   {#if reports.length === 0}
-    <p class="muted">No reports yet.</p>
+    <p class="empty text-sm">No reports yet.</p>
   {:else}
-    <ul>
+    <ul class="list">
       {#each reports as report (report.id)}
-        <li>
-          <a href="/app/reports/{report.id}">{report.title}</a>
-          <span class="date">{formatDate(report.updatedAt)}</span>
+        <li class="list-row">
+          <a class="grow truncate" href="/app/reports/{report.id}">{report.title}</a>
+          <span class="meta">{formatDate(report.updatedAt)}</span>
         </li>
       {/each}
     </ul>
   {/if}
 </div>
-
-<style lang="scss">
-  .widget-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    h4 {
-      margin: 0;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-muted);
-    }
-  }
-  .add-btn {
-    all: unset;
-    cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
-    padding: 0 0.25rem;
-    color: var(--color-muted);
-    &:hover { color: var(--color-primary); }
-  }
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  li {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-    font-size: 0.85rem;
-    border-bottom: 1px solid var(--color-muted-border);
-    a {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-  .date {
-    color: var(--color-muted);
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-  .muted {
-    color: var(--color-muted);
-    font-size: 0.85rem;
-    margin: 0;
-  }
-  .error {
-    color: var(--color-danger);
-    font-size: 0.8rem;
-  }
-</style>

@@ -28,6 +28,14 @@ Use `trpc(fetch)` so SSR requests pass through the same guard and validation as 
 
 There is no auth; `localOnlyGuard` is the only protection. It returns 403 for any request whose hostname isn't `localhost`, `127.0.0.1` or `[::1]`, and for any `/api/trpc` request without `x-working-notes: 1`. Don't add routes that bypass it, don't add CORS headers, and don't bind the server to anything but loopback.
 
+## Styles
+
+- `styles.scss` is the global entry (imported once in `+layout.svelte`). It only `@use`s the partials in `styles/`: `_tokens` (design tokens, `:root` only), `_base` (reset, elements, tables, breadcrumb), `_controls` (`.btn`, fields, forms, tabs, toolbar), `_layout` (page, card, list, badge, drawer, utilities), `_print` (`.no-print`).
+- Vite's `additionalData` injects `_variables.scss` into the entry and component `<style>` blocks only. Partials reached through `@use` must `@use '../_variables.scss' as *` themselves.
+- `_variables.scss` holds only breakpoints, font stacks and mixins (`mobile`, `below-md`, `tablet-up`, `desktop-up`, `flex-*`, `visually-hidden`). Colours, type, spacing and radii are CSS custom properties in `styles/_tokens.scss`.
+- The token and class vocabulary is documented in `src/lib/CLAUDE.md` § Design system.
+
 ## Layout notes
 
-Entity list layouts (`people`, `teams`, `departments`, `projects`, `todos`) set `layoutConfig.collapseInfoPanel` so the notes panel collapses on medium screens.
+- The top bar (`$lib/common/AppShell`) lists every section: Home, People, Teams, Departments, Projects, Org Map, Todos, Reports, with Branding as a secondary link and a search button that opens the ⌘K finder. Under 768px it collapses to a hamburger drawer.
+- Entity list layouts (`people`, `teams`, `departments`, `projects`, `todos`) set `layoutConfig.collapseInfoPanel` so the notes panel collapses on medium screens.

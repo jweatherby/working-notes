@@ -1,119 +1,107 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';  import type { PageData } from "./$types";
-  import { trpc } from "$shared/trpc/client";
-  import { goto, invalidateAll } from "$app/navigation";
+  import type { PageData } from './$types';
+  import { trpc } from '$shared/trpc/client';
+  import { goto } from '$app/navigation';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import Field from '$lib/ui/Field.svelte';
+  import { submit } from '$lib/ui/submit';
 
   const { data } = $props<{ data: PageData }>();
   const brandings = $derived(data.brandings.ok ? data.brandings.value : []);
 
   let busy = $state(false);
   let showCreate = $state(false);
-  let newName = $state("");
+  let newName = $state('');
+  let error = $state('');
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
     busy = true;
-    try {
-      const result = await trpc().branding.create.mutate({
-        name: newName.trim(),
-      });
-      if (result.ok) {
-        goto(`/app/branding/${result.value.id}`);
-      }
-    } finally {
-      busy = false;
+    error = '';
+    const outcome = await submit(() => trpc().branding.create.mutate({ name: newName.trim() }));
+    busy = false;
+    if (!outcome.ok) {
+      error = outcome.error;
+      return;
     }
+    goto(`/app/branding/${outcome.value.id}`);
   };
 </script>
 
 <svelte:head><title>Branding</title></svelte:head>
 
-<CenteredLayout>
-<hgroup>
-  <h1>Branding Profiles</h1>
-  <p>Logos and colours applied to reports and their printed PDFs.</p>
-</hgroup>
+<div class="page">
+  <PageHeader title="Branding" description="Logos and colours applied to reports and their printed PDFs.">
+    <button type="button" class="btn primary" onclick={() => { showCreate = !showCreate; }}>
+      {showCreate ? 'Cancel' : 'New profile'}
+    </button>
+  </PageHeader>
 
-<div class="toolbar">
-  <button class="outline" onclick={() => { showCreate = !showCreate; }}>
-    {showCreate ? "Cancel" : "New Profile"}
-  </button>
+  {#if showCreate}
+    <form class="card create-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+      <Field label="Profile name">
+        {#snippet children({ id })}
+          <input {id} type="text" bind:value={newName} placeholder="e.g. Acme Corp" required />
+        {/snippet}
+      </Field>
+      {#if error}<p class="form-error">{error}</p>{/if}
+      <div class="form-actions">
+        <button type="submit" class="btn primary" disabled={busy || !newName.trim()} aria-busy={busy}>Create profile</button>
+        <button type="button" class="btn ghost" onclick={() => { showCreate = false; }}>Cancel</button>
+      </div>
+    </form>
+  {/if}
+
+  {#if brandings.length === 0 && !showCreate}
+    <EmptyState message="No branding profiles yet." boxed>
+      <button type="button" class="btn sm" onclick={() => { showCreate = true; }}>New profile</button>
+    </EmptyState>
+  {/if}
+
+  {#if brandings.length > 0}
+    <div class="brand-grid">
+      {#each brandings as brand (brand.id)}
+        <a href="/app/branding/{brand.id}" class="card compact hover brand-card">
+          <div class="brand-swatches">
+            <span class="swatch" style="background:{brand.primaryColor}"></span>
+            <span class="swatch" style="background:{brand.accentColor}"></span>
+          </div>
+          <div class="brand-info">
+            <span class="brand-name">
+              {brand.name}
+              {#if brand.isDefault}<span class="badge accent">Default</span>{/if}
+            </span>
+            <span class="text-sm muted">
+              {#if brand.hasIcon}icon{/if}
+              {#if brand.hasLogo}{#if brand.hasIcon} · {/if}logo{/if}
+            </span>
+          </div>
+        </a>
+      {/each}
+    </div>
+  {/if}
 </div>
 
-{#if showCreate}
-  <article class="create-form">
-    <form onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-      <label>
-        Profile name
-        <input type="text" bind:value={newName} placeholder="e.g. Acme Corp" required />
-      </label>
-      <button type="submit" disabled={busy || !newName.trim()} aria-busy={busy}>
-        Create Profile
-      </button>
-    </form>
-  </article>
-{/if}
-
-{#if brandings.length === 0 && !showCreate}
-  <p class="muted">No branding profiles yet. Create one to brand your reports.</p>
-{/if}
-
-{#if brandings.length > 0}
-  <div class="brand-grid">
-    {#each brandings as brand}
-      <a href="/app/branding/{brand.id}" class="brand-card">
-        <div class="brand-swatches">
-          <span class="swatch" style="background:{brand.primaryColor}"></span>
-          <span class="swatch" style="background:{brand.accentColor}"></span>
-        </div>
-        <div class="brand-info">
-          <strong>
-            {brand.name}
-            {#if brand.isDefault}<span class="default-badge">Default</span>{/if}
-          </strong>
-          <span class="brand-meta">
-            {#if brand.hasIcon}icon{/if}
-            {#if brand.hasLogo}{#if brand.hasIcon} · {/if}logo{/if}
-          </span>
-        </div>
-      </a>
-    {/each}
-  </div>
-{/if}
-</CenteredLayout>
-
 <style lang="scss">
-  .toolbar {
-    margin-bottom: 1rem;
-  }
   .create-form {
-    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    max-width: 420px;
+    margin-bottom: var(--sp-5);
   }
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  .muted { font-size: $font-md; }
   .brand-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--sp-3);
   }
   .brand-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    border: 1px solid var(--color-muted-border);
-    border-radius: 6px;
-    text-decoration: none;
+    gap: var(--sp-3);
     color: inherit;
-    transition: border-color 100ms ease, box-shadow 100ms ease;
-    &:hover {
-      border-color: var(--color-primary);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
+    &:hover { text-decoration: none; }
   }
   .brand-swatches {
     display: flex;
@@ -123,28 +111,20 @@
   .swatch {
     display: block;
     width: 28px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    height: 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
   }
   .brand-info {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 2px;
+    min-width: 0;
   }
-  .brand-meta {
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
-  .default-badge {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.05rem 0.4rem;
-    font-size: 0.7rem;
+  .brand-name {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
     font-weight: 500;
-    color: var(--color-primary);
-    background: var(--color-surface-alt, #f0f0f0);
-    border-radius: 3px;
-    vertical-align: middle;
   }
 </style>

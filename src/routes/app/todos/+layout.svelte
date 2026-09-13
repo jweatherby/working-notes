@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { layoutConfig } from '$lib/stores/layout';
+  import { layoutConfig, DEFAULT_LAYOUT } from '$lib/stores/layout';
   import { onDestroy } from 'svelte';
 
-  layoutConfig.set({ collapseInfoPanel: true });
-  onDestroy(() => layoutConfig.set({ collapseInfoPanel: false }));
+  layoutConfig.set({ ...DEFAULT_LAYOUT, collapseInfoPanel: true });
+  onDestroy(() => layoutConfig.set(DEFAULT_LAYOUT));
 
   const { children } = $props<{ children: any }>();
 </script>

@@ -81,30 +81,30 @@
     :global(table) {
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid var(--color-muted-border);
+      border: 1px solid var(--border);
       margin: 1.5rem 0;
     }
     :global(th) {
-      background: var(--color-text);
-      color: var(--color-bg);
+      background: var(--text);
+      color: var(--surface);
       font-weight: 600;
       padding: 0.35rem 0.5rem;
-      border: 1px solid var(--color-text);
-      font-size: $font-sm;
+      border: 1px solid var(--text);
+      font-size: var(--fs-sm);
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
     :global(td) {
       padding: 0.25rem 0.5rem;
-      border: 1px solid var(--color-muted-border);
+      border: 1px solid var(--border);
     }
     :global(code) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
+      background: var(--surface-inset);
+      color: var(--text);
     }
     :global(pre) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
+      background: var(--surface-inset);
+      color: var(--text);
     }
     :global(img) {
       max-width: 100%;

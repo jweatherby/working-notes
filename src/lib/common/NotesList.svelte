@@ -1,5 +1,6 @@
 <script lang="ts">
   import { marked } from 'marked';
+  import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
 
   interface Note {
     readonly id: string;
@@ -24,7 +25,7 @@
 
   let expandedNotes = $state(new Set<string>());
   let overflowingNotes = $state(new Set<string>());
-  let listEl: HTMLDivElement;
+  let listEl = $state<HTMLDivElement | null>(null);
 
   const expandNote = (id: string) => {
     expandedNotes = new Set(expandedNotes).add(id);
@@ -61,17 +62,17 @@
   <div class="notes-list" bind:this={listEl}>
     {#each sortedNotes as note (note.id)}
       <article class="note">
-        <header>
+        <header class="note-header">
           {#if onEdit}
-            <button data-plain onclick={() => onEdit(note)} title="Edit" class="note-meta">{formatDate(note.createdAt)}</button>
+            <button type="button" class="btn link muted text-xs" onclick={() => onEdit(note)} title="Edit note">{formatDate(note.createdAt)}</button>
           {:else}
-            <span class="note-meta">{formatDate(note.createdAt)}</span>
+            <span class="text-xs muted">{formatDate(note.createdAt)}</span>
           {/if}
-          <span class="note-actions">
-            {#if onRemove}
-              <button class="note-action-btn" data-plain onclick={() => { if (confirm('Delete this note?')) onRemove(note.id); }} title="Delete">&times;</button>
-            {/if}
-          </span>
+          {#if onRemove}
+            <span class="note-actions">
+              <ConfirmButton label="Delete note" variant="icon" onConfirm={() => onRemove(note.id)} />
+            </span>
+          {/if}
         </header>
         <div
           class="note-body"
@@ -82,78 +83,47 @@
           {@html marked.parse(note.content)}
         </div>
         {#if !expandedNotes.has(note.id) && overflowingNotes.has(note.id)}
-          <button class="toggle-btn" data-plain onclick={() => expandNote(note.id)}>see more</button>
+          <button type="button" class="btn link text-xs" onclick={() => expandNote(note.id)}>See more</button>
         {:else if expandedNotes.has(note.id)}
-          <button class="toggle-btn" data-plain onclick={() => collapseNote(note.id)}>show less</button>
+          <button type="button" class="btn link text-xs" onclick={() => collapseNote(note.id)}>Show less</button>
         {/if}
       </article>
     {/each}
   </div>
 {:else}
-  <p class="muted">No notes yet.</p>
+  <p class="empty text-sm">No notes yet.</p>
 {/if}
 
 <style lang="scss">
   .notes-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
   }
   .note {
-    margin: 0;
-    padding: 0.75rem;
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.25rem;
-    }
+    padding: var(--sp-3) 0;
+    border-bottom: 1px solid var(--border);
+    &:last-child { border-bottom: 0; }
+    &:hover .note-actions { opacity: 1; }
   }
-  .note-meta {
-    font-size: 0.8rem;
-    color: var(--color-muted);
-    border: none;
-    background: none;
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    &:hover { color: var(--color-primary); }
-  }
-  .note-actions {
+  .note-header {
     display: flex;
-    gap: 0.25rem;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 20px;
+    margin-bottom: var(--sp-1);
   }
-  .note-action-btn {
-    padding: 0 0.4rem;
-    margin: 0;
-    font-size: 1rem;
-    line-height: 1;
-    border: none;
-    background: none;
-    color: var(--color-muted);
-    cursor: pointer;
-    &:hover { color: var(--color-danger); }
-  }
+  .note-actions { opacity: 0; transition: opacity var(--ease); }
   .note-body {
-    font-size: $font-xs;
+    font-size: var(--fs-md);
+    line-height: 1.5;
+    color: var(--text);
+    :global(p) { margin: 0 0 var(--sp-2); }
     :global(p:last-child) { margin-bottom: 0; }
+    :global(ul), :global(ol) { padding-left: var(--sp-4); margin: 0 0 var(--sp-2); }
+    :global(h1), :global(h2), :global(h3) { font-size: var(--fs-base); margin: var(--sp-2) 0 var(--sp-1); }
     &.clamped {
       max-height: var(--max-height, 250px);
       overflow: hidden;
     }
-  }
-  .toggle-btn {
-    font-size: 0.75rem;
-    color: var(--color-primary);
-    padding: 0;
-    margin: 0.25rem 0 0;
-    border: none;
-    background: none;
-    cursor: pointer;
-    &:hover { text-decoration: underline; }
-  }
-  .muted {
-    font-size: $font-md;
-    color: var(--color-muted);
   }
 </style>

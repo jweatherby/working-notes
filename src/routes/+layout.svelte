@@ -17,8 +17,14 @@
 
   let loadingMessage = $state(LOADING_MESSAGES[0]!);
 
+  // Only a real page change shows the overlay; opening a popup or changing a
+  // filter only touches the query string and should feel instant.
+  const pageChanging = $derived(
+    !!$navigating && $navigating.from?.url.pathname !== $navigating.to?.url.pathname,
+  );
+
   $effect(() => {
-    if ($navigating) loadingMessage = pickMessage();
+    if (pageChanging) loadingMessage = pickMessage();
   });
 </script>
 
@@ -26,7 +32,7 @@
 
 {@render children()}
 
-{#if $navigating}
+{#if pageChanging}
   <div
     class="nav-loading"
     role="status"
@@ -47,12 +53,12 @@
   .nav-loading {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: var(--z-loading);
     pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--scrim);
     backdrop-filter: blur(2px);
     animation: nav-fade-in 180ms ease;
   }
@@ -66,8 +72,8 @@
     background: linear-gradient(
       90deg,
       transparent,
-      var(--color-primary) 40%,
-      var(--color-primary) 60%,
+      var(--accent) 40%,
+      var(--accent) 60%,
       transparent
     );
     background-size: 200% 100%;
@@ -79,16 +85,16 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.6rem 1rem;
-    background: var(--color-card-bg);
-    border: 1px solid var(--color-muted-border);
-    border-radius: 4px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-3);
   }
   .pulse span {
     width: 0.35rem;
     height: 0.35rem;
     border-radius: 50%;
-    background: var(--color-primary);
+    background: var(--accent);
     animation: nav-pulse 1.2s ease-in-out infinite;
   }
   .pulse span:nth-child(1) { animation-delay: 0s; }
@@ -100,8 +106,9 @@
     border-radius: 0;
     background: transparent;
     animation: none;
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     letter-spacing: 0.08em;
+    color: var(--text-2);
     text-transform: uppercase;
     margin-left: 0.45rem;
   }

@@ -32,52 +32,38 @@
   };
 </script>
 
-<div class="note-editor">
+<section class="card note-editor">
   <div class="note-header">
-    <h3>Note</h3>
+    <h2>{noteId === '__new__' ? 'New note' : 'Note'}</h2>
     {#if onClose}
-      <button class="close-btn" data-plain onclick={onClose} aria-label="Close"></button>
+      <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>
     {/if}
   </div>
   <MarkdownEditor value={draft} onChange={(md) => draft = md} />
-  <div class="actions">
+  <div class="form-actions">
     <button
+      type="button"
+      class="btn primary"
       onclick={handleSave}
       disabled={saving || !draft.trim() || draft === content}
       aria-busy={saving}
     >Save</button>
+    {#if onClose}
+      <button type="button" class="btn ghost" onclick={onClose}>Cancel</button>
+    {/if}
   </div>
-</div>
+</section>
 
 <style lang="scss">
   .note-editor {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-  }
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .actions button {
-    margin: 0;
+    gap: var(--sp-3);
   }
   .note-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    h3 { flex: 1; min-width: 0; margin: 0; }
-  }
-  .close-btn {
-    padding: 0.25rem 0.5rem;
-    margin: 0;
-    border: none;
-    background: none;
-    color: var(--color-muted);
-    font-size: 1.5rem;
-    line-height: 1;
-    cursor: pointer;
-    flex-shrink: 0;
-    &:hover { color: var(--color-text); }
+    justify-content: space-between;
+    h2 { margin: 0; font-size: var(--fs-base); }
   }
 </style>

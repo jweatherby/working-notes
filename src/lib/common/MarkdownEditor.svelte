@@ -84,45 +84,45 @@
 </script>
 
 <div class="md-editor-container">
-  <div class="toolbar">
+  <div class="editor-toolbar">
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" title="Heading 1" onclick={() => editor && runCommand(wrapInHeadingCommand, 1)}>H1</button>
-      <button type="button" class="toolbar-btn" title="Heading 2" onclick={() => editor && runCommand(wrapInHeadingCommand, 2)}>H2</button>
-      <button type="button" class="toolbar-btn" title="Heading 3" onclick={() => editor && runCommand(wrapInHeadingCommand, 3)}>H3</button>
+      <button type="button" class="btn ghost sm tb" title="Heading 1" onclick={() => editor && runCommand(wrapInHeadingCommand, 1)}>H1</button>
+      <button type="button" class="btn ghost sm tb" title="Heading 2" onclick={() => editor && runCommand(wrapInHeadingCommand, 2)}>H2</button>
+      <button type="button" class="btn ghost sm tb" title="Heading 3" onclick={() => editor && runCommand(wrapInHeadingCommand, 3)}>H3</button>
     </div>
     <span class="toolbar-sep"></span>
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" title="Bold (Ctrl+B)" onclick={() => editor && runCommand(toggleStrongCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Bold (Ctrl+B)" onclick={() => editor && runCommand(toggleStrongCommand)}>
         <strong>B</strong>
       </button>
-      <button type="button" class="toolbar-btn" title="Italic (Ctrl+I)" onclick={() => editor && runCommand(toggleEmphasisCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Italic (Ctrl+I)" onclick={() => editor && runCommand(toggleEmphasisCommand)}>
         <em>I</em>
       </button>
-      <button type="button" class="toolbar-btn" title="Strikethrough" onclick={() => editor && runCommand(toggleStrikethroughCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Strikethrough" onclick={() => editor && runCommand(toggleStrikethroughCommand)}>
         <s>S</s>
       </button>
-      <button type="button" class="toolbar-btn" title="Inline code" onclick={() => editor && runCommand(toggleInlineCodeCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Inline code" onclick={() => editor && runCommand(toggleInlineCodeCommand)}>
         <code>&lt;/&gt;</code>
       </button>
     </div>
     <span class="toolbar-sep"></span>
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" title="Bullet list" onclick={() => editor && runCommand(wrapInBulletListCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Bullet list" onclick={() => editor && runCommand(wrapInBulletListCommand)}>
         &#8226;&#8801;
       </button>
-      <button type="button" class="toolbar-btn" title="Ordered list" onclick={() => editor && runCommand(wrapInOrderedListCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Ordered list" onclick={() => editor && runCommand(wrapInOrderedListCommand)}>
         1.&#8801;
       </button>
-      <button type="button" class="toolbar-btn" title="Blockquote" onclick={() => editor && runCommand(wrapInBlockquoteCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Blockquote" onclick={() => editor && runCommand(wrapInBlockquoteCommand)}>
         &#10077;
       </button>
     </div>
     <span class="toolbar-sep"></span>
     <div class="toolbar-group">
-      <button type="button" class="toolbar-btn" title="Link" onclick={() => editor && runCommand(toggleLinkCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Link" onclick={() => editor && runCommand(toggleLinkCommand)}>
         &#128279;
       </button>
-      <button type="button" class="toolbar-btn" title="Clear formatting" onclick={clearFormatting}>
+      <button type="button" class="btn ghost sm tb" title="Clear formatting" onclick={clearFormatting}>
         &#10005;
       </button>
     </div>
@@ -137,119 +137,87 @@
 
 <style lang="scss">
   .md-editor-container {
-    border: 1px solid var(--color-muted-border);
-    border-top: none;
-    border-radius: 0 0 4px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    overflow: hidden;
   }
 
-  .toolbar {
+  .editor-toolbar {
     display: flex;
     align-items: center;
-    gap: 0;
-    padding: 0.25rem 0.5rem;
-    border-bottom: 1px solid var(--color-muted-border);
-    background: var(--color-card-bg);
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: var(--sp-1) var(--sp-2);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: var(--z-sticky);
   }
 
   .toolbar-group {
     display: flex;
-    gap: 0;
+    gap: 2px;
   }
 
   .toolbar-end {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--sp-2);
   }
 
   .toolbar-sep {
     width: 1px;
-    height: 1.2rem;
-    background: var(--color-muted-border);
-    margin: 0 0.35rem;
+    height: 16px;
+    background: var(--border);
+    margin: 0 var(--sp-1);
   }
 
-  .toolbar-btn {
-    padding: 0.2rem 0.45rem;
-    margin: 0;
-    border: none;
-    background: none;
-    color: var(--color-muted);
-    font-size: 0.8rem;
-    cursor: pointer;
-    border-radius: 3px;
-    line-height: 1.2;
-
-    &:hover {
-      background: var(--color-form-bg);
-      color: var(--color-text);
-    }
-
-    code {
-      font-size: 0.75rem;
-      background: none;
-      padding: 0;
-    }
+  .tb {
+    min-width: var(--control-h-sm);
+    padding: 0 6px;
+    color: var(--text-3);
+    font-size: var(--fs-sm);
+    code { font-size: var(--fs-xs); background: none; padding: 0; color: inherit; }
   }
 
   .md-editor-wrap {
     min-height: 200px;
 
     :global(.milkdown) {
-      padding: 0.5rem 0.75rem;
+      padding: var(--sp-2) var(--sp-3);
     }
 
     :global(.editor) {
       outline: none;
       min-height: 180px;
       font-family: inherit;
-      font-size: 0.9rem;
-      line-height: 1.5;
+      font-size: var(--fs-md);
+      line-height: 1.55;
     }
 
     :global(.editor p) {
       margin: 0.25em 0;
     }
 
-    :global(h1) { font-size: 1.3rem; }
-    :global(h2) { font-size: 1.1rem; margin-top: 1rem; }
-    :global(h3) { font-size: 0.95rem; margin-top: 0.75rem; }
-
-    :global(code) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
-      padding: 0.15rem 0.3rem;
-      border-radius: 3px;
-      font-size: 0.85em;
-    }
-    :global(pre) {
-      background: var(--color-card-bg);
-      color: var(--color-text);
-      padding: 0.75rem;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-    :global(pre code) {
-      background: none;
-      padding: 0;
-    }
+    :global(h1) { font-size: var(--fs-xl); }
+    :global(h2) { font-size: var(--fs-lg); margin-top: var(--sp-4); }
+    :global(h3) { font-size: var(--fs-base); margin-top: var(--sp-3); }
 
     :global(ul), :global(ol) {
-      padding-left: 1.5rem;
+      padding-left: var(--sp-5);
     }
     :global(blockquote) {
-      border-left: 3px solid var(--color-muted-border);
-      padding-left: 1rem;
-      color: var(--color-muted);
+      border-left: 3px solid var(--border-strong);
+      padding-left: var(--sp-3);
+      color: var(--text-2);
     }
 
     :global(.editor img) {
       max-width: 100%;
-      border-radius: 4px;
+      border-radius: var(--r-sm);
     }
   }
 </style>

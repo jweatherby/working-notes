@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+
   interface Doc {
     readonly id: string;
     readonly title: string;
@@ -39,117 +41,36 @@
 </script>
 
 <div class="docs-manager">
-  <div class="docs-header">
-    <h4>Docs</h4>
-    <button
-      class="add-btn"
-      data-plain
-      onclick={onStartAdd}
-      title="Add doc"
-      aria-label="Add doc"
-    >+</button>
+  <div class="section-header">
+    <h4>Docs <span class="count">{docs.length}</span></h4>
+    <button type="button" class="btn icon sm" onclick={onStartAdd} title="Add doc" aria-label="Add doc">+</button>
   </div>
   {#if docs.length > 0}
-    <ul class="doc-list">
-      {#each docs as doc, i}
-        <li class:active={activeDocId === doc.id}>
-          <div class="arrow-btns">
-            <button class="arrow-btn" type="button" onclick={() => moveUp(i)} disabled={i === 0} title="Move up">&#9650;</button>
-            <button class="arrow-btn" type="button" onclick={() => moveDown(i)} disabled={i === docs.length - 1} title="Move down">&#9660;</button>
-          </div>
-          <button class="doc-title btn-sm outline" data-plain onclick={() => onSelect(doc.id)}>
+    <ul class="list">
+      {#each docs as doc, i (doc.id)}
+        <li class="list-row" class:active={activeDocId === doc.id}>
+          <button type="button" class="grow truncate doc-title" onclick={() => onSelect(doc.id)}>
             {doc.title}
           </button>
-          <button
-            class="remove-btn"
-            data-plain
-            onclick={() => {
-              if (confirm("Delete this doc?")) onRemove(doc.id);
-            }}>&times;</button
-          >
+          <span class="row-actions">
+            <button type="button" class="btn icon sm" onclick={() => moveUp(i)} disabled={i === 0} title="Move up" aria-label="Move up">↑</button>
+            <button type="button" class="btn icon sm" onclick={() => moveDown(i)} disabled={i === docs.length - 1} title="Move down" aria-label="Move down">↓</button>
+            <ConfirmButton label="Delete doc" variant="icon" onConfirm={() => onRemove(doc.id)} />
+          </span>
         </li>
       {/each}
     </ul>
   {:else}
-    <p class="muted">No docs yet.</p>
+    <p class="empty text-sm">No docs yet.</p>
   {/if}
 </div>
 
 <style lang="scss">
-  h4 {
-    margin: 0;
-  }
-  .docs-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-  .add-btn {
-    all: unset;
-    cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
-    padding: 0 0.35rem;
-    color: var(--color-muted);
-    &:hover { color: var(--color-primary); }
-    &:disabled { opacity: 0.4; cursor: default; }
-  }
-
-  .doc-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 0.75rem;
-    li {
-      display: flex;
-      align-items: center;
-      padding: 0.3rem 0.5rem;
-      border-radius: 4px;
-      gap: 0.35rem;
-      
-      &.active {
-        background: var(--gray-1);
-      }
-    }
-  }
   .doc-title {
-    flex: 1;
     text-align: left;
+    padding: 4px 0;
+    &:hover { color: var(--accent); }
   }
-  .arrow-btns {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .arrow-btn {
-    all: unset;
-    cursor: pointer;
-    font-size: 0.9rem;
-    line-height: 1;
-    padding: 0 0.15rem;
-    color: var(--color-secondary);
-    &:hover:not(:disabled) {
-      color: var(--color-primary);
-    }
-    &:disabled {
-      opacity: 0.25;
-      cursor: default;
-      color: var(--color-muted);
-    }
-  }
-  .remove-btn {
-    all: unset;
-    cursor: pointer;
-    font-size: 0.75rem;
-    color: var(--color-danger);
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  .muted {
-    font-size: 0.85rem;
-    color: var(--color-muted);
-  }
+  .list-row.active .doc-title { color: var(--accent); font-weight: 500; }
+  .row-actions :global(.btn.icon.sm) { font-size: var(--fs-sm); }
 </style>

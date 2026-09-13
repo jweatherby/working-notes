@@ -2,7 +2,7 @@
   "mcpServers": {
     "working-notes": {
       "command": "sh",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/wnotes", "mcp"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/wnotes", "mcp"]
     }
   }
 }

@@ -76,7 +76,7 @@ Reports are markdown with fenced `chart` blocks, rendered with the report's bran
 
 The repo is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`) with one plugin, in `plugin/`:
 - the skill
-- `plugin/bin/wnotes`, which Claude Code puts on PATH
+- `plugin/scripts/wnotes`, the shim `.mcp.json` runs to start the server. It isn't in `bin/`: claude.ai-hosted plugins (Cowork) reject a top-level `bin/`, so `bun run setup` puts `wnotes` on PATH instead
 - `plugin/.mcp.json`, which starts the `working-notes` MCP server
 
 The shim runs the clone named by `$WORKING_NOTES_HOME`, or by `<data dir>/app-path`, which `bun run setup` writes.
@@ -91,7 +91,7 @@ The shim runs the clone named by `$WORKING_NOTES_HOME`, or by `<data dir>/app-pa
   - installs or updates the Claude Code plugin
 
   `bun run setup uninstall` undoes that. The logic is the pure `planInstall`/`planUninstall` in `scripts/setup/plan.ts`.
-- **Why a subdirectory:** the plugin's cache copy holds only the skill, the shim and `.mcp.json`. At the repo root, the whole app would be copied, and `bin/` would go on PATH without `node_modules`.
+- **Why a subdirectory:** the plugin's cache copy holds only the skill, the shim and `.mcp.json`. At the repo root, the whole app would be copied, including the `bin/` folder that claude.ai-hosted plugins reject.
 - **Bump `version` in `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` whenever the skill or MCP config changes.** `claude plugin update` skips a version it already has.
 - **No repo paths in the skill:** it uses only MCP tools and `wnotes`. `wnotes backup …` and `wnotes app` run the backup script and the dev server.
 

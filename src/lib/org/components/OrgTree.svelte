@@ -15,7 +15,7 @@
 </script>
 
 <div class="tools">
-  <button type="button" onclick={() => resetVersion++}>Collapse all</button>
+  <button type="button" class="btn link text-sm" onclick={() => resetVersion++}>Collapse all</button>
 </div>
 <div class="scroller">
   <div class="org-chart">
@@ -28,23 +28,15 @@
 <style lang="scss">
   .tools {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-
-    button {
-      @include unstyled-button;
-      margin: 0;
-      color: var(--color-primary);
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-2);
   }
 
   .scroller {
     max-width: 100%;
     min-width: 0;
     overflow-x: auto;
-    padding: 0.5rem 0 1rem;
+    padding: var(--sp-2) 0 var(--sp-4);
   }
 
   // Auto margins centre a narrow chart without clipping a wide one on the left.

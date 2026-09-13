@@ -82,7 +82,7 @@
 
 <style lang="scss">
   .md-rendered {
-    font-size: 0.9rem;
+    font-size: var(--fs-md);
     line-height: 1.6;
 
     :global(p:last-child) { margin-bottom: 0; }

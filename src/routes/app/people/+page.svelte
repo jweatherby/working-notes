@@ -1,65 +1,54 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';
   import type { PageData } from './$types';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
   import Popup from '$lib/common/Popup.svelte';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
   import PersonForm from '$lib/person/components/PersonForm.svelte';
+  import { openPopup, closePopup } from '$lib/ui/popup-url';
 
   const { data } = $props<{ data: PageData }>();
   const persons = $derived(data.persons.ok ? data.persons.value : []);
 
-  const openPopup = (id: string) => {
-    const url = new URL($page.url);
-    url.searchParams.set('popup', id);
-    goto(url.toString(), { replaceState: true, noScroll: true });
-  };
-
-  const handleCreated = async () => {
-    const url = new URL($page.url);
-    url.searchParams.delete('popup');
-    await goto(url.toString(), { replaceState: true, noScroll: true, invalidateAll: true });
-  };
+  const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
 <svelte:head><title>People</title></svelte:head>
 
-<CenteredLayout>
-  <hgroup>
-    <h1>People</h1>
-    <p>Everyone in the org, their titles, and reporting lines.</p>
-  </hgroup>
-
-  <button onclick={() => openPopup('new-person')}>Add Person</button>
+<div class="page">
+  <PageHeader title="People" description="Everyone in the org, their titles, and reporting lines.">
+    <button type="button" class="btn primary" onclick={() => openPopup('new-person')}>Add person</button>
+  </PageHeader>
 
   {#if persons.length > 0}
-    <table role="grid">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Title</th>
-          <th>Email</th>
-          <th>Lead</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each persons as person}
+    <div class="table-wrap">
+      <table>
+        <thead>
           <tr>
-            <td><a href="/app/people/{person.id}">{person.name}</a></td>
-            <td>{person.title ?? '-'}</td>
-            <td>{person.email ?? '-'}</td>
-            <td>{person.leadName ?? '-'}</td>
-            <td><a href="/app/people/{person.id}">View</a></td>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Email</th>
+            <th>Lead</th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {#each persons as person (person.id)}
+            <tr>
+              <td><a href="/app/people/{person.id}">{person.name}</a></td>
+              <td class="text-2">{person.title ?? ''}</td>
+              <td class="text-2">{person.email ?? ''}</td>
+              <td class="text-2">{person.leadName ?? ''}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {:else}
-    <p>No people yet. Add one to get started.</p>
+    <EmptyState message="No people yet." boxed>
+      <button type="button" class="btn sm" onclick={() => openPopup('new-person')}>Add person</button>
+    </EmptyState>
   {/if}
-</CenteredLayout>
+</div>
 
-<Popup id="new-person" title="Add Person">
-  <PersonForm onSuccess={handleCreated} />
+<Popup id="new-person" title="Add person">
+  <PersonForm onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>

@@ -1,61 +1,50 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';
   import type { PageData } from './$types';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
   import Popup from '$lib/common/Popup.svelte';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
   import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
+  import { openPopup, closePopup } from '$lib/ui/popup-url';
 
   const { data } = $props<{ data: PageData }>();
   const departments = $derived(data.departments.ok ? data.departments.value : []);
 
-  const openPopup = (id: string) => {
-    const url = new URL($page.url);
-    url.searchParams.set('popup', id);
-    goto(url.toString(), { replaceState: true, noScroll: true });
-  };
-
-  const handleCreated = async () => {
-    const url = new URL($page.url);
-    url.searchParams.delete('popup');
-    await goto(url.toString(), { replaceState: true, noScroll: true, invalidateAll: true });
-  };
+  const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
 <svelte:head><title>Departments</title></svelte:head>
 
-<CenteredLayout>
-  <hgroup>
-    <h1>Departments</h1>
-    <p>Formal reporting groups within the org.</p>
-  </hgroup>
-
-  <button onclick={() => openPopup('new-department')}>Add Department</button>
+<div class="page">
+  <PageHeader title="Departments" description="Formal reporting groups within the org.">
+    <button type="button" class="btn primary" onclick={() => openPopup('new-department')}>Add department</button>
+  </PageHeader>
 
   {#if departments.length > 0}
-    <table role="grid">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each departments as dept}
+    <div class="table-wrap">
+      <table>
+        <thead>
           <tr>
-            <td><a href="/app/departments/{dept.id}">{dept.name}</a></td>
-            <td>{dept.description ?? '-'}</td>
-            <td><a href="/app/departments/{dept.id}">View</a></td>
+            <th>Name</th>
+            <th>Description</th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {#each departments as item (item.id)}
+            <tr>
+              <td><a href="/app/departments/{item.id}">{item.name}</a></td>
+              <td class="text-2">{item.description ?? ''}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {:else}
-    <p>No departments yet. Add one to get started.</p>
+    <EmptyState message="No departments yet." boxed>
+      <button type="button" class="btn sm" onclick={() => openPopup('new-department')}>Add department</button>
+    </EmptyState>
   {/if}
-</CenteredLayout>
+</div>
 
-<Popup id="new-department" title="Add Department">
-  <DepartmentForm onSuccess={handleCreated} />
+<Popup id="new-department" title="Add department">
+  <DepartmentForm onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>

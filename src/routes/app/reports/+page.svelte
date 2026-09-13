@@ -1,6 +1,7 @@
 <script lang="ts">
-  import CenteredLayout from '$lib/common/CenteredLayout.svelte';
   import type { PageData } from './$types';
+  import PageHeader from '$lib/ui/PageHeader.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   const { data }: { data: PageData } = $props();
 
@@ -10,45 +11,38 @@
 
 <svelte:head><title>Reports</title></svelte:head>
 
-<CenteredLayout>
-  <hgroup>
-    <h1>Reports</h1>
-    <p>Branded write-ups with charts. Create one from a person, team, department or project page, or ask Claude.</p>
-  </hgroup>
+<div class="page">
+  <PageHeader title="Reports" description="Branded write-ups with charts. Create one from a person, team, department or project page, or ask Claude." />
 
   {#if data.reports.length === 0}
-    <p class="muted">No reports yet.</p>
+    <EmptyState message="No reports yet." boxed />
   {:else}
-    <table>
-      <thead>
-        <tr><th>Title</th><th>About</th><th>Branding</th><th>Updated</th></tr>
-      </thead>
-      <tbody>
-        {#each data.reports as report (report.id)}
-          <tr>
-            <td><a href="/app/reports/{report.id}">{report.title}</a></td>
-            <td>
-              {#if report.entityName}
-                <a href={report.entityPath}>{report.entityName}</a>
-              {:else}
-                <span class="muted">{report.entityType.toLowerCase()}</span>
-              {/if}
-            </td>
-            <td>{report.brandingName ?? 'Default'}</td>
-            <td>{formatDate(report.updatedAt)}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Title</th><th>About</th><th>Branding</th><th>Updated</th></tr>
+        </thead>
+        <tbody>
+          {#each data.reports as report (report.id)}
+            <tr>
+              <td><a href="/app/reports/{report.id}">{report.title}</a></td>
+              <td class="text-2">
+                {#if report.entityName}
+                  <a href={report.entityPath} class="plain">{report.entityName}</a>
+                {:else}
+                  <span class="muted">{report.entityType.toLowerCase()}</span>
+                {/if}
+              </td>
+              <td class="text-2">{report.brandingName ?? 'Default'}</td>
+              <td class="text-2">{formatDate(report.updatedAt)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
-</CenteredLayout>
+</div>
 
 <style lang="scss">
-  table {
-    width: 100%;
-    font-size: 0.9rem;
-  }
-  .muted {
-    color: var(--color-muted);
-  }
+  .plain { font-weight: 400; color: var(--text-2); }
 </style>

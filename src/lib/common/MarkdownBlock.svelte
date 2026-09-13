@@ -40,8 +40,8 @@
   <div class="md-editor">
     <textarea bind:value={draft} rows={6}></textarea>
     <div class="md-actions">
-      <button class="outline" onclick={cancel} disabled={saving}>Cancel</button>
-      <button onclick={save} disabled={saving} aria-busy={saving}>Save</button>
+      <button type="button" class="btn ghost sm" onclick={cancel} disabled={saving}>Cancel</button>
+      <button type="button" class="btn primary sm" onclick={save} disabled={saving} aria-busy={saving}>Save</button>
     </div>
   </div>
 {:else}
@@ -63,51 +63,38 @@
 
 <style lang="scss">
   .md-preview {
-    font-size: $font-md;
+    font-size: var(--fs-md);
     line-height: 1.6;
 
     &.clickable {
       cursor: pointer;
-      border-radius: 4px;
-      padding: 0.5rem;
-      margin: -0.5rem;
-      transition: background 150ms ease;
-
-      &:hover {
-        background: var(--color-form-bg);
-      }
+      border-radius: var(--r-sm);
+      padding: var(--sp-2);
+      margin: calc(-1 * var(--sp-2));
+      transition: background var(--ease);
+      &:hover { background: var(--surface-hover); }
     }
 
-    &.empty {
-      min-height: 2rem;
-    }
+    &.empty { min-height: 2rem; }
 
-    :global(p:last-child) {
-      margin-bottom: 0;
-    }
+    :global(p:last-child) { margin-bottom: 0; }
   }
 
   .placeholder {
-    color: var(--color-muted);
+    color: var(--text-3);
     font-style: italic;
   }
 
-  .md-editor {
-    textarea {
-      width: 100%;
-      font-family: monospace;
-      font-size: 0.85rem;
-    }
+  .md-editor textarea {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
   }
 
   .md-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--sp-2);
     justify-content: flex-end;
-
-    button {
-      padding: 0.3rem 0.75rem;
-      margin: 0;
-    }
+    margin-top: var(--sp-2);
   }
 </style>
