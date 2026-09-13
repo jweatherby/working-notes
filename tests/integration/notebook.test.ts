@@ -2,11 +2,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { getPerson } from '../../src/api/person/operations';
-import { createTeam, addTeamMember, getTeam } from '../../src/api/team/operations';
-import { addNote, listNotes } from '../../src/api/note/operations';
-import { createTodo, listTodosForEntity } from '../../src/api/todo/operations';
-import { createTag, attachTag, listTagsForEntity } from '../../src/api/tag/operations';
+import { getPerson } from '../../src/api/org/person/operations';
+import { createTeam, addTeamMember, getTeam } from '../../src/api/org/team/operations';
+import { addNote, listNotes } from '../../src/api/aux/note/operations';
+import { createTodo, listTodosForEntity } from '../../src/api/aux/todo/operations';
+import { createTag, attachTag, listTagsForEntity } from '../../src/api/aux/tag/operations';
 
 describe('notebook smoke', () => {
   it('person → team membership → note → todo → tag', async () => {

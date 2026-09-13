@@ -2,7 +2,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
   import { trpc } from '$shared/trpc/client';
-  import type { TodoSummary } from '$api/todo/operations';
+  import type { TodoSummary } from '$api/aux/todo/operations';
   import StatusDot from '$lib/todo/components/StatusDot.svelte';
   import PriorityBadge from '$lib/todo/components/PriorityBadge.svelte';
   import { nextStatus, formatTodoDate, type TodoStatus } from '$lib/todo/utils';

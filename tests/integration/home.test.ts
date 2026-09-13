@@ -2,9 +2,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { createTeam } from '../../src/api/team/operations';
-import { createTodo } from '../../src/api/todo/operations';
-import { addNote } from '../../src/api/note/operations';
+import { createTeam } from '../../src/api/org/team/operations';
+import { createTodo } from '../../src/api/aux/todo/operations';
+import { addNote } from '../../src/api/aux/note/operations';
 import { getRelationGraph, listOpenTodos, listRecentUpdates } from '../../src/api/home/operations';
 
 describe('home smoke', () => {

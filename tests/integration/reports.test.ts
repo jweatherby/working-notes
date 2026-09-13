@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { createBranding } from '../../src/api/branding/operations';
-import { createReport, getReport, updateReport } from '../../src/api/report/operations';
+import { createReport, getReport, updateReport } from '../../src/api/aux/report/operations';
 
 const chart = (json: string): string => ['```chart', json, '```'].join('\n');
 

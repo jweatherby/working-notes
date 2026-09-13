@@ -10,7 +10,7 @@ import type {
 } from '$shared/types/home';
 import { entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
-import type { TodoSummary } from '$api/todo/operations';
+import type { TodoSummary } from '$api/aux/todo/operations';
 
 // ----- Pure helpers -----
 

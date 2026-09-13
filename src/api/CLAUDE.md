@@ -13,7 +13,11 @@ src/api/{domain}/
 
 Split into sub-domain folders with the same shape once an operations file passes ~300 lines or clearly holds unrelated noun-clusters.
 
-Current domains: `person`, `team`, `department`, `project`, `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`, `branding`, `health`, `trpc-meta`.
+Current domains, grouped into folders:
+
+- `org/`: `person`, `team`, `department`
+- `aux/` (attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
+- flat (infra + top-level entities): `project`, `branding`, `home`, `health`, `trpc-meta`
 
 Loose backend helpers that aren't domains use an underscore prefix, e.g. `_entity-labels.ts` (entity reference → display name).
 
