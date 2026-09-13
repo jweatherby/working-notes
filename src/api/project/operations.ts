@@ -1,11 +1,12 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
-import type { OwnerType } from '$shared/types/enums';
+import type { ArchiveFilter, OwnerType } from '$shared/types/enums';
 import type { EntityOwner } from '$shared/types/owner';
 import { entityPath } from '$shared/utils/entity';
 import { wouldCreateCycle } from '$shared/utils/hierarchy';
 import { loadOwner, resolveOwnerInput, type OwnerInput } from '$api/_owners';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureWritable } from '$api/_archive';
 
 // ----- Types -----
 
@@ -18,6 +19,7 @@ export interface ProjectSummary {
   readonly owner: EntityOwner | null;
   readonly childCount: number;
   readonly path: string;
+  readonly archivedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -36,6 +38,7 @@ export interface ProjectDetail {
   readonly owner: EntityOwner | null;
   readonly children: readonly { readonly id: string; readonly name: string }[];
   readonly path: string;
+  readonly archivedAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -61,6 +64,7 @@ const checkParent = async (
 export interface ProjectFilters {
   readonly ownerType?: OwnerType;
   readonly ownerId?: string;
+  readonly archived?: ArchiveFilter;
 }
 
 export const listProjects = async (
@@ -69,6 +73,7 @@ export const listProjects = async (
 ): Promise<Result<readonly ProjectSummary[]>> => {
   const projects = await reg.prisma.project.findMany({
     where: {
+      ...archiveWhere(filters.archived),
       ...(filters.ownerType !== undefined && { ownerType: filters.ownerType }),
       ...(filters.ownerId !== undefined && { ownerId: filters.ownerId })
     },
@@ -84,6 +89,7 @@ export const listProjects = async (
     owner: await loadOwner(reg, p.ownerType, p.ownerId),
     childCount: p._count.children,
     path: entityPath('PROJECT', p.id),
+    archivedAt: p.archivedAt,
     createdAt: p.createdAt
   }))));
 };
@@ -116,6 +122,7 @@ export const getProject = async (
     owner: await loadOwner(reg, project.ownerType, project.ownerId),
     children: project.children,
     path: entityPath('PROJECT', project.id),
+    archivedAt: project.archivedAt,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt
   });
@@ -179,6 +186,8 @@ export const updateProject = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.project.findFirst({ where: { id } });
   if (!existing) return err(new Error('Project not found'));
+  const writable = await ensureWritable(reg, 'PROJECT', id);
+  if (!writable.ok) return err(writable.error);
 
   const owner = await resolveOwnerInput(reg, input);
   if (!owner.ok) return err(owner.error);

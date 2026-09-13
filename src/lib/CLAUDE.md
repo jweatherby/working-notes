@@ -55,6 +55,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `Menu` | `label`, `items: {label, href?, onSelect?, current?, divided?}[]`, `trigger?` snippet, `iconOnly?` (just a chevron, named by `label`), `align?: start \| end` | a button that opens a short list of links and actions (the notebook switcher). Handles Escape, click-outside and arrow keys. Not for picking a relationship; that's `InlinePicker` |
 | `EmptyState` | `message`, `boxed?`, `small?`, children (action) | "nothing here yet" |
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
+| `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
 | `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
 | `popup-url.ts` | `openPopup(id, extra?)`, `closePopup({ invalidate?, clear? })` | opening and closing `Popup` (`?popup=<id>`) |
 | `submit.ts` | `submit(fn)`, `submitOrThrow(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |

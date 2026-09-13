@@ -19,6 +19,8 @@
   import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
+  import { submit } from '$lib/ui/submit';
+  import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
 
   interface DocItem {
     readonly id: string;
@@ -72,6 +74,8 @@
     readonly todos: readonly TodoItem[];
     readonly reports?: readonly ReportItem[];
     readonly relations?: readonly RelationGroup[];
+    /** Set for archivable entities. An archived entity shows a banner and no edit button. */
+    readonly archivedAt?: Date | string | null;
     readonly renderOverview: Snippet<[OverviewCtx]>;
     readonly renderAssetHeader: Snippet;
     readonly renderEditForm: Snippet<[EditFormCtx]>;
@@ -89,6 +93,7 @@
     todos,
     reports = [],
     relations = [],
+    archivedAt = undefined,
     renderOverview,
     renderAssetHeader,
     renderEditForm,
@@ -223,6 +228,41 @@
   const handleEditCancel = () => { closePopup(); };
 
   const todoEntityType = $derived(entityType as EntityType);
+
+  // ----- Archive -----
+  const archivable = $derived(archivedAt !== undefined);
+  const isArchived = $derived(archivedAt !== undefined && archivedAt !== null);
+  let archiveBusy = $state(false);
+  let archiveError = $state<string | null>(null);
+
+  const setArchived = (archived: boolean) => {
+    const c = trpc();
+    const input = { id: entityId };
+    switch (entityType) {
+      case 'PERSON': return archived ? c.person.archive.mutate(input) : c.person.unarchive.mutate(input);
+      case 'TEAM': return archived ? c.team.archive.mutate(input) : c.team.unarchive.mutate(input);
+      case 'DEPARTMENT': return archived ? c.department.archive.mutate(input) : c.department.unarchive.mutate(input);
+      case 'PROJECT': return archived ? c.project.archive.mutate(input) : c.project.unarchive.mutate(input);
+      case 'GOAL': return archived ? c.goal.archive.mutate(input) : c.goal.unarchive.mutate(input);
+      case 'PAGE': return archived ? c.page.archive.mutate(input) : c.page.unarchive.mutate(input);
+      default: return Promise.reject(new Error(`${entityType} can't be archived`));
+    }
+  };
+
+  const handleToggleArchive = async () => {
+    archiveBusy = true;
+    archiveError = null;
+    const outcome = await submit(() => setArchived(!isArchived));
+    archiveBusy = false;
+    if (!outcome.ok) {
+      archiveError = outcome.error;
+      return;
+    }
+    window.dispatchEvent(new Event(ARCHIVE_CHANGED_EVENT));
+    await invalidateAll();
+  };
+
+  const formatArchivedDate = (d: Date | string): string => new Date(d).toLocaleDateString('en-CA');
 </script>
 
 <svelte:head><title>{entityName}</title></svelte:head>
@@ -266,8 +306,22 @@
       </nav>
       <div class="asset-header-row">
         <div class="asset-header-content">{@render renderAssetHeader()}</div>
-        <button type="button" class="btn icon sm edit-btn" onclick={openEdit} aria-label="Edit {entityName}" title="Edit"><PencilIcon /></button>
+        {#if !isArchived}
+          <button type="button" class="btn icon sm edit-btn" onclick={openEdit} aria-label="Edit {entityName}" title="Edit"><PencilIcon /></button>
+        {/if}
+        {#if archivable}
+          <button type="button" class="btn sm" onclick={handleToggleArchive} disabled={archiveBusy} aria-busy={archiveBusy}>
+            {archiveBusy ? 'Saving…' : isArchived ? 'Unarchive' : 'Archive'}
+          </button>
+        {/if}
       </div>
+      {#if archiveError}<p class="inline-error">{archiveError}</p>{/if}
+      {#if isArchived && archivedAt}
+        <p class="archived-banner">
+          <span class="badge warning">Archived</span>
+          <span>Archived on {formatArchivedDate(archivedAt)}. It's read-only and hidden from lists; unarchive it to make changes.</span>
+        </p>
+      {/if}
     </div>
 
     {#if activeDoc}
@@ -366,6 +420,14 @@
     min-width: 0;
     :global(.asset-h-name) { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; }
     :global(.asset-h-meta) { font-size: var(--fs-md); color: var(--text-2); }
+  }
+  .archived-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
   }
   .pane-card { max-width: 640px; }
   .pane-header {

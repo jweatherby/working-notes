@@ -21,7 +21,10 @@ describe('createReport', () => {
   it('rejects a malformed chart block, naming its line, without writing', async () => {
     const create = vi.fn();
     const reg = createTestRegistry({
-      prisma: { report: { create } } as unknown as Registry['prisma']
+      prisma: {
+        person: { findUnique: vi.fn().mockResolvedValue({ name: 'Alice', archivedAt: null }) },
+        report: { create }
+      } as unknown as Registry['prisma']
     });
 
     const result = await createReport(reg, { entityType: 'PERSON', entityId: 'p1', title: 'Q3', content: BAD_CHART });

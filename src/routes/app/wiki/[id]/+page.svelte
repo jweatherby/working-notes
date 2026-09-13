@@ -88,6 +88,7 @@
 <EntityDetailPage
   entityType="PAGE"
   entityId={wikiPage.id}
+  archivedAt={wikiPage.archivedAt}
   entityName={wikiPage.title}
   breadcrumbLabel="Wiki"
   breadcrumbHref="/app/wiki"

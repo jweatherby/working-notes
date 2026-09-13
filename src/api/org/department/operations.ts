@@ -1,6 +1,8 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import type { ArchiveFilter } from '$shared/types/enums';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureAllWritable, ensureWritable } from '$api/_archive';
 
 // ----- Types -----
 
@@ -8,6 +10,7 @@ export interface DepartmentSummary {
   readonly id: string;
   readonly name: string;
   readonly description: string | null;
+  readonly archivedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -29,22 +32,28 @@ export interface DepartmentWithMembers extends DepartmentSummary {
 // ----- Operations -----
 
 export const listDepartments = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  archived: ArchiveFilter = 'exclude'
 ): Promise<Result<readonly DepartmentSummary[]>> => {
   const departments = await reg.prisma.department.findMany({
+    where: archiveWhere(archived),
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, description: true, createdAt: true }
+    select: { id: true, name: true, description: true, archivedAt: true, createdAt: true }
   });
   return ok(departments);
 };
 
+/** For the org map: archived people are left out of member lists too. */
 export const listDepartmentsWithMembers = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  archived: ArchiveFilter = 'exclude'
 ): Promise<Result<readonly DepartmentWithMembers[]>> => {
   const depts = await reg.prisma.department.findMany({
+    where: archiveWhere(archived),
     orderBy: { name: 'asc' },
     include: {
       members: {
+        where: { archivedAt: null },
         select: { id: true, name: true, title: true },
         orderBy: { name: 'asc' }
       }
@@ -55,6 +64,7 @@ export const listDepartmentsWithMembers = async (
       id: d.id,
       name: d.name,
       description: d.description,
+      archivedAt: d.archivedAt,
       createdAt: d.createdAt,
       members: d.members.map((p) => ({
         personId: p.id,
@@ -83,6 +93,7 @@ export const getDepartment = async (
     id: dept.id,
     name: dept.name,
     description: dept.description,
+    archivedAt: dept.archivedAt,
     createdAt: dept.createdAt,
     updatedAt: dept.updatedAt,
     members: dept.members.map((p) => ({
@@ -113,6 +124,8 @@ export const updateDepartment = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.department.findFirst({ where: { id } });
   if (!existing) return err(new Error('Department not found'));
+  const writable = await ensureWritable(reg, 'DEPARTMENT', id);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.department.update({
     where: { id },
@@ -171,6 +184,8 @@ export const addDepartmentMember = async (
 
   const person = await reg.prisma.person.findFirst({ where: { id: input.personId } });
   if (!person) return err(new Error('Person not found'));
+  const writable = await ensureAllWritable(reg, [['DEPARTMENT', departmentId], ['PERSON', input.personId]]);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.person.update({
     where: { id: input.personId },
@@ -186,6 +201,8 @@ export const removeDepartmentMember = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const dept = await reg.prisma.department.findFirst({ where: { id: departmentId } });
   if (!dept) return err(new Error('Department not found'));
+  const writable = await ensureAllWritable(reg, [['DEPARTMENT', departmentId], ['PERSON', personId]]);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.person.updateMany({
     where: { id: personId, departmentId },

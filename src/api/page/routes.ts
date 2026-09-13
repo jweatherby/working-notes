@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { PAGE_KINDS } from '$shared/types/enums';
+import { ARCHIVE_FILTERS, PAGE_KINDS } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
+import { setArchived } from '$api/_archive';
 import { createPage, deletePage, getPage, listPages, updatePage } from './operations';
 
 // Values are validated per kind in the operation (src/shared/types/pages.ts).
@@ -10,7 +11,8 @@ export const pageRouter = router({
   list: procedure
     .input(z.object({
       kind: z.enum(PAGE_KINDS).optional(),
-      parentId: z.string().nullable().optional()
+      parentId: z.string().nullable().optional(),
+      archived: z.enum(ARCHIVE_FILTERS).default('exclude')
     }).default({}))
     .query(({ ctx, input }) => listPages(ctx.reg, input)),
 
@@ -38,6 +40,14 @@ export const pageRouter = router({
       properties: properties.optional()
     }))
     .mutation(({ ctx, input: { id, ...data } }) => updatePage(ctx.reg, id, data)),
+
+  archive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PAGE', input.id, true)),
+
+  unarchive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PAGE', input.id, false)),
 
   delete: procedure
     .input(z.object({ id: z.string() }))

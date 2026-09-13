@@ -1,10 +1,13 @@
 import { z } from 'zod';
+import { ARCHIVE_FILTERS } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
+import { setArchived } from '$api/_archive';
 import { listPersons, getPerson, createPerson, updatePerson, deletePerson } from './operations';
 
 export const personRouter = router({
   list: procedure
-    .query(({ ctx }) => listPersons(ctx.reg)),
+    .input(z.object({ archived: z.enum(ARCHIVE_FILTERS).default('exclude') }).default({}))
+    .query(({ ctx, input }) => listPersons(ctx.reg, input.archived)),
 
   get: procedure
     .input(z.object({ id: z.string() }))
@@ -28,6 +31,14 @@ export const personRouter = router({
       leadId: z.string().nullable().optional()
     }))
     .mutation(({ ctx, input }) => updatePerson(ctx.reg, input.id, input)),
+
+  archive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PERSON', input.id, true)),
+
+  unarchive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PERSON', input.id, false)),
 
   delete: procedure
     .input(z.object({ id: z.string() }))

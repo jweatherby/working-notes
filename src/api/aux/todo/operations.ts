@@ -1,8 +1,10 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
-import type { EntityType, TodoStatus } from '$shared/types/enums';
+import { ensureWritable } from '$api/_archive';
+import type { ArchiveFilter, EntityType, TodoStatus } from '$shared/types/enums';
 import { entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
+import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
 
 // ----- Types -----
 
@@ -24,6 +26,8 @@ export interface TodoSummary {
 export interface TodoFilters {
   readonly status?: TodoStatus;
   readonly entityType?: EntityType;
+  /** 'exclude' (the default) leaves out todos on archived entities. */
+  readonly archived?: ArchiveFilter;
 }
 
 // ----- Operations -----
@@ -35,6 +39,7 @@ export const listTodos = async (
   const where: Record<string, unknown> = {};
   if (filters?.status) where.status = filters.status;
   if (filters?.entityType) where.entityType = filters.entityType;
+  if ((filters?.archived ?? 'exclude') === 'exclude') Object.assign(where, notAttachedToArchived(await loadArchivedIds(reg)));
 
   const todos = await reg.prisma.todo.findMany({
     where,
@@ -102,6 +107,8 @@ export const createTodo = async (
   reg: Pick<Registry, 'prisma'>,
   input: CreateTodoInput
 ): Promise<Result<{ readonly id: string }>> => {
+  const writable = await ensureWritable(reg, input.entityType, input.entityId);
+  if (!writable.ok) return err(writable.error);
   const todo = await reg.prisma.todo.create({
     data: {
       title: input.title,
@@ -131,6 +138,8 @@ export const updateTodo = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.todo.findFirst({ where: { id } });
   if (!existing) return err(new Error('Todo not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   const data: Record<string, unknown> = {};
   if (input.title !== undefined) data.title = input.title;
@@ -155,6 +164,8 @@ export const deleteTodo = async (
 ): Promise<Result<{ readonly deleted: boolean }>> => {
   const existing = await reg.prisma.todo.findFirst({ where: { id } });
   if (!existing) return err(new Error('Todo not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.todo.delete({ where: { id } });
   return ok({ deleted: true });

@@ -1,9 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { trpc } from '$shared/trpc/client';
+import { parseArchiveFilter } from '$shared/utils/archive';
 import { loadOwnerOptions } from '$shared/trpc/load-owner-options';
 
-export const load: PageServerLoad = async ({ fetch }) => {
+export const load: PageServerLoad = async ({ fetch, url }) => {
   const client = trpc(fetch);
-  const [projects, ownerOptions] = await Promise.all([client.project.list.query(), loadOwnerOptions(client)]);
+  const [projects, ownerOptions] = await Promise.all([client.project.list.query({ archived: parseArchiveFilter(url.searchParams.get('archived')) }), loadOwnerOptions(client)]);
   return { projects, ownerOptions };
 };

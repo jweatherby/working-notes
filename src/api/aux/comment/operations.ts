@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { ensureWritable } from '$api/_archive';
 import type { EntityType } from '$shared/types/enums';
 
 // ----- Types -----
@@ -34,6 +35,8 @@ export const addComment = async (
   entityId: string,
   input: { readonly content: string }
 ): Promise<Result<{ readonly id: string }>> => {
+  const writable = await ensureWritable(reg, entityType, entityId);
+  if (!writable.ok) return err(writable.error);
   const comment = await reg.prisma.comment.create({
     data: {
       entityType,
@@ -50,6 +53,8 @@ export const removeComment = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.comment.findUnique({ where: { id } });
   if (!existing) return err(new Error('Comment not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.comment.delete({ where: { id } });
   return ok({ deleted: true as const });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ENTITY_TYPES, TODO_STATUSES } from '$shared/types/enums';
+import { ARCHIVE_FILTERS, ENTITY_TYPES, TODO_STATUSES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
 import { listTodos, listTodosForEntity, createTodo, updateTodo, deleteTodo } from './operations';
 
@@ -10,7 +10,8 @@ export const todoRouter = router({
   list: procedure
     .input(z.object({
       status: todoStatusEnum.optional(),
-      entityType: entityTypeEnum.optional()
+      entityType: entityTypeEnum.optional(),
+      archived: z.enum(ARCHIVE_FILTERS).default('exclude')
     }))
     .query(({ ctx, input }) => listTodos(ctx.reg, input)),
 

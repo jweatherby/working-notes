@@ -165,4 +165,9 @@
   flex-wrap: wrap;
   gap: var(--sp-2);
   .spacer { flex: 1; }
+  // A list page's filter row, between the header and the table.
+  &.filters {
+    margin-bottom: var(--sp-3);
+    select { width: auto; min-width: 140px; }
+  }
 }

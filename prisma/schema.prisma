@@ -42,6 +42,7 @@ model Person {
   title        String?
   leadId       String?  @map("lead_id")
   departmentId String?  @map("department_id")
+  archivedAt   DateTime? @map("archived_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -52,6 +53,7 @@ model Person {
 
   @@index([leadId])
   @@index([departmentId])
+  @@index([archivedAt])
   @@map("person")
 }
 
@@ -59,11 +61,13 @@ model Team {
   id          String   @id @default(cuid())
   name        String
   description String?
+  archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   members TeamMember[]
 
+  @@index([archivedAt])
   @@map("team")
 }
 
@@ -71,11 +75,13 @@ model Department {
   id          String   @id @default(cuid())
   name        String
   description String?
+  archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   members Person[]
 
+  @@index([archivedAt])
   @@map("department")
 }
 
@@ -158,6 +164,7 @@ model Project {
   parentId        String?   @map("parent_id")
   ownerType       String?   @map("owner_type")
   ownerId         String?   @map("owner_id")
+  archivedAt      DateTime? @map("archived_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -166,6 +173,7 @@ model Project {
   goals    GoalProject[]
 
   @@index([ownerType, ownerId])
+  @@index([archivedAt])
   @@map("project")
 }
 
@@ -184,6 +192,7 @@ model Goal {
   baseline    Float?
   target      Float?
   sortOrder   Int      @default(0) @map("sort_order")
+  archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -195,6 +204,7 @@ model Goal {
   @@index([ownerType, ownerId])
   @@index([parentId])
   @@index([period])
+  @@index([archivedAt])
   @@map("goal")
 }
 
@@ -237,6 +247,7 @@ model Page {
   content    String   @default("")
   properties String   @default("{}")
   sortOrder  Int      @default(0) @map("sort_order")
+  archivedAt DateTime? @map("archived_at")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -245,6 +256,7 @@ model Page {
 
   @@index([kind])
   @@index([parentId])
+  @@index([archivedAt])
   @@map("page")
 }
 

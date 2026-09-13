@@ -3,6 +3,7 @@
   import Popup from '$lib/common/Popup.svelte';
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import ProgressBar from '$lib/ui/ProgressBar.svelte';
   import GoalForm from '$lib/goal/components/GoalForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
@@ -43,8 +44,9 @@
     <button type="button" class="btn primary" onclick={() => openPopup('new-goal')}>Add goal</button>
   </PageHeader>
 
-  {#if data.goals.length > 0}
-    <div class="toolbar filters">
+  <div class="toolbar filters">
+    <ArchiveFilter />
+    {#if data.goals.length > 0}
       <select class="sm" bind:value={periodFilter} aria-label="Filter by period">
         <option value="ALL">All periods</option>
         {#each periods as period (period)}
@@ -57,8 +59,10 @@
           <option value={status}>{GOAL_STATUS_LABELS[status]}</option>
         {/each}
       </select>
-    </div>
+    {/if}
+  </div>
 
+  {#if data.goals.length > 0}
     {#if rows.length > 0}
       <div class="table-wrap">
         <table>
@@ -77,7 +81,7 @@
                 <td>
                   <span class="goal-name" style="--depth: {depth}">
                     {#if depth > 0}<span class="tree-indent">└</span>{/if}
-                    <a href={goal.path}>{goal.title}</a>
+                    <a href={goal.path}>{goal.title}</a>{#if goal.archivedAt} <span class="badge muted">Archived</span>{/if}
                   </span>
                 </td>
                 <td class="text-2">
@@ -114,10 +118,6 @@
 </Popup>
 
 <style lang="scss">
-  .filters {
-    margin-bottom: var(--sp-3);
-    select { width: auto; min-width: 140px; }
-  }
   .goal-name {
     display: inline-flex;
     align-items: center;

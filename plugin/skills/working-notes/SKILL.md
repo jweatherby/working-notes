@@ -45,7 +45,7 @@ Every call works on one notebook: the default, unless you name another.
 
 1. **Look before you write**, in the notebook you're writing to. Find ids with `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list`. Match names and titles case-insensitively. Never create a second person, team or project with a name that already exists, or a second goal or page with a title that already exists.
 2. **Ask when it's ambiguous.** For example, two people match "Sam", or it's unclear which project a note belongs to.
-3. **Confirm before deleting anything**, and say exactly what will be removed.
+3. **Confirm before deleting anything**, and say exactly what will be removed. When someone leaves, or a team, project, goal or page is finished, offer to **archive** it instead: archiving keeps its history, and deleting removes everything attached to it.
 4. **Snapshot before bulk or destructive changes.** That means any delete, or more than about five writes in one go:
    `backup_snapshot` with a reason like "before <what>", or `wnotes backup --force --reason "before <what>"`
 5. **Report back by name.** Say "Added Dana Park to Platform, reporting to Alice Johnson", not ids.
@@ -63,6 +63,9 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "Dana reports to Alice" | `person.update --id <dana> --leadId <alice>` |
 | "Dana is on Platform" | `team.addMember --teamId <platform> --personId <dana>` (people can be on several teams) |
 | "Dana moved from Platform to Payments" | `team.removeMember` from Platform, then `team.addMember` to Payments |
+| "Dana left the company" | Ask whether to archive or delete; archiving keeps their notes and history. `person.archive --id <dana>` (first move or close anything that must change: archived people are read-only) |
+| "The Q4 migration is finished, archive it" | `project.update --id <project> --status done` first if the status should change, then `project.archive --id <project>` |
+| "What did we archive?" / "Show old projects" | `project.list --archived only` (also `person`, `team`, `department`, `goal`, `page`); `--archived include` lists both |
 | "Dana is in Engineering" | `department.addMember --departmentId <eng> --personId <dana>` (one department per person; this replaces the old one) |
 | "Note that Dana wants to lead the migration" | `note.add --entityType PERSON --entityId <dana> --content "..."` |
 | "Remind me to book a 1:1 with Dana" | `todo.create --title "Book 1:1 with Dana" --entityType PERSON --entityId <dana>` (optional `--priority 0-3`, `--targetDate 2026-10-01`) |
@@ -78,7 +81,7 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "We pay Datadog $40k a year; it renews in March" | `page.create --title Datadog --kind SOFTWARE --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'` |
 | "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --kind USES --note "Alerting"` |
 
-Entity types for notes, docs, todos, reports, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`. They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. The full data model is in [references/schema.md](references/schema.md).
+Entity types for notes, docs, todos, reports, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`. They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
 
 ## Linking things
 

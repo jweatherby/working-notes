@@ -1,6 +1,8 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import type { ArchiveFilter } from '$shared/types/enums';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureWritable } from '$api/_archive';
 
 // ----- Types -----
 
@@ -11,6 +13,7 @@ export interface PersonSummary {
   readonly title: string | null;
   readonly leadId: string | null;
   readonly leadName: string | null;
+  readonly archivedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -40,9 +43,11 @@ export interface PersonDetail extends PersonSummary {
 // ----- Operations -----
 
 export const listPersons = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  archived: ArchiveFilter = 'exclude'
 ): Promise<Result<readonly PersonSummary[]>> => {
   const persons = await reg.prisma.person.findMany({
+    where: archiveWhere(archived),
     orderBy: { name: 'asc' },
     include: { lead: { select: { id: true, name: true } } }
   });
@@ -54,6 +59,7 @@ export const listPersons = async (
       title: p.title,
       leadId: p.leadId,
       leadName: p.lead?.name ?? null,
+      archivedAt: p.archivedAt,
       createdAt: p.createdAt
     }))
   );
@@ -83,6 +89,7 @@ export const getPerson = async (
     title: person.title,
     leadId: person.leadId,
     leadName: person.lead?.name ?? null,
+    archivedAt: person.archivedAt,
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
     reports: person.reports.map((r) => ({ id: r.id, name: r.name, title: r.title })),
@@ -131,6 +138,8 @@ export const updatePerson = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.person.findFirst({ where: { id } });
   if (!existing) return err(new Error('Person not found'));
+  const writable = await ensureWritable(reg, 'PERSON', id);
+  if (!writable.ok) return err(writable.error);
 
   if (input.leadId !== undefined && input.leadId !== null) {
     if (input.leadId === id) return err(new Error('Person cannot be their own lead'));

@@ -1,6 +1,8 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import type { ArchiveFilter } from '$shared/types/enums';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureAllWritable, ensureWritable } from '$api/_archive';
 
 // ----- Types -----
 
@@ -8,6 +10,7 @@ export interface TeamSummary {
   readonly id: string;
   readonly name: string;
   readonly description: string | null;
+  readonly archivedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -30,22 +33,28 @@ export interface TeamWithMembers extends TeamSummary {
 // ----- Operations -----
 
 export const listTeams = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  archived: ArchiveFilter = 'exclude'
 ): Promise<Result<readonly TeamSummary[]>> => {
   const teams = await reg.prisma.team.findMany({
+    where: archiveWhere(archived),
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, description: true, createdAt: true }
+    select: { id: true, name: true, description: true, archivedAt: true, createdAt: true }
   });
   return ok(teams);
 };
 
+/** For the org map: archived people are left out of member lists too. */
 export const listTeamsWithMembers = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  archived: ArchiveFilter = 'exclude'
 ): Promise<Result<readonly TeamWithMembers[]>> => {
   const teams = await reg.prisma.team.findMany({
+    where: archiveWhere(archived),
     orderBy: { name: 'asc' },
     include: {
       members: {
+        where: { person: { archivedAt: null } },
         include: { person: { select: { id: true, name: true, title: true } } },
         orderBy: { createdAt: 'asc' }
       }
@@ -56,6 +65,7 @@ export const listTeamsWithMembers = async (
       id: t.id,
       name: t.name,
       description: t.description,
+      archivedAt: t.archivedAt,
       createdAt: t.createdAt,
       members: t.members.map((m) => ({
         id: m.id,
@@ -85,6 +95,7 @@ export const getTeam = async (
     id: team.id,
     name: team.name,
     description: team.description,
+    archivedAt: team.archivedAt,
     createdAt: team.createdAt,
     updatedAt: team.updatedAt,
     members: team.members.map((m) => ({
@@ -116,6 +127,8 @@ export const updateTeam = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.team.findFirst({ where: { id } });
   if (!existing) return err(new Error('Team not found'));
+  const writable = await ensureWritable(reg, 'TEAM', id);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.team.update({
     where: { id },
@@ -175,6 +188,8 @@ export const addTeamMember = async (
 
   const person = await reg.prisma.person.findFirst({ where: { id: input.personId } });
   if (!person) return err(new Error('Person not found'));
+  const writable = await ensureAllWritable(reg, [['TEAM', teamId], ['PERSON', input.personId]]);
+  if (!writable.ok) return err(writable.error);
 
   const member = await reg.prisma.teamMember.upsert({
     where: { teamId_personId: { teamId, personId: input.personId } },
@@ -191,6 +206,8 @@ export const removeTeamMember = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const team = await reg.prisma.team.findFirst({ where: { id: teamId } });
   if (!team) return err(new Error('Team not found'));
+  const writable = await ensureAllWritable(reg, [['TEAM', teamId], ['PERSON', personId]]);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.teamMember.deleteMany({ where: { teamId, personId } });
   return ok({ deleted: true as const });

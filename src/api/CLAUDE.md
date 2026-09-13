@@ -87,6 +87,18 @@ Nothing polymorphic has a foreign key, so a delete cleans up after itself. Every
 
 Then call `removeFiles(reg, cleanup.files)` for the attached docs' PDFs once the transaction commits. Doc and note removal use `relationCleanupOp` alone. Goals and pages move their children up to their own parent; `wouldCreateCycle` (`$shared/utils/hierarchy`) rejects a parent change that would make a loop for projects, goals and pages.
 
+## Archiving
+
+Person, team, department, project, goal and page (`ARCHIVABLE_TYPES`) have a nullable `archivedAt`. The helpers are in `_archive.ts`:
+
+- `setArchived(reg, type, id, archived)` backs every `<type>.archive` / `<type>.unarchive` procedure. It's idempotent and keeps the first archive date.
+- `archiveWhere(filter)` is the `where` fragment for a list's `archived` input (`exclude`, the default; `only`; `include`). Every top-level `list*` takes one.
+- `ensureWritable(reg, entityType, entityId)` / `ensureAllWritable` refuse a write to an archived entity **or to anything attached to it**. Call one in every update, membership change and aux create/update/remove, before writing. Types that can't be archived pass. Deletes don't check: deleting an archived entity is allowed.
+- `loadArchivedIds` + `notAttachedToArchived(ids)` leave rows attached to archived entities out of cross-entity queries (home feed, open todos, `todo.list`).
+- Relations check only the `from` end, so a relation can point at an archived entity.
+
+Archiving is not a status. `Project.status` is free text and separate; don't derive one from the other.
+
 ## Relations and mentions
 
 A `Relation` is a directional link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` and an optional `note`, unique per pair and kind. `RELATION_LABELS` (`$shared/types/relations`) gives the forward and inverse label for each kind, and `relation.forEntity` groups by the label from the asking entity's side ("Owns", "Owned by").

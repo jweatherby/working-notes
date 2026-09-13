@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { GOAL_STATUSES, OWNER_TYPES } from '$shared/types/enums';
+import { ARCHIVE_FILTERS, GOAL_STATUSES, OWNER_TYPES } from '$shared/types/enums';
 import { GOAL_PERIOD_PATTERN } from '$shared/types/goals';
 import { router, procedure } from '$shared/trpc/init';
+import { setArchived } from '$api/_archive';
 import {
   addCheckIn,
   addGoalProject,
@@ -26,7 +27,8 @@ export const goalRouter = router({
       period: z.string().optional(),
       status: status.optional(),
       parentId: z.string().nullable().optional(),
-      projectId: z.string().optional()
+      projectId: z.string().optional(),
+      archived: z.enum(ARCHIVE_FILTERS).default('exclude')
     }).default({}))
     .query(({ ctx, input }) => listGoals(ctx.reg, input)),
 
@@ -64,6 +66,14 @@ export const goalRouter = router({
       target: z.number().nullable().optional()
     }))
     .mutation(({ ctx, input: { id, ...data } }) => updateGoal(ctx.reg, id, data)),
+
+  archive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'GOAL', input.id, true)),
+
+  unarchive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'GOAL', input.id, false)),
 
   delete: procedure
     .input(z.object({ id: z.string() }))

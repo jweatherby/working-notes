@@ -44,6 +44,16 @@ export const RELATION_KINDS = [...MANUAL_RELATION_KINDS, 'MENTIONS'] as const;
 
 export type RelationKind = (typeof RELATION_KINDS)[number];
 
+/** Entity types that can be archived: hidden from lists and read-only until unarchived. */
+export const ARCHIVABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE'] as const;
+
+export type ArchivableType = (typeof ARCHIVABLE_TYPES)[number];
+
+/** Which rows a list returns: active only (the default), archived only, or both. */
+export const ARCHIVE_FILTERS = ['exclude', 'only', 'include'] as const;
+
+export type ArchiveFilter = (typeof ARCHIVE_FILTERS)[number];
+
 /** Entity types a relation can start or end at. */
 export const RELATABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE', 'DOC', 'NOTE', 'REPORT'] as const;
 

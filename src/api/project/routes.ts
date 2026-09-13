@@ -1,13 +1,15 @@
 import { z } from 'zod';
-import { OWNER_TYPES } from '$shared/types/enums';
+import { ARCHIVE_FILTERS, OWNER_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
+import { setArchived } from '$api/_archive';
 import { listProjects, getProject, createProject, updateProject, deleteProject } from './operations';
 
 export const projectRouter = router({
   list: procedure
     .input(z.object({
       ownerType: z.enum(OWNER_TYPES).optional(),
-      ownerId: z.string().optional()
+      ownerId: z.string().optional(),
+      archived: z.enum(ARCHIVE_FILTERS).default('exclude')
     }).default({}))
     .query(({ ctx, input }) => listProjects(ctx.reg, input)),
 
@@ -47,6 +49,14 @@ export const projectRouter = router({
       ownerId: z.string().nullable().optional()
     }))
     .mutation(({ ctx, input: { id, ...data } }) => updateProject(ctx.reg, id, data)),
+
+  archive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PROJECT', input.id, true)),
+
+  unarchive: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => setArchived(ctx.reg, 'PROJECT', input.id, false)),
 
   delete: procedure
     .input(z.object({ id: z.string() }))

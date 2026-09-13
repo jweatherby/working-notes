@@ -1,6 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
-import type { PageKind } from '$shared/types/enums';
+import type { ArchiveFilter, PageKind } from '$shared/types/enums';
 import { validateChartBlocks } from '$shared/types/charts';
 import {
   PAGE_KIND_FIELDS,
@@ -14,6 +14,7 @@ import {
 import { entityPath } from '$shared/utils/entity';
 import { wouldCreateCycle } from '$shared/utils/hierarchy';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureWritable } from '$api/_archive';
 import { syncMentions } from '$api/relation/mentions';
 
 // ----- Pure helpers -----
@@ -42,7 +43,7 @@ export const mergePageProperties = (
 
 const ORDER = [{ sortOrder: 'asc' as const }, { title: 'asc' as const }];
 
-const SUMMARY_FIELDS = { id: true, title: true, kind: true, parentId: true, properties: true, updatedAt: true } as const;
+const SUMMARY_FIELDS = { id: true, title: true, kind: true, parentId: true, properties: true, archivedAt: true, updatedAt: true } as const;
 
 interface PageRow {
   readonly id: string;
@@ -50,6 +51,7 @@ interface PageRow {
   readonly kind: string;
   readonly parentId: string | null;
   readonly properties: string;
+  readonly archivedAt: Date | null;
   readonly updatedAt: Date;
 }
 
@@ -60,6 +62,7 @@ const toSummary = (row: PageRow): PageSummary => ({
   parentId: row.parentId,
   properties: readPageProperties(row.properties),
   path: entityPath('PAGE', row.id),
+  archivedAt: row.archivedAt,
   updatedAt: row.updatedAt
 });
 
@@ -85,6 +88,7 @@ export interface PageFilters {
   readonly kind?: PageKind;
   /** null lists top-level pages. */
   readonly parentId?: string | null;
+  readonly archived?: ArchiveFilter;
 }
 
 export const listPages = async (
@@ -93,6 +97,7 @@ export const listPages = async (
 ): Promise<Result<readonly PageSummary[]>> => {
   const rows = await reg.prisma.page.findMany({
     where: {
+      ...archiveWhere(filters.archived),
       ...(filters.kind !== undefined && { kind: filters.kind }),
       ...(filters.parentId !== undefined && { parentId: filters.parentId })
     },
@@ -185,6 +190,8 @@ export const updatePage = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.page.findUnique({ where: { id }, select: { kind: true, properties: true } });
   if (!existing) return err(new Error(`Page ${id} not found`));
+  const writable = await ensureWritable(reg, 'PAGE', id);
+  if (!writable.ok) return err(writable.error);
 
   const kind = input.kind ?? (existing.kind as PageKind);
   let properties: string | undefined;

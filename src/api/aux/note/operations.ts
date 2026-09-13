@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { ensureWritable } from '$api/_archive';
 import type { EntityType } from '$shared/types/enums';
 import { relationCleanupOp } from '$api/_entity-cleanup';
 import { syncMentions } from '$api/relation/mentions';
@@ -42,6 +43,8 @@ export const addNote = async (
   entityId: string,
   input: { readonly content: string; readonly parentId?: string }
 ): Promise<Result<{ readonly id: string }>> => {
+  const writable = await ensureWritable(reg, entityType, entityId);
+  if (!writable.ok) return err(writable.error);
   const note = await reg.prisma.note.create({
     data: {
       entityType,
@@ -61,6 +64,8 @@ export const updateNote = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.note.findUnique({ where: { id } });
   if (!existing) return err(new Error('Note not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.note.update({ where: { id }, data: { content: input.content } });
   await syncMentions(reg, { entityType: 'NOTE', entityId: id }, input.content);
@@ -73,6 +78,8 @@ export const removeNote = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.note.findUnique({ where: { id } });
   if (!existing) return err(new Error('Note not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   await relationCleanupOp(reg, 'NOTE', id);
   await reg.prisma.note.delete({ where: { id } });

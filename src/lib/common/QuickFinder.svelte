@@ -7,6 +7,7 @@
   import { openPopup } from '$lib/ui/popup-url';
   import { switchNotebook } from '$lib/notebook/switch';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
+  import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
 
   interface FinderItem {
     readonly label: string;
@@ -146,6 +147,17 @@
       return null;
     }
   };
+
+  // Archived projects, goals and pages leave the finder: forget the cache when one changes.
+  $effect(() => {
+    const key = cacheKey;
+    const forget = () => {
+      try { localStorage.removeItem(key); } catch { /* storage unavailable — ignore */ }
+      dynamicItems = [];
+    };
+    window.addEventListener(ARCHIVE_CHANGED_EVENT, forget);
+    return () => window.removeEventListener(ARCHIVE_CHANGED_EVENT, forget);
+  });
 
   const writeCache = (data: Omit<CacheData, 'ts'>) => {
     try {

@@ -39,6 +39,7 @@
 <EntityDetailPage
   entityType="TEAM"
   entityId={team.id}
+  archivedAt={team.archivedAt}
   entityName={team.name}
   breadcrumbLabel="Teams"
   breadcrumbHref="/app/teams"

@@ -147,6 +147,7 @@
 <EntityDetailPage
   entityType="GOAL"
   entityId={goal.id}
+  archivedAt={goal.archivedAt}
   entityName={goal.title}
   breadcrumbLabel="Goals"
   breadcrumbHref="/app/goals"

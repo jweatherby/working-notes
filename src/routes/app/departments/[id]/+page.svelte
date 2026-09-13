@@ -39,6 +39,7 @@
 <EntityDetailPage
   entityType="DEPARTMENT"
   entityId={department.id}
+  archivedAt={department.archivedAt}
   entityName={department.name}
   breadcrumbLabel="Departments"
   breadcrumbHref="/app/departments"

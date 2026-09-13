@@ -3,6 +3,7 @@
   import Popup from '$lib/common/Popup.svelte';
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
 
@@ -19,6 +20,10 @@
     <button type="button" class="btn primary" onclick={() => openPopup('new-department')}>Add department</button>
   </PageHeader>
 
+  <div class="toolbar filters">
+    <ArchiveFilter />
+  </div>
+
   {#if departments.length > 0}
     <div class="table-wrap">
       <table>
@@ -31,7 +36,7 @@
         <tbody>
           {#each departments as item (item.id)}
             <tr>
-              <td><a href="/app/departments/{item.id}">{item.name}</a></td>
+              <td><a href="/app/departments/{item.id}">{item.name}</a>{#if item.archivedAt} <span class="badge muted">Archived</span>{/if}</td>
               <td class="text-2">{item.description ?? ''}</td>
             </tr>
           {/each}

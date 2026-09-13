@@ -3,6 +3,7 @@
   import Popup from '$lib/common/Popup.svelte';
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { statusBadgeClass } from '$lib/project/utils';
@@ -16,6 +17,7 @@
     readonly parentId: string | null;
     readonly owner: EntityOwner | null;
     readonly childCount: number;
+    readonly archivedAt: Date | string | null;
   }
 
   const { data } = $props<{ data: PageData }>();
@@ -31,6 +33,10 @@
   <PageHeader title="Projects" description="Track project health, documentation, and feedback.">
     <button type="button" class="btn primary" onclick={() => openPopup('new-project')}>Add project</button>
   </PageHeader>
+
+  <div class="toolbar filters">
+    <ArchiveFilter />
+  </div>
 
   {#if rows.length > 0}
     <div class="table-wrap">
@@ -49,7 +55,7 @@
               <td>
                 <span class="project-name" style="--depth: {depth}">
                   {#if depth > 0}<span class="tree-indent">└</span>{/if}
-                  <a href="/app/projects/{project.id}">{project.name}</a>
+                  <a href="/app/projects/{project.id}">{project.name}</a>{#if project.archivedAt} <span class="badge muted">Archived</span>{/if}
                 </span>
               </td>
               <td class="text-2">

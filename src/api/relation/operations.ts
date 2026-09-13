@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { ensureWritable } from '$api/_archive';
 import { RELATION_KINDS, type EntityType, type RelatableType, type RelationKind } from '$shared/types/enums';
 import { RELATION_LABELS, type RelationGroup, type RelationItem } from '$shared/types/relations';
 import { entityPath } from '$shared/utils/entity';
@@ -92,6 +93,10 @@ export const addRelation = async (
     return err(new Error('A relation needs two different entities'));
   }
 
+  // Relations *to* an archived entity are allowed ("supersedes" an archived project); from one, not.
+  const writable = await ensureWritable(reg, input.fromType, input.fromId);
+  if (!writable.ok) return err(writable.error);
+
   const [fromLabel, toLabel] = await Promise.all([
     resolveEntityLabel(reg, input.fromType, input.fromId),
     resolveEntityLabel(reg, input.toType, input.toId)
@@ -118,6 +123,8 @@ export const updateRelation = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.relation.findUnique({ where: { id } });
   if (!existing) return err(new Error(`Relation ${id} not found`));
+  const writable = await ensureWritable(reg, existing.fromType, existing.fromId);
+  if (!writable.ok) return err(writable.error);
   if (existing.kind === 'MENTIONS' || input.kind === 'MENTIONS') {
     return err(new Error('MENTIONS relations come from links in content and can\'t be edited; change the content instead'));
   }
@@ -153,6 +160,8 @@ export const removeRelation = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.relation.findUnique({ where: { id } });
   if (!existing) return err(new Error(`Relation ${id} not found`));
+  const writable = await ensureWritable(reg, existing.fromType, existing.fromId);
+  if (!writable.ok) return err(writable.error);
   if (existing.kind === 'MENTIONS') {
     return err(new Error('MENTIONS relations come from links in content; remove the link from the content instead'));
   }

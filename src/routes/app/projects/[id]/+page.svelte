@@ -123,6 +123,7 @@
 <EntityDetailPage
   entityType="PROJECT"
   entityId={project.id}
+  archivedAt={project.archivedAt}
   entityName={project.name}
   breadcrumbLabel="Projects"
   breadcrumbHref="/app/projects"

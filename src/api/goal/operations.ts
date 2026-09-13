@@ -1,11 +1,12 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
-import type { GoalStatus, OwnerType } from '$shared/types/enums';
+import type { ArchiveFilter, GoalStatus, OwnerType } from '$shared/types/enums';
 import { goalProgress, type GoalCheckInItem, type GoalDetail, type GoalSummary } from '$shared/types/goals';
 import { entityPath } from '$shared/utils/entity';
 import { wouldCreateCycle } from '$shared/utils/hierarchy';
 import { loadOwner, resolveOwnerInput, type OwnerInput } from '$api/_owners';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { archiveWhere, ensureAllWritable, ensureWritable } from '$api/_archive';
 
 // ----- Row mapping -----
 
@@ -31,6 +32,7 @@ interface GoalRow {
   readonly unit: string | null;
   readonly baseline: number | null;
   readonly target: number | null;
+  readonly archivedAt: Date | null;
   readonly updatedAt: Date;
   readonly checkIns: readonly { readonly value: number | null }[];
 }
@@ -51,6 +53,7 @@ const toSummary = async (reg: Pick<Registry, 'prisma'>, row: GoalRow): Promise<G
     current,
     progress: goalProgress({ baseline: row.baseline, target: row.target, current }),
     path: entityPath('GOAL', row.id),
+    archivedAt: row.archivedAt,
     updatedAt: row.updatedAt
   };
 };
@@ -81,6 +84,7 @@ export interface GoalFilters {
   /** null lists top-level goals. */
   readonly parentId?: string | null;
   readonly projectId?: string;
+  readonly archived?: ArchiveFilter;
 }
 
 export const listGoals = async (
@@ -89,6 +93,7 @@ export const listGoals = async (
 ): Promise<Result<readonly GoalSummary[]>> => {
   const rows = await reg.prisma.goal.findMany({
     where: {
+      ...archiveWhere(filters.archived),
       ...(filters.ownerType !== undefined && { ownerType: filters.ownerType }),
       ...(filters.ownerId !== undefined && { ownerId: filters.ownerId }),
       ...(filters.period !== undefined && { period: filters.period }),
@@ -202,6 +207,8 @@ export const updateGoal = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.goal.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return err(new Error(`Goal ${id} not found`));
+  const writable = await ensureWritable(reg, 'GOAL', id);
+  if (!writable.ok) return err(writable.error);
 
   const owner = await resolveOwnerInput(reg, input);
   if (!owner.ok) return err(owner.error);
@@ -267,6 +274,8 @@ export const addCheckIn = async (
   }
   const goal = await reg.prisma.goal.findUnique({ where: { id: input.goalId }, select: { id: true } });
   if (!goal) return err(new Error(`Goal ${input.goalId} not found`));
+  const writable = await ensureWritable(reg, 'GOAL', input.goalId);
+  if (!writable.ok) return err(writable.error);
 
   const create = reg.prisma.goalCheckIn.create({
     data: {
@@ -292,8 +301,10 @@ export const removeCheckIn = async (
   reg: Pick<Registry, 'prisma'>,
   id: string
 ): Promise<Result<{ readonly deleted: true }>> => {
-  const existing = await reg.prisma.goalCheckIn.findUnique({ where: { id }, select: { id: true } });
+  const existing = await reg.prisma.goalCheckIn.findUnique({ where: { id }, select: { goalId: true } });
   if (!existing) return err(new Error(`Check-in ${id} not found`));
+  const writable = await ensureWritable(reg, 'GOAL', existing.goalId);
+  if (!writable.ok) return err(writable.error);
   await reg.prisma.goalCheckIn.delete({ where: { id } });
   return ok({ deleted: true as const });
 };
@@ -312,6 +323,8 @@ export const addGoalProject = async (
   ]);
   if (!goal) return err(new Error(`Goal ${goalId} not found`));
   if (!project) return err(new Error(`Project ${projectId} not found`));
+  const writable = await ensureAllWritable(reg, [['GOAL', goalId], ['PROJECT', projectId]]);
+  if (!writable.ok) return err(writable.error);
 
   const link = { goalId, projectId };
   const existing = await reg.prisma.goalProject.findUnique({ where: { goalId_projectId: link } });
@@ -324,6 +337,8 @@ export const removeGoalProject = async (
   goalId: string,
   projectId: string
 ): Promise<Result<{ readonly removed: true }>> => {
+  const writable = await ensureAllWritable(reg, [['GOAL', goalId], ['PROJECT', projectId]]);
+  if (!writable.ok) return err(writable.error);
   const { count } = await reg.prisma.goalProject.deleteMany({ where: { goalId, projectId } });
   if (count === 0) return err(new Error(`Project ${projectId} isn't linked to goal ${goalId}`));
   return ok({ removed: true as const });

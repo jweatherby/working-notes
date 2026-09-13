@@ -52,6 +52,7 @@ export interface PageSummary {
   readonly parentId: string | null;
   readonly properties: PageProperties;
   readonly path: string;
+  readonly archivedAt: Date | null;
   readonly updatedAt: Date;
 }
 

@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { ensureWritable } from '$api/_archive';
 import type { EntityType } from '$shared/types/enums';
 import { fileUrl } from '$shared/utils/files';
 import { relationCleanupOp } from '$api/_entity-cleanup';
@@ -37,6 +38,8 @@ export const addDoc = async (
   entityId: string,
   input: { readonly title: string }
 ): Promise<Result<{ readonly id: string }>> => {
+  const writable = await ensureWritable(reg, entityType, entityId);
+  if (!writable.ok) return err(writable.error);
   const maxOrder = await reg.prisma.doc.aggregate({
     where: { entityType, entityId },
     _max: { sortOrder: true }
@@ -59,6 +62,8 @@ export const updateDoc = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.doc.findUnique({ where: { id } });
   if (!existing) return err(new Error('Doc not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   await reg.prisma.doc.update({
     where: { id },
@@ -78,6 +83,8 @@ export const removeDoc = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.doc.findUnique({ where: { id } });
   if (!existing) return err(new Error('Doc not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   if (existing.sourceUrl) {
     try {
@@ -98,6 +105,8 @@ export const reorderDocs = async (
   entityId: string,
   docIds: readonly string[]
 ): Promise<Result<{ readonly reordered: true }>> => {
+  const writable = await ensureWritable(reg, entityType, entityId);
+  if (!writable.ok) return err(writable.error);
   await reg.prisma.$transaction(
     docIds.map((id, i) =>
       reg.prisma.doc.update({ where: { id }, data: { sortOrder: i } })
@@ -118,6 +127,8 @@ export const attachSourcePdf = async (
 ): Promise<Result<{ readonly sourceUrl: string }>> => {
   const existing = await reg.prisma.doc.findUnique({ where: { id: docId } });
   if (!existing) return err(new Error('Doc not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   const key = `docs/${docId}/source-${reg.uuid()}.pdf`;
   await reg.storage.putObject(key, Buffer.from(dataBase64, 'base64'), contentType);

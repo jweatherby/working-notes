@@ -3,6 +3,7 @@
   import Popup from '$lib/common/Popup.svelte';
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import PageForm from '$lib/page/components/PageForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { PAGE_KINDS, type PageKind } from '$shared/types/enums';
@@ -41,16 +42,19 @@
     <button type="button" class="btn primary" onclick={() => openPopup('new-page')}>Add page</button>
   </PageHeader>
 
-  {#if data.pages.length > 0}
-    <div class="toolbar filters">
+  <div class="toolbar filters">
+    <ArchiveFilter />
+    {#if data.pages.length > 0}
       <select class="sm" bind:value={kindFilter} aria-label="Filter by kind">
         <option value="ALL">All kinds</option>
         {#each PAGE_KINDS as kind (kind)}
           <option value={kind}>{PAGE_KIND_LABELS[kind]}</option>
         {/each}
       </select>
-    </div>
+    {/if}
+  </div>
 
+  {#if data.pages.length > 0}
     {#if rows.length > 0}
       <div class="table-wrap">
         <table>
@@ -68,7 +72,7 @@
                 <td>
                   <span class="page-name" style="--depth: {depth}">
                     {#if depth > 0}<span class="tree-indent">└</span>{/if}
-                    <a href={page.path}>{page.title}</a>
+                    <a href={page.path}>{page.title}</a>{#if page.archivedAt} <span class="badge muted">Archived</span>{/if}
                   </span>
                 </td>
                 <td><span class="badge">{PAGE_KIND_LABELS[page.kind]}</span></td>
@@ -94,10 +98,6 @@
 </Popup>
 
 <style lang="scss">
-  .filters {
-    margin-bottom: var(--sp-3);
-    select { width: auto; min-width: 140px; }
-  }
   .page-name {
     display: inline-flex;
     align-items: center;

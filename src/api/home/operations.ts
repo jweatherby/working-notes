@@ -10,6 +10,7 @@ import type {
 } from '$shared/types/home';
 import { entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
+import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
 import type { TodoSummary } from '$api/aux/todo/operations';
 
 // ----- Pure helpers -----
@@ -125,7 +126,7 @@ export const listOpenTodos = async (
   limit = 25
 ): Promise<Result<readonly TodoSummary[]>> => {
   const todos = await reg.prisma.todo.findMany({
-    where: { status: { in: [...OPEN_STATUSES] } },
+    where: { status: { in: [...OPEN_STATUSES] }, ...notAttachedToArchived(await loadArchivedIds(reg)) },
     orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
     take: limit
   });
@@ -158,19 +159,22 @@ export const listRecentUpdates = async (
 ): Promise<Result<readonly RecentUpdate[]>> => {
   const recent = { orderBy: { updatedAt: 'desc' as const }, take: limit };
   const p = reg.prisma;
+  // Archived entities, and what's attached to them, stay out of the feed.
+  const active = { ...recent, where: { archivedAt: null } };
+  const attached = notAttachedToArchived(await loadArchivedIds(reg));
 
   // People and notes about people are left out: the feed is for everything else.
-  const titled = { ...recent, select: { id: true, title: true, createdAt: true, updatedAt: true } };
+  const titled = { ...active, select: { id: true, title: true, createdAt: true, updatedAt: true } };
   const [teams, departments, projects, goals, pages, docs, notes, reports, todos] = await Promise.all([
-    p.team.findMany(recent),
-    p.department.findMany(recent),
-    p.project.findMany(recent),
+    p.team.findMany(active),
+    p.department.findMany(active),
+    p.project.findMany(active),
     p.goal.findMany(titled),
     p.page.findMany(titled),
-    p.doc.findMany({ ...recent, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
-    p.note.findMany({ ...recent, where: { entityType: { not: 'PERSON' } } }),
-    p.report.findMany({ ...recent, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
-    p.todo.findMany(recent)
+    p.doc.findMany({ ...recent, where: attached, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
+    p.note.findMany({ ...recent, where: { entityType: { not: 'PERSON' }, ...attached } }),
+    p.report.findMany({ ...recent, where: attached, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
+    p.todo.findMany({ ...recent, where: attached })
   ]);
 
   const parentOf = (x: { entityType: string; entityId: string }) => ({
@@ -219,7 +223,7 @@ export const getRelationGraph = async (
   reg: Pick<Registry, 'prisma'>
 ): Promise<Result<RelationGraph>> => {
   const p = reg.prisma;
-  const projects = await p.project.findMany({ select: { id: true, name: true, parentId: true } });
+  const projects = await p.project.findMany({ where: { archivedAt: null }, select: { id: true, name: true, parentId: true } });
   if (projects.length === 0) return ok({ nodes: [], edges: [] });
 
   const onProjects = { where: { entityType: 'PROJECT' }, select: { id: true, title: true, entityId: true } };

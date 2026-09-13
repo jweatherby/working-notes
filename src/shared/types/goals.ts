@@ -23,6 +23,7 @@ export interface GoalSummary {
   /** 0–1 from baseline to target, or null when the goal isn't measured yet. */
   readonly progress: number | null;
   readonly path: string;
+  readonly archivedAt: Date | null;
   readonly updatedAt: Date;
 }
 

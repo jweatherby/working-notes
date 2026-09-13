@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { ensureWritable } from '$api/_archive';
 import { validateChartBlocks } from '$shared/types/charts';
 import type { EntityType } from '$shared/types/enums';
 import type { ReportBrandingProfile, ReportDetail, ReportSummary } from '$shared/types/report';
@@ -126,6 +127,8 @@ export const createReport = async (
   reg: Pick<Registry, 'prisma'>,
   input: CreateReportInput
 ): Promise<Result<{ readonly id: string }>> => {
+  const writable = await ensureWritable(reg, input.entityType, input.entityId);
+  if (!writable.ok) return err(writable.error);
   const charts = validateChartBlocks(input.content ?? '');
   if (!charts.ok) return err(charts.error);
 
@@ -163,6 +166,8 @@ export const updateReport = async (
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.report.findUnique({ where: { id } });
   if (!existing) return err(new Error('Report not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   if (input.content !== undefined) {
     const charts = validateChartBlocks(input.content);
@@ -190,6 +195,8 @@ export const removeReport = async (
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.report.findUnique({ where: { id } });
   if (!existing) return err(new Error('Report not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
 
   const cleanup = await planEntityCleanup(reg, 'REPORT', id);
   await reg.prisma.$transaction([...cleanup.ops, reg.prisma.report.delete({ where: { id } })]);
