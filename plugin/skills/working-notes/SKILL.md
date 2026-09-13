@@ -13,7 +13,12 @@ The notebooks are reachable in two ways, and the app does **not** need to be run
 
 **MCP tools** from the `working-notes` server, in Claude desktop Chat, Cowork and Claude Code. Each tool is one procedure, with `_` in place of `.`: `person_list`, `person_create`, `note_add`. Pass inputs as the tool's arguments, and long text inline (there are no `-file` inputs). Every tool except `notebook_*` also takes an optional `notebook`. `backup_snapshot` and `backup_list` handle snapshots, and `app_open` starts the app on this computer and returns its link.
 
-**The `wnotes` CLI**, in a shell:
+**In Cowork, or any other sandbox, use only the MCP tools.** The notebooks live on the user's Mac, in `~/Library/Application Support/Working Notes`, which a sandbox can't see, and `wnotes` isn't installed there.
+- Never read, list, copy or `cat` that folder, open its database, or run `wnotes` from a sandbox.
+- Don't ask the user to attach that folder to the session: the database must not be opened from the sandbox and the Mac at once.
+- If the Working Notes tools (`notebook_list`, `person_list` and so on) aren't in this session, stop and tell the user. They need the current Working Notes plugin installed, and the Cowork session started on their Mac, not in the cloud, with the Claude desktop app open. Local MCP servers don't run in cloud sessions.
+
+**The `wnotes` CLI**, only in a shell on the user's own Mac (for example Claude Code), not in a sandbox:
 
 ```bash
 wnotes help                    # every procedure
@@ -25,7 +30,7 @@ wnotes person.create --name "Dana Park" --title "Senior Engineer"
 - If the shell says `wnotes: command not found`, use the first of these that exists, wherever this skill says `wnotes`:
   - the app a release installed: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes"`
   - a clone set up with `bun run setup`: `"$(cat "$HOME/Library/Application Support/Working Notes/app-path")/bin/wnotes"` (on Linux, `"$(cat "${XDG_DATA_HOME:-$HOME/.local/share}/working-notes/app-path")/bin/wnotes"`)
-- If neither the tools nor `wnotes` work, or they say Working Notes isn't set up, tell the user what you saw and stop. Setup is theirs to do: install the Working Notes plugin from a release, which includes the app.
+- If neither the tools nor `wnotes` work, or they say Working Notes isn't set up, tell the user what you saw and stop. Setup is theirs to do: install the Working Notes plugin from a release, which includes the app. Don't look for the data folder yourself.
 - stdout is JSON. Most calls return `{"ok": true, "value": ...}` or `{"ok": false, "error": {"message": ...}}`. Exit code 1 means failure; read the message and fix the call.
 - Values are typed by each procedure's schema: `--priority 2` is a number, `--title 2024` stays a string, and `--leadId null` clears a field.
 - For long text, write it to a file and pass `--content-file path.md` (any `--<field>-file`). For awkward input, pass `--input '{"...": ...}'`.
@@ -113,4 +118,4 @@ Snapshots are kept on this computer in the `Backups` folder, per notebook. On ma
 
 - A snapshot covers one notebook: `backup_snapshot` with `notebook`, or `wnotes backup --force --reason "<why>" --notebook <id>`. Snapshot the notebook you're about to change.
 - `backup_list` (with `notebook`), or `wnotes backup list` for every notebook
-- Restore **only when the user asks**, and only from a shell: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. Without a shell, give the user that command to run.
+- Restore **only when the user asks**, and only from a shell on the user's Mac: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their Mac, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup restore <id|latest> --notebook <id>`.

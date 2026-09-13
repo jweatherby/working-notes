@@ -41,6 +41,7 @@ const INSTRUCTIONS = [
   'Each tool is one procedure: person_create is person.create. Find ids with the list and get tools before writing, and never create a second person, team or project with an existing name, or a second goal or page with an existing title, in the same notebook.',
   'Confirm with the user before any delete, remove or detach tool, and call backup_snapshot first before deletes or more than about five writes in one go.',
   'To show the user something in the app, call app_open and give them the link.',
+  "Reach Working Notes only through these tools. Never read its data folder (~/Library/Application Support/Working Notes) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
   'Report back by name, not id. The working-notes skill has the full rules and recipes.'
 ].join(' ');
 

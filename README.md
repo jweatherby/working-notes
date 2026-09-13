@@ -13,7 +13,7 @@ A local-only, single-user structured notebook — org chart, projects, notes, do
 Each release includes the app, so a Mac only needs Claude. Releases are built for Apple silicon.
 
 - **Claude Code:** `claude plugin marketplace add jweatherby/working-notes`, then `claude plugin install working-notes@working-notes`. To update: `claude plugin marketplace update working-notes && claude plugin update working-notes@working-notes`, or turn on auto-update for the marketplace in `/plugin`. The repo is private, so Claude Code needs git access to it; for background auto-update, use SSH.
-- **Cowork:** Customize → **+** → **Add marketplace from GitHub** → `jweatherby/working-notes`, then install Working Notes.
+- **Cowork:** Customize → **+** → **Add marketplace from GitHub** → `jweatherby/working-notes`, then install Working Notes, or upload the release zip as for Chat. Start Cowork sessions on your Mac, not in the cloud, with Claude desktop open. Cowork's sandbox can't see `~/Library/Application Support`, so your notebooks are reachable only through the plugin's tools, which Claude desktop runs on your Mac for local sessions. Don't attach the data folder to a session.
 - **Claude desktop Chat:** download `working-notes-<version>-darwin-arm64.zip` from the [latest release](https://github.com/jweatherby/working-notes/releases/latest) and add it as a plugin. Repeat with each new release.
 
 The first time Claude starts the plugin, it installs the app into `~/Library/Application Support/Working Notes/App`. Your notebooks stay in that folder across updates.
