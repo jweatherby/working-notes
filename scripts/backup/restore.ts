@@ -1,0 +1,77 @@
+// Restore a snapshot into the live data directory. Refuses while the app is
+// running, verifies the snapshot, and snapshots the current data first.
+
+import { existsSync } from 'node:fs';
+import { copyFile, cp, rm } from 'node:fs/promises';
+import { connect } from 'node:net';
+import { join } from 'node:path';
+import { createClient } from '@libsql/client';
+import { settings } from '$shared/settings/server/index.server';
+import { databasePath, filesDir } from '$shared/settings/server/paths';
+import { migrateDatabase } from '$shared/db/bootstrap.server';
+import { getRegistry } from '$shared/registry.server';
+import { ok, err, type Result } from '$shared/utils/result';
+import { createSnapshot, listSnapshots } from './snapshot';
+
+export const APP_PORT = 5173;
+
+export const isPortListening = (port: number, host = '127.0.0.1'): Promise<boolean> =>
+  new Promise((resolve) => {
+    const socket = connect({ host, port });
+    const done = (listening: boolean): void => {
+      socket.destroy();
+      resolve(listening);
+    };
+    socket.once('connect', () => done(true));
+    socket.once('error', () => done(false));
+    socket.setTimeout(500, () => done(false));
+  });
+
+export interface RestoreOptions {
+  readonly appPort?: number;
+  readonly now?: Date;
+}
+
+export const restoreSnapshot = async (
+  target: string,
+  options: RestoreOptions = {}
+): Promise<Result<{ readonly restored: string; readonly safetySnapshot: string | null }>> => {
+  const port = options.appPort ?? APP_PORT;
+  if (await isPortListening(port)) {
+    return err(new Error(`Working Notes is running on 127.0.0.1:${port}. Quit it, then restore.`));
+  }
+
+  const snapshots = await listSnapshots();
+  const snapshot = target === 'latest' ? snapshots[0] : snapshots.find((s) => s.id === target);
+  if (!snapshot) {
+    return err(new Error(target === 'latest' ? 'There are no snapshots to restore' : `Snapshot ${target} not found`));
+  }
+
+  const check = createClient({ url: `file:${join(snapshot.path, 'working-notes.db')}` });
+  try {
+    const verdict = String((await check.execute('PRAGMA integrity_check')).rows[0]?.[0] ?? '');
+    if (verdict !== 'ok') return err(new Error(`Snapshot ${snapshot.id} failed its integrity check: ${verdict}`));
+  } finally {
+    check.close();
+  }
+
+  const safety = await createSnapshot({
+    force: true,
+    reason: `pre-restore (before restoring ${snapshot.id})`,
+    now: options.now
+  });
+
+  await getRegistry().prisma.$disconnect();
+  const db = databasePath(settings);
+  for (const suffix of ['', '-wal', '-shm']) await rm(`${db}${suffix}`, { force: true });
+  await copyFile(join(snapshot.path, 'working-notes.db'), db);
+
+  await rm(filesDir(settings), { recursive: true, force: true });
+  if (existsSync(join(snapshot.path, 'files'))) {
+    await cp(join(snapshot.path, 'files'), filesDir(settings), { recursive: true });
+  }
+
+  // An older snapshot may predate newer migrations.
+  await migrateDatabase();
+  return ok({ restored: snapshot.id, safetySnapshot: safety.snapshot?.id ?? null });
+};

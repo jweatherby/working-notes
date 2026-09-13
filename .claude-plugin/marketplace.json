@@ -1,0 +1,20 @@
+{
+  "name": "working-notes",
+  "owner": {
+    "name": "jweatherby"
+  },
+  "metadata": {
+    "description": "Working Notes: a local notebook that Claude keeps for you",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "working-notes",
+      "source": "./plugin",
+      "description": "Lets Claude read and write your local Working Notes notebook: org chart, projects, notes, docs, todos and branded reports. Needs a local clone of the Working Notes app, set up with `bun run setup`.",
+      "version": "0.2.0",
+      "category": "productivity",
+      "keywords": ["notes", "org-chart", "todos", "reports", "local-first"]
+    }
+  ]
+}

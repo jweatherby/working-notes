@@ -1,0 +1,62 @@
+// Local-disk object storage under settings.dataDir/files.
+// Keys are relative paths (e.g. `docs/<id>/source-<uuid>.pdf`); any key that
+// resolves outside the files root is rejected.
+
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, extname, resolve, sep } from 'node:path';
+import { settings } from '$shared/settings/server/index.server';
+import { filesDir } from '$shared/settings/server/paths';
+
+export interface StoredObject {
+  readonly bytes: Uint8Array;
+  readonly contentType: string;
+}
+
+export interface StorageClient {
+  readonly putObject: (key: string, body: Uint8Array, contentType: string) => Promise<void>;
+  readonly readObject: (key: string) => Promise<StoredObject | null>;
+  readonly deleteObject: (key: string) => Promise<void>;
+}
+
+const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg'
+};
+
+/** Absolute path for `key` inside `root`, or null if it would escape `root`. */
+export const resolveKey = (root: string, key: string): string | null => {
+  const base = resolve(root);
+  const full = resolve(base, key);
+  return full.startsWith(base + sep) ? full : null;
+};
+
+export const createStorageClient = (root: string = filesDir(settings)): StorageClient => ({
+  putObject: async (key: string, body: Uint8Array): Promise<void> => {
+    const path = resolveKey(root, key);
+    if (!path) throw new Error(`Invalid storage key: ${key}`);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, body);
+  },
+
+  readObject: async (key: string): Promise<StoredObject | null> => {
+    const path = resolveKey(root, key);
+    if (!path) return null;
+    try {
+      const bytes = await readFile(path);
+      return {
+        bytes: new Uint8Array(bytes),
+        contentType: CONTENT_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream'
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  deleteObject: async (key: string): Promise<void> => {
+    const path = resolveKey(root, key);
+    if (!path) return;
+    await rm(path, { force: true });
+  }
+});

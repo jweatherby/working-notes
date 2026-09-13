@@ -1,0 +1,165 @@
+import { describe, it, expect, vi } from 'vitest';
+import { createTestRegistry } from '$shared/registry.test';
+import type { Registry } from '$shared/registry';
+import { attachSourcePdf, getDocReadUrl, removeDoc, updateDoc } from '../operations';
+
+const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['storage'] => ({
+  putObject: vi.fn().mockResolvedValue(undefined),
+  readObject: vi.fn().mockResolvedValue(null),
+  deleteObject: vi.fn().mockResolvedValue(undefined),
+  ...overrides
+});
+
+describe('attachSourcePdf', () => {
+  it('stores the PDF and sets sourceUrl without touching content', async () => {
+    const findUnique = vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: null });
+    const update = vi.fn().mockResolvedValue({});
+    const putObject = vi.fn().mockResolvedValue(undefined);
+    const reg = createTestRegistry({
+      prisma: { doc: { findUnique, update } } as unknown as Registry['prisma'],
+      storage: storageMock({ putObject }),
+      uuid: () => 'uuid-abc'
+    });
+
+    const dataBase64 = Buffer.from('hello pdf').toString('base64');
+    const result = await attachSourcePdf(reg, 'doc_1', 'application/pdf', dataBase64);
+
+    expect(result.ok).toBe(true);
+    const [key, body, contentType] = putObject.mock.calls[0]!;
+    expect(key).toBe('docs/doc_1/source-uuid-abc.pdf');
+    expect(contentType).toBe('application/pdf');
+    expect(Buffer.from(body).toString('utf8')).toBe('hello pdf');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'doc_1' },
+      data: { sourceUrl: 'docs/doc_1/source-uuid-abc.pdf' }
+    });
+  });
+
+  it('deletes the previously attached PDF', async () => {
+    const deleteObject = vi.fn().mockResolvedValue(undefined);
+    const reg = createTestRegistry({
+      prisma: {
+        doc: {
+          findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source-old.pdf' }),
+          update: vi.fn().mockResolvedValue({})
+        }
+      } as unknown as Registry['prisma'],
+      storage: storageMock({ deleteObject })
+    });
+
+    await attachSourcePdf(reg, 'doc_1', 'application/pdf', 'abc');
+    expect(deleteObject).toHaveBeenCalledWith('docs/doc_1/source-old.pdf');
+  });
+
+  it('returns err when doc is not found', async () => {
+    const reg = createTestRegistry({
+      prisma: { doc: { findUnique: vi.fn().mockResolvedValue(null), update: vi.fn() } } as unknown as Registry['prisma']
+    });
+
+    const result = await attachSourcePdf(reg, 'doc_missing', 'application/pdf', 'abc');
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('getDocReadUrl', () => {
+  it('returns a local /files URL for the source PDF', async () => {
+    const reg = createTestRegistry({
+      prisma: {
+        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source-a.pdf' }) }
+      } as unknown as Registry['prisma']
+    });
+
+    const result = await getDocReadUrl(reg, 'doc_1');
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.url).toBe('/files/docs/doc_1/source-a.pdf');
+  });
+});
+
+describe('removeDoc', () => {
+  it('deletes the doc and its PDF from storage when sourceUrl is set', async () => {
+    const del = vi.fn().mockResolvedValue({});
+    const deleteObject = vi.fn().mockResolvedValue(undefined);
+    const reg = createTestRegistry({
+      prisma: {
+        doc: {
+          findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source.pdf' }),
+          delete: del
+        }
+      } as unknown as Registry['prisma'],
+      storage: storageMock({ deleteObject })
+    });
+
+    const result = await removeDoc(reg, 'doc_1');
+
+    expect(result.ok).toBe(true);
+    expect(deleteObject).toHaveBeenCalledWith('docs/doc_1/source.pdf');
+    expect(del).toHaveBeenCalledWith({ where: { id: 'doc_1' } });
+  });
+
+  it('does not call storage when sourceUrl is null', async () => {
+    const deleteObject = vi.fn();
+    const reg = createTestRegistry({
+      prisma: {
+        doc: {
+          findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: null }),
+          delete: vi.fn().mockResolvedValue({})
+        }
+      } as unknown as Registry['prisma'],
+      storage: storageMock({ deleteObject })
+    });
+
+    await removeDoc(reg, 'doc_1');
+    expect(deleteObject).not.toHaveBeenCalled();
+  });
+
+  it('still deletes the doc row when storage deletion fails', async () => {
+    const del = vi.fn().mockResolvedValue({});
+    const reg = createTestRegistry({
+      prisma: {
+        doc: {
+          findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source.pdf' }),
+          delete: del
+        }
+      } as unknown as Registry['prisma'],
+      storage: storageMock({ deleteObject: vi.fn().mockRejectedValue(new Error('disk full')) })
+    });
+
+    const result = await removeDoc(reg, 'doc_1');
+    expect(result.ok).toBe(true);
+    expect(del).toHaveBeenCalledWith({ where: { id: 'doc_1' } });
+  });
+});
+
+describe('updateDoc', () => {
+  it('forwards sourceUrl to prisma when provided', async () => {
+    const update = vi.fn().mockResolvedValue({});
+    const reg = createTestRegistry({
+      prisma: {
+        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1' }), update }
+      } as unknown as Registry['prisma']
+    });
+
+    const result = await updateDoc(reg, 'doc_1', { sourceUrl: 'docs/doc_1/source.pdf' });
+
+    expect(result.ok).toBe(true);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'doc_1' },
+      data: { sourceUrl: 'docs/doc_1/source.pdf' }
+    });
+  });
+
+  it('does not touch sourceUrl when omitted', async () => {
+    const update = vi.fn().mockResolvedValue({});
+    const reg = createTestRegistry({
+      prisma: {
+        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1' }), update }
+      } as unknown as Registry['prisma']
+    });
+
+    await updateDoc(reg, 'doc_1', { content: 'x' });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'doc_1' },
+      data: { content: 'x' }
+    });
+  });
+});

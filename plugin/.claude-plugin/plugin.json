@@ -1,0 +1,11 @@
+{
+  "name": "working-notes",
+  "version": "0.2.0",
+  "description": "Lets Claude read and write your local Working Notes notebook: org chart, projects, notes, docs, todos and branded reports. Needs a local clone of the Working Notes app, set up with `bun run setup`.",
+  "author": {
+    "name": "jweatherby"
+  },
+  "keywords": ["notes", "org-chart", "todos", "reports", "local-first"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

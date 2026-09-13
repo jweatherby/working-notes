@@ -1,0 +1,246 @@
+// Prisma schema — SQLite, local-only, single user.
+// Conventions: snake_case table and column names via @@map / @map.
+// SQLite has no enums: entity_type and status columns are plain strings,
+// validated by Zod against the unions in src/shared/types/enums.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ----- Branding -----
+
+model Branding {
+  id               String   @id @default(cuid())
+  name             String
+  iconUrl          String?  @map("icon_url")
+  logoUrl          String?  @map("logo_url")
+  primaryColor     String   @default("#4f46e5") @map("primary_color")
+  accentColor      String   @default("#06b6d4") @map("accent_color")
+  primaryFontColor String   @default("#ffffff") @map("primary_font_color")
+  accentFontColor  String   @default("#ffffff") @map("accent_font_color")
+  isDefault        Boolean  @default(false) @map("is_default")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  reports Report[]
+
+  @@index([isDefault])
+  @@map("branding")
+}
+
+// ----- Entities: Person, Team, Department -----
+
+model Person {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  title        String?
+  leadId       String?  @map("lead_id")
+  departmentId String?  @map("department_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  lead            Person?      @relation("PersonLead", fields: [leadId], references: [id], onDelete: SetNull)
+  reports         Person[]     @relation("PersonLead")
+  department      Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  teamMemberships TeamMember[]
+
+  @@index([leadId])
+  @@index([departmentId])
+  @@map("person")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members TeamMember[]
+
+  @@map("team")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members Person[]
+
+  @@map("department")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  personId  String   @map("person_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, personId])
+  @@index([personId])
+  @@map("team_member")
+}
+
+// ----- Assets: Doc, Note, Report (polymorphic via entityType + entityId) -----
+
+model Doc {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  title      String
+  content    String   @default("")
+  sourceUrl  String?  @map("source_url")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([entityType, entityId])
+  @@map("doc")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  parentId   String?  @map("parent_id")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  parent  Note?  @relation("NoteThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Note[] @relation("NoteThread")
+
+  @@index([entityType, entityId])
+  @@map("note")
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  title      String
+  content    String   @default("")
+  brandingId String?  @map("branding_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  branding Branding? @relation(fields: [brandingId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([brandingId])
+  @@map("report")
+}
+
+// ----- Projects -----
+
+model Project {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  status          String?
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  daysOptimistic  Int?      @map("days_optimistic")
+  daysLikely      Int?      @map("days_likely")
+  daysPessimistic Int?      @map("days_pessimistic")
+  parentId        String?   @map("parent_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  parent   Project?  @relation("ProjectHierarchy", fields: [parentId], references: [id])
+  children Project[] @relation("ProjectHierarchy")
+
+  @@map("project")
+}
+
+// ----- Todos -----
+
+model Todo {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("PENDING")
+  priority    Int       @default(0)
+  entityType  String    @map("entity_type")
+  entityId    String    @map("entity_id")
+  targetDate  DateTime? @map("target_date")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@map("todo")
+}
+
+// ----- Meta: Link, Tag, Comment, Emoji -----
+
+model Link {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  url        String
+  title      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("link")
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String @default("#6b7280")
+
+  attachments TagAttachment[]
+
+  @@map("tag")
+}
+
+model TagAttachment {
+  id         String   @id @default(cuid())
+  tagId      String   @map("tag_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("tag_attachment")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("comment")
+}
+
+model Emoji {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  emoji      String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([entityType, entityId, emoji])
+  @@map("emoji")
+}

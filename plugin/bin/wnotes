@@ -1,0 +1,31 @@
+#!/bin/sh
+# Working Notes plugin shim. Claude Code puts this directory on PATH while the
+# plugin is enabled. It finds the user's clone of the app and runs that clone's
+# CLI, so the skill always matches the procedures the clone has.
+# The clone comes from $WORKING_NOTES_HOME, or the app-path file `bun run setup` writes.
+set -e
+
+if [ "$(uname -s)" = Darwin ]; then
+  data="$HOME/Library/Application Support/Working Notes"
+else
+  data="${XDG_DATA_HOME:-$HOME/.local/share}/working-notes"
+fi
+setup='To set it up, clone the Working Notes repo, then run `bun install` and `bun run setup` in the clone.'
+
+app=${WORKING_NOTES_HOME:-}
+if [ -z "$app" ] && [ -r "$data/app-path" ]; then
+  app=$(cat "$data/app-path")
+fi
+if [ -z "$app" ]; then
+  echo "Working Notes isn't set up on this computer. $setup" >&2
+  exit 1
+fi
+if [ ! -x "$app/bin/wnotes" ]; then
+  echo "Working Notes isn't at $app any more (no bin/wnotes there). $setup" >&2
+  exit 1
+fi
+if [ ! -d "$app/node_modules" ]; then
+  echo "Working Notes at $app has no dependencies installed. Run \`bun install\` in $app." >&2
+  exit 1
+fi
+exec "$app/bin/wnotes" "$@"
