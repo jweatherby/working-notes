@@ -103,11 +103,11 @@ jobs:
 
       - name: Publish the built plugin to the dist branch
         run: |
+          # The plugin sits at the branch root: Cowork's marketplace sync ignores a
+          # source `path` and requires .claude-plugin/plugin.json at the root.
           site=$(mktemp -d)
-          cp -R dist/plugin "$site/plugin"
-          mkdir -p "$site/.claude-plugin"
-          # On dist, the marketplace's plugin is the folder next to it.
-          jq '(.plugins[] | select(.name == "working-notes") | .source) = "./plugin"' .claude-plugin/marketplace.json > "$site/.claude-plugin/marketplace.json"
+          cp -R dist/plugin/. "$site/"
+          test -f "$site/.claude-plugin/plugin.json"
           cd "$site"
           git init -q -b dist
           git config user.name "github-actions[bot]"
