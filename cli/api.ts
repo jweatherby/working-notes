@@ -1,13 +1,14 @@
-// The app's tRPC procedures, called in-process against the local notebook.
+// The app's tRPC procedures, called in-process against a local notebook.
 // Shared by the CLI (main.ts) and its MCP server (mcp.ts). Import it only after
 // the entry point has changed to the repo directory, because settings resolve paths from there.
 
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '$shared/trpc/router';
 import { createCallerFactory } from '$shared/trpc/init';
+import { createNotebookContext } from '$shared/trpc/context.server';
 import { listProcedures, type ProcedureMeta } from '$shared/trpc/meta';
-import { getRegistry } from '$shared/registry.server';
-import { ensureDatabase } from '$shared/db/bootstrap.server';
+import { resolveCurrentNotebook } from '$shared/notebooks/current.server';
+import { closeRegistries } from '$shared/registry.server';
 
 export const procedures: readonly ProcedureMeta[] = listProcedures(appRouter, new Set(['trpcMeta.list']));
 
@@ -21,20 +22,25 @@ export type CallOutcome =
   | { readonly kind: 'result'; readonly result: unknown; readonly failed: boolean }
   | { readonly kind: 'invalid'; readonly issues: readonly InputIssue[] };
 
-let databaseReady: Promise<unknown> | null = null;
+export interface CallOptions {
+  /** Notebook id or name. Otherwise WNOTES_NOTEBOOK, then the default notebook. */
+  readonly notebook?: string;
+}
 
 const zodIssues = (error: unknown): readonly InputIssue[] => {
   const issues = (error as { issues?: ReadonlyArray<{ path: readonly (string | number)[]; message: string }> } | undefined)?.issues ?? [];
   return issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
 };
 
-/** Calls a procedure by name. Invalid input comes back as issues; any other error throws. */
-export const callProcedure = async (name: string, input: unknown): Promise<CallOutcome> => {
+/** Calls a procedure by name. Invalid input comes back as issues; an unknown notebook or any other error throws. */
+export const callProcedure = async (name: string, input: unknown, options: CallOptions = {}): Promise<CallOutcome> => {
   if (!procedures.some((p) => p.name === name)) throw new Error(`Unknown procedure: ${name}`);
-  databaseReady ??= ensureDatabase();
-  await databaseReady;
 
-  const caller = createCallerFactory(appRouter)({ reg: getRegistry() });
+  // Resolved on every call, so a long-running MCP server sees notebook.setDefault.
+  const notebook = await resolveCurrentNotebook({ explicit: options.notebook, env: process.env['WNOTES_NOTEBOOK'] });
+  if (!notebook.ok) throw notebook.error;
+
+  const caller = createCallerFactory(appRouter)(await createNotebookContext(notebook.value));
   const call = name
     .split('.')
     .reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], caller) as (value: unknown) => Promise<unknown>;
@@ -50,4 +56,4 @@ export const callProcedure = async (name: string, input: unknown): Promise<CallO
   }
 };
 
-export const disconnect = (): Promise<void> => getRegistry().prisma.$disconnect();
+export const disconnect = (): Promise<void> => closeRegistries();

@@ -1,5 +1,11 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import type { OwnerType } from '$shared/types/enums';
+import type { EntityOwner } from '$shared/types/owner';
+import { entityPath } from '$shared/utils/entity';
+import { wouldCreateCycle } from '$shared/utils/hierarchy';
+import { loadOwner, resolveOwnerInput, type OwnerInput } from '$api/_owners';
+import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
 
 // ----- Types -----
 
@@ -9,7 +15,9 @@ export interface ProjectSummary {
   readonly description: string | null;
   readonly status: string | null;
   readonly parentId: string | null;
+  readonly owner: EntityOwner | null;
   readonly childCount: number;
+  readonly path: string;
   readonly createdAt: Date;
 }
 
@@ -25,29 +33,59 @@ export interface ProjectDetail {
   readonly daysPessimistic: number | null;
   readonly parentId: string | null;
   readonly parentName: string | null;
+  readonly owner: EntityOwner | null;
   readonly children: readonly { readonly id: string; readonly name: string }[];
+  readonly path: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
 
+const checkParent = async (
+  reg: Pick<Registry, 'prisma'>,
+  id: string | null,
+  parentId: string
+): Promise<Result<void>> => {
+  const parent = await reg.prisma.project.findUnique({ where: { id: parentId }, select: { name: true } });
+  if (!parent) return err(new Error(`Parent project ${parentId} not found`));
+  if (id === null) return ok(undefined);
+
+  const all = await reg.prisma.project.findMany({ select: { id: true, parentId: true } });
+  const parents = new Map(all.map((p) => [p.id, p.parentId]));
+  return wouldCreateCycle((projectId) => parents.get(projectId), id, parentId)
+    ? err(new Error(`"${parent.name}" is this project or one of its sub-projects, so it can't be its parent`))
+    : ok(undefined);
+};
+
 // ----- Operations -----
 
+export interface ProjectFilters {
+  readonly ownerType?: OwnerType;
+  readonly ownerId?: string;
+}
+
 export const listProjects = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  filters: ProjectFilters = {}
 ): Promise<Result<readonly ProjectSummary[]>> => {
   const projects = await reg.prisma.project.findMany({
+    where: {
+      ...(filters.ownerType !== undefined && { ownerType: filters.ownerType }),
+      ...(filters.ownerId !== undefined && { ownerId: filters.ownerId })
+    },
     orderBy: { name: 'asc' },
     include: { _count: { select: { children: true } } }
   });
-  return ok(projects.map((p) => ({
+  return ok(await Promise.all(projects.map(async (p) => ({
     id: p.id,
     name: p.name,
     description: p.description,
     status: p.status,
     parentId: p.parentId,
+    owner: await loadOwner(reg, p.ownerType, p.ownerId),
     childCount: p._count.children,
+    path: entityPath('PROJECT', p.id),
     createdAt: p.createdAt
-  })));
+  }))));
 };
 
 export const getProject = async (
@@ -75,13 +113,15 @@ export const getProject = async (
     daysPessimistic: project.daysPessimistic,
     parentId: project.parentId,
     parentName: project.parent?.name ?? null,
+    owner: await loadOwner(reg, project.ownerType, project.ownerId),
     children: project.children,
+    path: entityPath('PROJECT', project.id),
     createdAt: project.createdAt,
     updatedAt: project.updatedAt
   });
 };
 
-interface CreateProjectInput {
+interface CreateProjectInput extends OwnerInput {
   readonly name: string;
   readonly description?: string;
   readonly status?: string;
@@ -96,7 +136,14 @@ interface CreateProjectInput {
 export const createProject = async (
   reg: Pick<Registry, 'prisma'>,
   input: CreateProjectInput
-): Promise<Result<{ readonly id: string }>> => {
+): Promise<Result<{ readonly id: string; readonly path: string }>> => {
+  const owner = await resolveOwnerInput(reg, input);
+  if (!owner.ok) return err(owner.error);
+  if (input.parentId) {
+    const parent = await checkParent(reg, null, input.parentId);
+    if (!parent.ok) return err(parent.error);
+  }
+
   const project = await reg.prisma.project.create({
     data: {
       name: input.name,
@@ -107,16 +154,18 @@ export const createProject = async (
       daysOptimistic: input.daysOptimistic,
       daysLikely: input.daysLikely,
       daysPessimistic: input.daysPessimistic,
-      parentId: input.parentId
+      parentId: input.parentId,
+      ownerType: owner.value?.ownerType ?? null,
+      ownerId: owner.value?.ownerId ?? null
     }
   });
-  return ok({ id: project.id });
+  return ok({ id: project.id, path: entityPath('PROJECT', project.id) });
 };
 
 export const updateProject = async (
   reg: Pick<Registry, 'prisma'>,
   id: string,
-  input: {
+  input: OwnerInput & {
     readonly name?: string;
     readonly description?: string | null;
     readonly status?: string | null;
@@ -131,9 +180,17 @@ export const updateProject = async (
   const existing = await reg.prisma.project.findFirst({ where: { id } });
   if (!existing) return err(new Error('Project not found'));
 
+  const owner = await resolveOwnerInput(reg, input);
+  if (!owner.ok) return err(owner.error);
+  if (input.parentId) {
+    const parent = await checkParent(reg, id, input.parentId);
+    if (!parent.ok) return err(parent.error);
+  }
+
   await reg.prisma.project.update({
     where: { id },
     data: {
+      ...(owner.value !== undefined && owner.value),
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.status !== undefined && { status: input.status }),
@@ -148,13 +205,21 @@ export const updateProject = async (
   return ok({ id });
 };
 
+/** Sub-projects move up to this project's parent; goal links, attached items and relations are deleted. */
 export const deleteProject = async (
-  reg: Pick<Registry, 'prisma'>,
+  reg: Pick<Registry, 'prisma' | 'storage' | 'logger'>,
   id: string
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.project.findFirst({ where: { id } });
   if (!existing) return err(new Error('Project not found'));
 
-  await reg.prisma.project.delete({ where: { id } });
+  const cleanup = await planEntityCleanup(reg, 'PROJECT', id);
+  await reg.prisma.$transaction([
+    reg.prisma.project.updateMany({ where: { parentId: id }, data: { parentId: existing.parentId } }),
+    reg.prisma.goalProject.deleteMany({ where: { projectId: id } }),
+    ...cleanup.ops,
+    reg.prisma.project.delete({ where: { id } })
+  ]);
+  await removeFiles(reg, cleanup.files);
   return ok({ deleted: true as const });
 };

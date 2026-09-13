@@ -6,36 +6,21 @@
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { statusBadgeClass } from '$lib/project/utils';
+  import { buildTree, flattenTree } from '$shared/utils/hierarchy';
+  import type { EntityOwner } from '$shared/types/owner';
 
-  const { data } = $props<{ data: PageData }>();
-  const allProjects = $derived(data.projects.ok ? data.projects.value : []);
-
-  interface ProjectNode {
+  interface ProjectRow {
     readonly id: string;
     readonly name: string;
     readonly status: string | null;
     readonly parentId: string | null;
+    readonly owner: EntityOwner | null;
     readonly childCount: number;
-    readonly children: ProjectNode[];
   }
 
-  const projectTree = $derived.by(() => {
-    const map = new Map<string, ProjectNode>();
-    const roots: ProjectNode[] = [];
-
-    for (const p of allProjects) {
-      map.set(p.id, { ...p, children: [] });
-    }
-    for (const p of allProjects) {
-      const node = map.get(p.id)!;
-      if (p.parentId && map.has(p.parentId)) {
-        map.get(p.parentId)!.children.push(node);
-      } else {
-        roots.push(node);
-      }
-    }
-    return roots;
-  });
+  const { data } = $props<{ data: PageData }>();
+  const allProjects = $derived((data.projects.ok ? data.projects.value : []) as readonly ProjectRow[]);
+  const rows = $derived(flattenTree(buildTree(allProjects, (p) => p.parentId)));
 
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
@@ -47,19 +32,34 @@
     <button type="button" class="btn primary" onclick={() => openPopup('new-project')}>Add project</button>
   </PageHeader>
 
-  {#if projectTree.length > 0}
+  {#if rows.length > 0}
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Name</th>
+            <th>Owner</th>
             <th>Status</th>
             <th>Sub-projects</th>
           </tr>
         </thead>
         <tbody>
-          {#each projectTree as project (project.id)}
-            {@render projectRow(project, 0)}
+          {#each rows as { item: project, depth } (project.id)}
+            <tr>
+              <td>
+                <span class="project-name" style="--depth: {depth}">
+                  {#if depth > 0}<span class="tree-indent">└</span>{/if}
+                  <a href="/app/projects/{project.id}">{project.name}</a>
+                </span>
+              </td>
+              <td class="text-2">
+                {#if project.owner}<a href={project.owner.path}>{project.owner.label ?? '—'}</a>{/if}
+              </td>
+              <td>
+                {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+              </td>
+              <td class="text-2">{project.childCount || ''}</td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -71,26 +71,8 @@
   {/if}
 </div>
 
-{#snippet projectRow(project: ProjectNode, depth: number)}
-  <tr>
-    <td>
-      <span class="project-name" style="padding-left: {depth * 1.25}rem">
-        {#if depth > 0}<span class="tree-indent">└</span>{/if}
-        <a href="/app/projects/{project.id}">{project.name}</a>
-      </span>
-    </td>
-    <td>
-      {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
-    </td>
-    <td class="text-2">{project.childCount || ''}</td>
-  </tr>
-  {#each project.children as child (child.id)}
-    {@render projectRow(child, depth + 1)}
-  {/each}
-{/snippet}
-
 <Popup id="new-project" title="Add project">
-  <ProjectForm onSuccess={handleCreated} onCancel={() => closePopup()} />
+  <ProjectForm ownerOptions={data.ownerOptions} onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>
 
 <style lang="scss">
@@ -98,6 +80,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sp-1);
+    padding-left: calc(var(--depth) * var(--sp-5));
   }
   .tree-indent {
     color: var(--border-strong);

@@ -1,10 +1,15 @@
 import { z } from 'zod';
+import { OWNER_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
 import { listProjects, getProject, createProject, updateProject, deleteProject } from './operations';
 
 export const projectRouter = router({
   list: procedure
-    .query(({ ctx }) => listProjects(ctx.reg)),
+    .input(z.object({
+      ownerType: z.enum(OWNER_TYPES).optional(),
+      ownerId: z.string().optional()
+    }).default({}))
+    .query(({ ctx, input }) => listProjects(ctx.reg, input)),
 
   get: procedure
     .input(z.object({ id: z.string() }))
@@ -20,7 +25,9 @@ export const projectRouter = router({
       daysOptimistic: z.number().int().min(0).optional(),
       daysLikely: z.number().int().min(0).optional(),
       daysPessimistic: z.number().int().min(0).optional(),
-      parentId: z.string().optional()
+      parentId: z.string().optional(),
+      ownerType: z.enum(OWNER_TYPES).optional(),
+      ownerId: z.string().optional()
     }))
     .mutation(({ ctx, input }) => createProject(ctx.reg, input)),
 
@@ -35,7 +42,9 @@ export const projectRouter = router({
       daysOptimistic: z.number().int().min(0).nullable().optional(),
       daysLikely: z.number().int().min(0).nullable().optional(),
       daysPessimistic: z.number().int().min(0).nullable().optional(),
-      parentId: z.string().nullable().optional()
+      parentId: z.string().nullable().optional(),
+      ownerType: z.enum(OWNER_TYPES).nullable().optional(),
+      ownerId: z.string().nullable().optional()
     }))
     .mutation(({ ctx, input: { id, ...data } }) => updateProject(ctx.reg, id, data)),
 

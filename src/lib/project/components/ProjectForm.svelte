@@ -2,7 +2,10 @@
   import { trpc } from '$shared/trpc/client';
   import Field from '$lib/ui/Field.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import GroupedOptions from '$lib/ui/GroupedOptions.svelte';
   import { submit } from '$lib/ui/submit';
+  import type { EntityOwner } from '$shared/types/owner';
+  import { ownerOptionValue, parseOwnerOptionValue, type OwnerOption } from '$shared/trpc/load-owner-options';
 
   interface ProjectData {
     readonly id?: string;
@@ -14,16 +17,19 @@
     readonly daysLikely?: number | null;
     readonly daysPessimistic?: number | null;
     readonly parentId?: string;
+    readonly owner?: EntityOwner | null;
   }
 
   interface Props {
     readonly initial?: ProjectData;
+    /** When given, the form shows an owner field. */
+    readonly ownerOptions?: readonly OwnerOption[];
     readonly onSuccess: (result: { readonly id: string }) => void;
     readonly onCancel?: () => void;
     readonly onDelete?: () => Promise<void> | void;
   }
 
-  const { initial = {}, onSuccess, onCancel, onDelete }: Props = $props();
+  const { initial = {}, ownerOptions, onSuccess, onCancel, onDelete }: Props = $props();
 
   const isEdit = $derived(!!initial.id);
 
@@ -33,8 +39,12 @@
     return date.toISOString().slice(0, 10);
   };
 
+  const ownerValue = (owner: EntityOwner | null | undefined): string =>
+    owner ? ownerOptionValue(owner.type, owner.id) : '';
+
   let name = $state(initial.name ?? '');
   let description = $state(initial.description ?? '');
+  let owner = $state(ownerValue(initial.owner));
   let startDate = $state(toDateStr(initial.startDate));
   let endDate = $state(toDateStr(initial.endDate));
   let daysOptimistic = $state<number | undefined>(initial.daysOptimistic ?? undefined);
@@ -47,6 +57,7 @@
   $effect(() => {
     name = initial.name ?? '';
     description = initial.description ?? '';
+    owner = ownerValue(initial.owner);
     startDate = toDateStr(initial.startDate);
     endDate = toDateStr(initial.endDate);
     daysOptimistic = initial.daysOptimistic ?? undefined;
@@ -57,6 +68,7 @@
   const handleSubmit = async () => {
     submitting = true;
     error = '';
+    const picked = parseOwnerOptionValue(owner);
     const outcome = isEdit
       ? await submit(() => trpc().project.update.mutate({
           id: initial.id!,
@@ -67,6 +79,7 @@
           daysOptimistic: daysOptimistic ?? null,
           daysLikely: daysLikely ?? null,
           daysPessimistic: daysPessimistic ?? null,
+          ...(ownerOptions && { ownerType: picked?.ownerType ?? null, ownerId: picked?.ownerId ?? null }),
         }))
       : await submit(() => trpc().project.create.mutate({
           name: name.trim(),
@@ -78,6 +91,7 @@
           daysLikely,
           daysPessimistic,
           parentId: initial.parentId,
+          ...(picked ?? {}),
         }));
     submitting = false;
     if (!outcome.ok) {
@@ -87,6 +101,7 @@
     if (!isEdit) {
       name = '';
       description = '';
+      owner = '';
       startDate = '';
       endDate = '';
       daysOptimistic = undefined;
@@ -108,6 +123,16 @@
       <textarea {id} bind:value={description} rows={3} placeholder="Brief description"></textarea>
     {/snippet}
   </Field>
+  {#if ownerOptions}
+    <Field label="Owner">
+      {#snippet children({ id })}
+        <select {id} bind:value={owner}>
+          <option value="">No owner</option>
+          <GroupedOptions options={ownerOptions} />
+        </select>
+      {/snippet}
+    </Field>
+  {/if}
   <div class="form-row">
     <Field label="Start date">
       {#snippet children({ id })}

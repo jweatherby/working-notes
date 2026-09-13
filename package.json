@@ -20,6 +20,9 @@
     "prepare": "svelte-kit sync",
     "backup": "bun scripts/backup/main.ts",
     "setup": "bun scripts/setup/main.ts",
+    "release:version": "bun scripts/release/version.ts",
+    "release:build": "bun scripts/release/build.ts",
+    "release:smoke": "bun scripts/release/smoke.ts",
     "wnotes": "bun cli/main.ts"
   },
   "dependencies": {

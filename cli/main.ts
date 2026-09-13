@@ -1,24 +1,26 @@
 #!/usr/bin/env bun
-// Working Notes CLI. Calls any tRPC procedure in-process against the local
+// Working Notes CLI. Calls any tRPC procedure in-process against a local
 // notebook, with the router's own validation. The app does not need to be running.
 //   wnotes help                        list procedures
 //   wnotes help <procedure>            show a procedure's inputs
 //   wnotes <procedure> [--key value]   call it; the JSON result goes to stdout
+//   --notebook <id>                    on any call: use that notebook (else WNOTES_NOTEBOOK, else the default)
 // See cli/args.ts for --<key>-file, --input and value coercion, and cli/mcp.ts for `wnotes mcp`.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { JsonSchema } from './args';
 
-// Paths (migrations, test data) resolve from the repo; files named in
-// arguments resolve from wherever the command was run.
+// From a clone, paths (migrations, test data) resolve from the repo. The standalone
+// binary has no repo and finds its migrations itself. Files named in arguments
+// resolve from wherever the command was run.
 const callerCwd = process.cwd();
-process.chdir(resolve(import.meta.dir, '..'));
+if (!process.env['WNOTES_STANDALONE']) process.chdir(resolve(import.meta.dir, '..'));
 
 // App logs go to stderr so stdout carries only the JSON result.
 console.log = console.info = console.debug = (...args: unknown[]): void => console.error(...args);
 
-const { coerceArgs, typesOf } = await import('./args');
+const { coerceArgs, splitGlobalArgs, typesOf } = await import('./args');
 const { procedures, callProcedure, disconnect } = await import('./api');
 
 const describeType = (prop: JsonSchema): string => {
@@ -35,7 +37,8 @@ const printHelp = (name: string | undefined): number => {
       const props = Object.keys((p.inputSchema as JsonSchema).properties ?? {});
       process.stdout.write(`  ${p.name} (${p.type})${props.length ? `  --${props.join(' --')}` : ''}\n`);
     }
-    console.error('\nAlso: wnotes backup [list | restore <id|latest> | --force --reason <why> | install | uninstall], wnotes app (the UI), and wnotes mcp (the MCP server).');
+    console.error('\nNotebooks: every call uses the default notebook unless you add --notebook <id> (or set WNOTES_NOTEBOOK). wnotes notebook.list shows them.');
+    console.error('Also: wnotes backup [list | restore <id|latest> | --force --reason <why> | install | uninstall] [--notebook <id>], wnotes app (the UI), and wnotes mcp (the MCP server).');
     return 0;
   }
   const meta = procedures.find((p) => p.name === name);
@@ -59,7 +62,12 @@ const printHelp = (name: string | undefined): number => {
 };
 
 const run = async (): Promise<number> => {
-  const [command, ...rest] = process.argv.slice(2);
+  const globals = splitGlobalArgs(process.argv.slice(2));
+  if (!globals.ok) {
+    console.error(`Error: ${globals.error.message}`);
+    return 1;
+  }
+  const [command, ...rest] = globals.value.rest;
   if (!command || command === 'help' || command === '--help') return printHelp(rest[0]);
 
   const meta = procedures.find((p) => p.name === command);
@@ -74,7 +82,7 @@ const run = async (): Promise<number> => {
     return 1;
   }
 
-  const outcome = await callProcedure(command, input.value);
+  const outcome = await callProcedure(command, input.value, { notebook: globals.value.notebook });
   if (outcome.kind === 'invalid') {
     console.error(`Invalid input for ${command}:\n${outcome.issues.map((i) => `  --${i.path || '(input)'}: ${i.message}`).join('\n')}`);
     return 1;

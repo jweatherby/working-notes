@@ -75,16 +75,30 @@ describe('updateBranding', () => {
 });
 
 describe('getDefaultBranding', () => {
-  it('returns the id and a local /files icon URL', async () => {
+  it('returns the id, a local /files icon URL and the primary colours', async () => {
     const reg = createTestRegistry({
       prisma: {
-        branding: { findFirst: vi.fn().mockResolvedValue({ id: 'brand_1', iconUrl: 'branding/brand_1/icon.png' }) }
+        branding: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: 'brand_1',
+            iconUrl: 'branding/brand_1/icon.png',
+            primaryColor: '#16a34a',
+            primaryFontColor: '#ffffff'
+          })
+        }
       } as unknown as Registry['prisma']
     });
 
     const result = await getDefaultBranding(reg);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value).toEqual({ id: 'brand_1', iconUrl: '/files/branding/brand_1/icon.png' });
+    if (result.ok) {
+      expect(result.value).toEqual({
+        id: 'brand_1',
+        iconUrl: '/files/branding/brand_1/icon.png',
+        primaryColor: '#16a34a',
+        primaryFontColor: '#ffffff'
+      });
+    }
   });
 
   it('returns null when there is no default', async () => {

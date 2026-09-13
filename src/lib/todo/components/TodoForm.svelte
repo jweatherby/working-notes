@@ -169,6 +169,8 @@
               <option value="PERSON">Person</option>
               <option value="TEAM">Team</option>
               <option value="DEPARTMENT">Department</option>
+              <option value="GOAL">Goal</option>
+              <option value="PAGE">Page</option>
             </select>
           {/snippet}
         </Field>

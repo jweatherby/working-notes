@@ -5,6 +5,8 @@ export const UPDATE_KINDS = [
   'TEAM',
   'DEPARTMENT',
   'PROJECT',
+  'GOAL',
+  'PAGE',
   'DOC',
   'NOTE',
   'REPORT',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PROTOCOL_VERSIONS, handleMessage, resultFromOutcome, toolFromProcedure, type McpContext } from '../mcp-protocol';
+import { PROTOCOL_VERSIONS, handleMessage, notebookArgumentSchema, resultFromOutcome, splitNotebookArgument, toolFromProcedure, type McpContext } from '../mcp-protocol';
 
 const personCreate = toolFromProcedure({
   name: 'person.create',
@@ -21,10 +21,25 @@ const ctx: McpContext = {
 const request = (method: string, params?: unknown, id: string | number = 1) => handleMessage({ jsonrpc: '2.0', id, method, params }, ctx);
 
 describe('toolFromProcedure', () => {
-  it('names the tool with underscores and drops $schema', () => {
+  it('names the tool with underscores, drops $schema and adds the optional notebook argument', () => {
     expect(personCreate.name).toBe('person_create');
-    expect(personCreate.inputSchema).toEqual({ type: 'object', properties: { name: { type: 'string' } }, required: ['name'], additionalProperties: false });
+    expect(personCreate.inputSchema).toEqual({
+      type: 'object',
+      properties: { name: { type: 'string' }, notebook: notebookArgumentSchema },
+      required: ['name'],
+      additionalProperties: false
+    });
     expect(personCreate.description).toContain('`wnotes person.create`');
+  });
+
+  it('adds the notebook argument to procedures without inputs, but not to the notebook procedures', () => {
+    expect(toolFromProcedure({ name: 'home.todos', type: 'query', inputSchema: { type: 'object' } }).inputSchema).toEqual({
+      type: 'object',
+      properties: { notebook: notebookArgumentSchema }
+    });
+    const create = toolFromProcedure({ name: 'notebook.create', type: 'mutation', inputSchema: { type: 'object', properties: { name: { type: 'string' } } } });
+    expect(create.inputSchema).toEqual({ type: 'object', properties: { name: { type: 'string' } } });
+    expect(create.description).toContain('Manages');
   });
 
   it('marks queries read-only and deletes, removes and detaches destructive', () => {
@@ -34,6 +49,18 @@ describe('toolFromProcedure', () => {
     for (const name of ['person.delete', 'note.remove', 'team.removeMember', 'tag.detach']) {
       expect(tool(name, 'mutation').destructiveHint).toBe(true);
     }
+  });
+});
+
+describe('splitNotebookArgument', () => {
+  it('takes notebook out of the arguments', () => {
+    expect(splitNotebookArgument({ name: 'Dana', notebook: 'work' })).toEqual({ notebook: 'work', args: { name: 'Dana' } });
+    expect(splitNotebookArgument({ name: 'Dana' })).toEqual({ args: { name: 'Dana' } });
+    expect(splitNotebookArgument({ name: 'Dana', notebook: '' })).toEqual({ args: { name: 'Dana' } });
+  });
+
+  it('rejects a notebook that is not a string', () => {
+    expect(splitNotebookArgument({ notebook: 3 })).toEqual({ error: 'notebook must be a notebook id or name' });
   });
 });
 

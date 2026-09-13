@@ -8,6 +8,7 @@
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submitOrThrow } from '$lib/ui/submit';
+  import OwnedWork from '$lib/goal/components/OwnedWork.svelte';
 
   const { data } = $props<{ data: PageData }>();
   const person = $derived(data.person);
@@ -15,6 +16,7 @@
   const notes = $derived(data.notes);
   const todos = $derived(data.todos);
   const reports = $derived(data.reports);
+  const relations = $derived(data.relations);
 
   const leadOptions = $derived(
     data.allPersons.filter((p: { id: string }) => p.id !== person.id),
@@ -68,6 +70,7 @@
   {notes}
   {todos}
   {reports}
+  {relations}
 >
   {#snippet renderOverview()}
     <section class="section">
@@ -141,6 +144,8 @@
         <InlinePicker label="Add to team" options={availableTeams} placeholder="Select a team…" onPick={handleAddTeam} />
       </div>
     </section>
+
+    <OwnedWork goals={data.ownedGoals} projects={data.ownedProjects} />
   {/snippet}
 
   {#snippet renderAssetHeader()}

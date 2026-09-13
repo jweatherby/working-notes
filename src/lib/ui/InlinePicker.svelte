@@ -1,9 +1,13 @@
 <script lang="ts">
   // A single-pick relationship editor: a link-style trigger that reveals a
   // compact select. Replaces the <details><summary><select onchange> pattern.
+  // Options with a `group` are shown under that heading.
+  import GroupedOptions from './GroupedOptions.svelte';
+
   interface Option {
     readonly id: string;
     readonly name: string;
+    readonly group?: string;
   }
 
   interface Props {
@@ -58,9 +62,7 @@
         aria-label={label}
       >
         <option value="">{placeholder}</option>
-        {#each options as o (o.id)}
-          <option value={o.id}>{o.name}</option>
-        {/each}
+        <GroupedOptions {options} />
       </select>
       <button type="button" class="btn ghost sm" onclick={close}>Cancel</button>
       {#if error}<span class="inline-error" role="alert">{error}</span>{/if}

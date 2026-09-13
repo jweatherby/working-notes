@@ -3,19 +3,40 @@
 import { spawnSync } from 'node:child_process';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { ok, err, type Result } from '$shared/utils/result';
 
 export const LABEL = 'dev.jweatherby.working-notes.backup';
 
-export interface PlistOptions {
-  readonly label: string;
-  readonly bunPath: string;
-  readonly repoDir: string;
-  readonly logFile: string;
-  readonly intervalSeconds: number;
+/** What the LaunchAgent runs. */
+export interface BackupCommand {
+  readonly programArguments: readonly string[];
+  readonly workingDirectory: string;
   readonly path: string;
 }
+
+export interface PlistOptions extends BackupCommand {
+  readonly label: string;
+  readonly logFile: string;
+  readonly intervalSeconds: number;
+}
+
+export interface BackupCommandInputs {
+  /** The standalone binary to run, when this is a release rather than a clone. */
+  readonly standaloneBinary: string | null;
+  readonly dataDir: string;
+  readonly bunPath: string;
+  readonly repoDir: string;
+}
+
+/**
+ * Pure. A release runs its binary through `<data dir>/App/current`, which the plugin
+ * shim repoints on every update; a clone runs the backup script with Bun.
+ */
+export const backupCommand = (i: BackupCommandInputs): BackupCommand =>
+  i.standaloneBinary
+    ? { programArguments: [i.standaloneBinary, 'backup'], workingDirectory: i.dataDir, path: '/usr/bin:/bin' }
+    : { programArguments: [i.bunPath, 'scripts/backup/main.ts'], workingDirectory: i.repoDir, path: `${dirname(i.bunPath)}:/usr/local/bin:/usr/bin:/bin` };
 
 const xml = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -27,11 +48,10 @@ export const renderPlist = (o: PlistOptions): string => `<?xml version="1.0" enc
   <string>${xml(o.label)}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${xml(o.bunPath)}</string>
-    <string>scripts/backup/main.ts</string>
+${o.programArguments.map((arg) => `    <string>${xml(arg)}</string>`).join('\n')}
   </array>
   <key>WorkingDirectory</key>
-  <string>${xml(o.repoDir)}</string>
+  <string>${xml(o.workingDirectory)}</string>
   <key>StartInterval</key>
   <integer>${o.intervalSeconds}</integer>
   <key>RunAtLoad</key>
@@ -60,24 +80,15 @@ export const plistPath = (): string => join(homedir(), 'Library', 'LaunchAgents'
 const domain = (): string => `gui/${process.getuid?.() ?? 501}`;
 
 export const installAgent = async (
-  repoDir: string,
+  command: BackupCommand,
   logFile: string
 ): Promise<Result<{ readonly plist: string }>> => {
-  if (platform() !== 'darwin') return err(new Error('The backup LaunchAgent is macOS-only; schedule `bun run backup` with cron instead'));
+  if (platform() !== 'darwin') return err(new Error('The backup LaunchAgent is macOS-only; schedule `wnotes backup` with cron instead'));
 
-  // The Homebrew symlink survives `brew upgrade`; process.execPath points into a versioned Cellar folder.
-  const bunPath = Bun.which('bun') ?? process.execPath;
   const plist = plistPath();
   await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
-  await mkdir(join(logFile, '..'), { recursive: true });
-  await writeFile(plist, renderPlist({
-    label: LABEL,
-    bunPath,
-    repoDir,
-    logFile,
-    intervalSeconds: 3600,
-    path: `${join(bunPath, '..')}:/usr/local/bin:/usr/bin:/bin`
-  }));
+  await mkdir(dirname(logFile), { recursive: true });
+  await writeFile(plist, renderPlist({ ...command, label: LABEL, logFile, intervalSeconds: 3600 }));
 
   spawnSync('launchctl', ['bootout', `${domain()}/${LABEL}`]);
   const loaded = spawnSync('launchctl', ['bootstrap', domain(), plist], { encoding: 'utf8' });

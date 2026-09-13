@@ -60,6 +60,22 @@ describe('wnotes CLI', () => {
     expect(bad.json?.error?.message).toContain('chart block at line 3');
   });
 
+  it('uses the default notebook unless --notebook names another', () => {
+    const listed = wnotes('notebook.list');
+    expect(listed.code).toBe(0);
+    const notebooks = listed.json?.value as unknown as Array<{ id: string; isDefault: boolean }>;
+    expect(notebooks.map((n) => [n.id, n.isDefault])).toEqual([['notebook', true], ['other', false]]);
+
+    expect(wnotes('person.create', '--name', 'Ola Other', '--notebook', 'other').code).toBe(0);
+    const names = (...args: string[]) => (wnotes('person.list', ...args).json?.value as unknown as Array<{ name: string }>).map((p) => p.name);
+    expect(names('--notebook=other')).toEqual(['Ola Other']);
+    expect(names()).not.toContain('Ola Other');
+
+    const unknown = wnotes('person.list', '--notebook', 'nope');
+    expect(unknown.code).toBe(1);
+    expect(unknown.stderr).toContain('There is no notebook "nope"');
+  });
+
   it('explains bad invocations on stderr with exit code 1', () => {
     const typo = wnotes('person.create', '--nmae', 'Dana');
     expect(typo.code).toBe(1);

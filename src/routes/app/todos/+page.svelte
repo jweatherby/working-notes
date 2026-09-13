@@ -9,6 +9,7 @@
   import { openPopup } from '$lib/ui/popup-url';
   import { submit } from '$lib/ui/submit';
   import { nextStatus, formatTodoDate, type TodoStatus, type EntityType } from '$lib/todo/utils';
+  import { entityPath, entityTypeLabel } from '$shared/utils/entity';
 
   const { data } = $props<{ data: PageData }>();
   const todos = $derived(data.todos);
@@ -69,25 +70,6 @@
     if (outcome.ok) await invalidateAll();
   };
 
-  const entityPath = (entityType: EntityType, entityId: string): string => {
-    switch (entityType) {
-      case 'PROJECT': return `/app/projects/${entityId}`;
-      case 'PERSON': return `/app/people/${entityId}`;
-      case 'TEAM': return `/app/teams/${entityId}`;
-      case 'DEPARTMENT': return `/app/departments/${entityId}`;
-      default: return `/app`;
-    }
-  };
-
-  const entityTypeLabel = (t: EntityType): string => {
-    switch (t) {
-      case 'PROJECT': return 'Project';
-      case 'PERSON': return 'Person';
-      case 'TEAM': return 'Team';
-      case 'DEPARTMENT': return 'Department';
-      default: return t.replace('_', ' ').toLowerCase();
-    }
-  };
 </script>
 
 <svelte:head><title>Todos</title></svelte:head>

@@ -58,17 +58,48 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
 /** MCP tool names can't contain dots: `person.create` is served as `person_create`. */
 export const toolName = (procedure: string): string => procedure.replaceAll('.', '_');
 
+/** Every tool that works inside a notebook takes this optional argument. */
+export const NOTEBOOK_ARGUMENT = 'notebook';
+
+export const notebookArgumentSchema = {
+  type: 'string',
+  description: 'Notebook id or name. Omit to use the default notebook; notebook_list shows them.'
+} as const;
+
+/** The `notebook.*` procedures manage notebooks themselves, so they take no notebook argument. */
+const isNotebookScoped = (procedure: string): boolean => !procedure.startsWith('notebook.');
+
 export const toolFromProcedure = (procedure: ProcedureMeta): McpTool => {
   const reads = procedure.type === 'query';
   const destructive = !reads && DESTRUCTIVE.test(procedure.name);
   const schema = isRecord(procedure.inputSchema) ? procedure.inputSchema : {};
   const verb = reads ? 'Reads from' : destructive ? 'Deletes from' : 'Writes to';
+  const base: Record<string, unknown> = { type: 'object', ...Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$schema')) };
+  const scoped = isNotebookScoped(procedure.name);
+  if (scoped) {
+    base['properties'] = { ...(isRecord(base['properties']) ? base['properties'] : {}), [NOTEBOOK_ARGUMENT]: notebookArgumentSchema };
+  }
   return {
     name: toolName(procedure.name),
-    description: `${verb} the user's Working Notes notebook: the \`${procedure.name}\` procedure, with the same inputs as \`wnotes ${procedure.name}\`.`,
-    inputSchema: { type: 'object', ...Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$schema')) },
+    description: scoped
+      ? `${verb} one of the user's Working Notes notebooks (the default unless you pass \`notebook\`): the \`${procedure.name}\` procedure, with the same inputs as \`wnotes ${procedure.name}\`.`
+      : `Manages the user's Working Notes notebooks: the \`${procedure.name}\` procedure, with the same inputs as \`wnotes ${procedure.name}\`.`,
+    inputSchema: base,
     annotations: { readOnlyHint: reads, destructiveHint: destructive, openWorldHint: false }
   };
+};
+
+export interface NotebookArgument {
+  readonly notebook?: string;
+  /** The tool's arguments without `notebook`. */
+  readonly args: Readonly<Record<string, unknown>>;
+}
+
+/** Takes the `notebook` argument out of a tool call's arguments. */
+export const splitNotebookArgument = (args: Readonly<Record<string, unknown>>): NotebookArgument | { readonly error: string } => {
+  const { [NOTEBOOK_ARGUMENT]: notebook, ...rest } = args;
+  if (notebook === undefined || notebook === null || notebook === '') return { args: rest };
+  return typeof notebook === 'string' ? { notebook, args: rest } : { error: 'notebook must be a notebook id or name' };
 };
 
 export const textResult = (value: unknown, isError = false): ToolResult => ({

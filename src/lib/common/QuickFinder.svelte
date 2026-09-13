@@ -1,8 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { trpc } from '$shared/trpc/client';
+  import type { NotebookSummary } from '$shared/types/notebook';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import { openPopup } from '$lib/ui/popup-url';
+  import { switchNotebook } from '$lib/notebook/switch';
+  import { buildTree, flattenTree } from '$shared/utils/hierarchy';
 
   interface FinderItem {
     readonly label: string;
@@ -12,8 +16,18 @@
     readonly indent?: boolean;
   }
 
-  const CACHE_KEY = 'quick-finder-cache';
   const CACHE_TTL = 24 * 60 * 60 * 1000;
+  // One cache per notebook, so another notebook's projects never show up.
+  const cacheKey = $derived(`quick-finder-cache:${$page.data.notebook?.id ?? ''}`);
+
+  // From the /app layout. A page's own data can shadow the key, so check it's the list.
+  const notebookItems = $derived.by((): readonly FinderItem[] => {
+    const notebooks: unknown = $page.data.notebooks;
+    if (!Array.isArray(notebooks)) return [];
+    return (notebooks as readonly NotebookSummary[])
+      .filter((n) => !n.isCurrent)
+      .map((n) => ({ label: `Switch to ${n.name}`, section: 'Notebooks', action: () => switchNotebook(n.id) }));
+  });
 
   const STATIC_ROUTES: readonly FinderItem[] = [
     { label: 'Home', href: '/app', section: 'Pages' },
@@ -21,10 +35,13 @@
     { label: 'Teams', href: '/app/teams', section: 'Pages' },
     { label: 'Departments', href: '/app/departments', section: 'Pages' },
     { label: 'Projects', href: '/app/projects', section: 'Pages' },
+    { label: 'Goals', href: '/app/goals', section: 'Pages' },
+    { label: 'Wiki', href: '/app/wiki', section: 'Pages' },
     { label: 'Org Map', href: '/app/orgmap', section: 'Pages' },
     { label: 'Todos', href: '/app/todos', section: 'Pages' },
     { label: 'Reports', href: '/app/reports', section: 'Pages' },
     { label: 'Branding', href: '/app/branding', section: 'Pages' },
+    { label: 'Notebooks', href: '/app/notebooks', section: 'Pages' },
   ];
 
   const COMMANDS: readonly FinderItem[] = [
@@ -32,6 +49,11 @@
       label: '/todos — New todo',
       section: 'Commands',
       action: () => { openPopup('todo'); }
+    },
+    {
+      label: '/notebook — New notebook',
+      section: 'Commands',
+      action: () => { openPopup('new-notebook'); }
     },
   ];
 
@@ -50,7 +72,7 @@
       return COMMANDS.filter((c) => c.label.toLowerCase().includes(cmd));
     }
 
-    const all = [...dynamicItems, ...STATIC_ROUTES];
+    const all = [...dynamicItems, ...STATIC_ROUTES, ...notebookItems];
     if (!q) return [...COMMANDS, ...all];
     return all.filter((item) => item.label.toLowerCase().includes(q));
   });
@@ -98,17 +120,27 @@
     }
   };
 
+  interface CachedEntity {
+    readonly id: string;
+    readonly name: string;
+    readonly parentId: string | null;
+  }
+
   interface CacheData {
     readonly ts: number;
-    readonly projects: readonly { id: string; name: string; parentId: string | null }[];
+    readonly projects: readonly CachedEntity[];
+    readonly goals: readonly CachedEntity[];
+    readonly pages: readonly CachedEntity[];
   }
 
   const readCache = (): CacheData | null => {
     try {
-      const raw = localStorage.getItem(CACHE_KEY);
+      const raw = localStorage.getItem(cacheKey);
       if (!raw) return null;
       const data: CacheData = JSON.parse(raw);
       if (Date.now() - data.ts > CACHE_TTL) return null;
+      // Caches written before goals and pages existed are stale.
+      if (!data.goals || !data.pages) return null;
       return data;
     } catch {
       return null;
@@ -117,31 +149,24 @@
 
   const writeCache = (data: Omit<CacheData, 'ts'>) => {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, ts: Date.now() }));
+      localStorage.setItem(cacheKey, JSON.stringify({ ...data, ts: Date.now() }));
     } catch { /* quota exceeded — ignore */ }
   };
 
-  const buildDynamicItems = (cache: Omit<CacheData, 'ts'>): readonly FinderItem[] => {
-    const parents = cache.projects.filter((p) => !p.parentId);
-    const childrenByParent = new Map<string, { id: string; name: string; parentId: string | null }[]>();
-    for (const p of cache.projects) {
-      if (p.parentId) {
-        const list = childrenByParent.get(p.parentId) ?? [];
-        list.push(p);
-        childrenByParent.set(p.parentId, list);
-      }
-    }
-    const projectItems: FinderItem[] = [];
-    for (const p of parents) {
-      projectItems.push({ label: p.name, href: `/app/projects/${p.id}`, section: 'Projects' });
-      for (const c of childrenByParent.get(p.id) ?? []) {
-        projectItems.push({ label: c.name, href: `/app/projects/${c.id}`, section: 'Projects', indent: true });
-      }
-    }
-    return [
-      ...projectItems,
-    ];
-  };
+  // Every level of the tree, children indented under their parent.
+  const treeItems = (items: readonly CachedEntity[], section: string, base: string): readonly FinderItem[] =>
+    flattenTree(buildTree(items, (item) => item.parentId)).map(({ item, depth }) => ({
+      label: item.name,
+      href: `${base}/${item.id}`,
+      section,
+      indent: depth > 0,
+    }));
+
+  const buildDynamicItems = (cache: Omit<CacheData, 'ts'>): readonly FinderItem[] => [
+    ...treeItems(cache.projects, 'Projects', '/app/projects'),
+    ...treeItems(cache.goals, 'Goals', '/app/goals'),
+    ...treeItems(cache.pages, 'Wiki', '/app/wiki'),
+  ];
 
   const loadDynamic = async (force: boolean) => {
     if (!force) {
@@ -154,10 +179,16 @@
     loading = true;
     try {
       const client = trpc();
-      const projectsResult = await client.project.list.query();
-      const projects = projectsResult.ok ? projectsResult.value.map((p: { id: string; name: string; parentId: string | null }) => ({ id: p.id, name: p.name, parentId: p.parentId })) : [];
-      writeCache({ projects });
-      dynamicItems = buildDynamicItems({ projects });
+      const [projectsResult, goalsResult, pagesResult] = await Promise.all([
+        client.project.list.query(),
+        client.goal.list.query(),
+        client.page.list.query(),
+      ]);
+      const projects = projectsResult.ok ? projectsResult.value.map((p) => ({ id: p.id, name: p.name, parentId: p.parentId })) : [];
+      const goals = goalsResult.ok ? goalsResult.value.map((g) => ({ id: g.id, name: g.title, parentId: g.parentId })) : [];
+      const pages = pagesResult.ok ? pagesResult.value.map((p) => ({ id: p.id, name: p.title, parentId: p.parentId })) : [];
+      writeCache({ projects, goals, pages });
+      dynamicItems = buildDynamicItems({ projects, goals, pages });
     } catch {
       dynamicItems = [];
     } finally {

@@ -4,11 +4,21 @@
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
+  import GoalRows from '$lib/goal/components/GoalRows.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submit, submitOrThrow } from '$lib/ui/submit';
   import { statusBadgeClass } from '$lib/project/utils';
+  import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
+  import { wouldCreateCycle } from '$shared/utils/hierarchy';
+  import type { GoalSummary } from '$shared/types/goals';
+
+  interface ProjectOption {
+    readonly id: string;
+    readonly name: string;
+    readonly parentId: string | null;
+  }
 
   const { data } = $props<{ data: PageData }>();
   const project = $derived(data.project);
@@ -16,9 +26,20 @@
   const notes = $derived(data.notes);
   const todos = $derived(data.todos);
   const reports = $derived(data.reports);
+  const relations = $derived(data.relations);
+  const linkedGoals = $derived(data.linkedGoals as readonly GoalSummary[]);
 
-  const parentOptions = $derived(
-    data.allProjects.filter((p: { id: string }) => p.id !== project.id),
+  // Any project except this one and its sub-projects can be its parent.
+  const parentOptions = $derived.by(() => {
+    const allProjects = data.allProjects as readonly ProjectOption[];
+    const parents = new Map(allProjects.map((p): [string, string | null] => [p.id, p.parentId]));
+    return allProjects.filter((p) => !wouldCreateCycle((id) => parents.get(id), project.id, p.id));
+  });
+
+  const goalOptions = $derived(
+    (data.allGoals as readonly GoalSummary[])
+      .filter((g) => !linkedGoals.some((linked) => linked.id === g.id))
+      .map((g) => ({ id: g.id, name: g.title })),
   );
 
   let newChildName = $state('');
@@ -50,8 +71,28 @@
     await invalidateAll();
   };
 
+  const handleSetOwner = async (value: string | null) => {
+    const picked = value ? parseOwnerOptionValue(value) : null;
+    await submitOrThrow(() => trpc().project.update.mutate({
+      id: project.id,
+      ownerType: picked?.ownerType ?? null,
+      ownerId: picked?.ownerId ?? null,
+    }));
+    await invalidateAll();
+  };
+
   const handleUnlinkChild = async (childId: string) => {
     await submitOrThrow(() => trpc().project.update.mutate({ id: childId, parentId: null }));
+    await invalidateAll();
+  };
+
+  const handleLinkGoal = async (goalId: string) => {
+    await submitOrThrow(() => trpc().goal.addProject.mutate({ goalId, projectId: project.id }));
+    await invalidateAll();
+  };
+
+  const handleUnlinkGoal = async (goalId: string) => {
+    await submitOrThrow(() => trpc().goal.removeProject.mutate({ goalId, projectId: project.id }));
     await invalidateAll();
   };
 
@@ -90,6 +131,7 @@
   {notes}
   {todos}
   {reports}
+  {relations}
 >
   {#snippet renderOverview()}
     <section class="section">
@@ -113,6 +155,17 @@
           </div>
         {/if}
         <div>
+          <dt>Owner</dt>
+          <dd>
+            {#if project.owner}
+              <a href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
+              <ConfirmButton label="Unassign" confirmLabel="Unassign owner" onConfirm={() => handleSetOwner(null)} />
+            {:else}
+              <InlinePicker label="Assign owner" options={data.ownerOptions} placeholder="Select an owner…" onPick={handleSetOwner} />
+            {/if}
+          </dd>
+        </div>
+        <div>
           <dt>Parent</dt>
           <dd>
             {#if project.parentName}
@@ -130,6 +183,20 @@
           </div>
         {/if}
       </dl>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h4>Goals <span class="count">{data.linkedGoals.length}</span></h4>
+      </div>
+      {#if data.linkedGoals.length > 0}
+        <GoalRows goals={data.linkedGoals} showOwner removeLabel="Unlink goal" onRemove={handleUnlinkGoal} />
+      {:else}
+        <EmptyState message="Not linked to any goal." />
+      {/if}
+      <div class="section-footer">
+        <InlinePicker label="Link goal" options={goalOptions} placeholder="Select a goal…" onPick={handleLinkGoal} />
+      </div>
     </section>
 
     <section class="section">
@@ -166,7 +233,7 @@
   {/snippet}
 
   {#snippet renderEditForm({ onSuccess, onCancel })}
-    <ProjectForm initial={project} {onSuccess} {onCancel} />
+    <ProjectForm initial={project} ownerOptions={data.ownerOptions} {onSuccess} {onCancel} />
   {/snippet}
 </EntityDetailPage>
 
@@ -187,4 +254,5 @@
     max-width: 360px;
     input { flex: 1; }
   }
+  .section-footer { margin-top: var(--sp-2); }
 </style>

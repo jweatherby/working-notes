@@ -1,16 +1,20 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import RightPanel from '$lib/common/RightPanel.svelte';
+  import NotebookSwitcher from '$lib/notebook/components/NotebookSwitcher.svelte';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
+  import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
 
   interface Props {
     readonly children: any;
     readonly showInfoPanel?: boolean;
     readonly collapseInfoPanelOnMedium?: boolean;
     readonly brandIconUrl?: string | null;
+    readonly notebook?: NotebookInfo | null;
+    readonly notebooks?: readonly NotebookSummary[];
   }
 
-  const { children, showInfoPanel = false, collapseInfoPanelOnMedium = false, brandIconUrl = null }: Props = $props();
+  const { children, showInfoPanel = false, collapseInfoPanelOnMedium = false, brandIconUrl = null, notebook = null, notebooks = [] }: Props = $props();
 
   let menuOpen = $state(false);
 
@@ -24,6 +28,8 @@
     { href: '/app', label: 'Home', exact: true },
     { href: '/app/orgmap', label: 'Org Map' },
     { href: '/app/projects', label: 'Projects' },
+    { href: '/app/goals', label: 'Goals' },
+    { href: '/app/wiki', label: 'Wiki' },
     { href: '/app/reports', label: 'Reports' },
     { href: '/app/todos', label: 'Todos' },
   ];
@@ -41,12 +47,17 @@
   <div class="app-main">
     <nav class="topnav" aria-label="Main">
       <div class="nav-bar">
-        <a href="/app" class="nav-brand" onclick={closeMenu}>
-          {#if brandIconUrl}
-            <img src={brandIconUrl} alt="" class="brand-icon" />
+        <div class="nav-identity">
+          <a href="/app" class="nav-brand" aria-label={notebook ? `Home: ${notebook.name}` : undefined} onclick={closeMenu}>
+            {#if brandIconUrl}
+              <img src={brandIconUrl} alt="" class="brand-icon" />
+            {/if}
+            <span class="truncate">{notebook?.name ?? 'Working Notes'}</span>
+          </a>
+          {#if notebook}
+            <NotebookSwitcher current={notebook} {notebooks} />
           {/if}
-          <span>Working Notes</span>
-        </a>
+        </div>
         <div class="nav-mobile-actions">
           <button type="button" class="btn icon" aria-label="Search" title="Search (⌘K)" onclick={() => quickFinderOpen.set(true)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="m13.5 13.5-3-3"/></svg>
@@ -107,7 +118,15 @@
     align-items: center;
     flex-shrink: 0;
   }
+  .nav-identity {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+  }
   .nav-brand {
+    min-width: 0;
+    max-width: 240px;
     display: inline-flex;
     align-items: center;
     gap: var(--sp-2);

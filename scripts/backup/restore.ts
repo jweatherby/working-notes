@@ -1,5 +1,5 @@
-// Restore a snapshot into the live data directory. Refuses while the app is
-// running, verifies the snapshot, and snapshots the current data first.
+// Restore a snapshot into a notebook's live database and files. Refuses while the
+// app is running, verifies the snapshot, and snapshots the current data first.
 
 import { existsSync } from 'node:fs';
 import { copyFile, cp, rm } from 'node:fs/promises';
@@ -33,6 +33,7 @@ export interface RestoreOptions {
 }
 
 export const restoreSnapshot = async (
+  notebook: string,
   target: string,
   options: RestoreOptions = {}
 ): Promise<Result<{ readonly restored: string; readonly safetySnapshot: string | null }>> => {
@@ -41,10 +42,12 @@ export const restoreSnapshot = async (
     return err(new Error(`Working Notes is running on 127.0.0.1:${port}. Quit it, then restore.`));
   }
 
-  const snapshots = await listSnapshots();
+  const snapshots = await listSnapshots(notebook);
   const snapshot = target === 'latest' ? snapshots[0] : snapshots.find((s) => s.id === target);
   if (!snapshot) {
-    return err(new Error(target === 'latest' ? 'There are no snapshots to restore' : `Snapshot ${target} not found`));
+    return err(new Error(target === 'latest'
+      ? `Notebook ${notebook} has no snapshots to restore`
+      : `Snapshot ${target} not found in notebook ${notebook}`));
   }
 
   const check = createClient({ url: `file:${join(snapshot.path, 'working-notes.db')}` });
@@ -56,22 +59,24 @@ export const restoreSnapshot = async (
   }
 
   const safety = await createSnapshot({
+    notebook,
     force: true,
     reason: `pre-restore (before restoring ${snapshot.id})`,
     now: options.now
   });
 
-  await getRegistry().prisma.$disconnect();
-  const db = databasePath(settings);
+  await getRegistry(notebook).prisma.$disconnect();
+  const db = databasePath(settings, notebook);
   for (const suffix of ['', '-wal', '-shm']) await rm(`${db}${suffix}`, { force: true });
   await copyFile(join(snapshot.path, 'working-notes.db'), db);
 
-  await rm(filesDir(settings), { recursive: true, force: true });
+  const files = filesDir(settings, notebook);
+  await rm(files, { recursive: true, force: true });
   if (existsSync(join(snapshot.path, 'files'))) {
-    await cp(join(snapshot.path, 'files'), filesDir(settings), { recursive: true });
+    await cp(join(snapshot.path, 'files'), files, { recursive: true });
   }
 
   // An older snapshot may predate newer migrations.
-  await migrateDatabase();
+  await migrateDatabase(notebook);
   return ok({ restored: snapshot.id, safetySnapshot: safety.snapshot?.id ?? null });
 };

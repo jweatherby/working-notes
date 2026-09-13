@@ -17,6 +17,12 @@ Components call the API through `trpc()` from `$shared/trpc/client` (a browser s
 
 There is no session, user or org anywhere in the UI, and nothing is gated on ownership: everything is editable.
 
+The one app-wide context is the open notebook. The `/app` layout provides `data.notebook` and `data.notebooks`, and the server picks the notebook for every request, so components never pass it to the API.
+- Switch with `switchNotebook(id)` (`$lib/notebook/switch`). It's a full page load, so no ids, lists or popups from the old notebook carry over. Never edit the cookie or `?notebook=` yourself.
+- Anything cached in the browser must be keyed by notebook id (QuickFinder's localStorage is).
+- The layout also applies the notebook's default branding: its primary colour replaces the `--accent*` tokens (and `--focus`) through `.branded` in `styles/_tokens.scss`. Components keep using the accent tokens and never read branding colours for app chrome.
+- `notebook/components/`: `NotebookSwitcher` (the chevron beside the notebook title in the top bar, props `current`, `notebooks`), `NotebookForm` (create, or rename with `initial`), and `NewNotebookPopup` (global `?popup=new-notebook`; opens the new notebook).
+
 ## Stores
 
 Use classic Svelte stores (`writable`, `readable`, `derived`), not rune modules. Entity caches use a normalized `{ [entityType]: { [id]: entity } }` shape, and lists hold ids.
@@ -42,8 +48,11 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | Component | Props | Use for |
 |---|---|---|
 | `Field` | `label`, `hint?`, `error?`, children snippet `({ id })` | every labelled form control |
-| `InlinePicker` | `label`, `options: {id,name}[]`, `placeholder?`, `onPick(id)` | single-pick relationship edits (assign lead, add member, set parent). Renders nothing when there are no options |
+| `InlinePicker` | `label`, `options: {id,name,group?}[]`, `placeholder?`, `onPick(id)` | single-pick relationship edits (assign lead, add member, set parent). Options with a `group` render in an `<optgroup>`; owner pickers use composite ids like `TEAM:<id>`. Renders nothing when there are no options |
+| `ProgressBar` | `value: number \| null` (0–1), `tone?: accent \| success \| warning \| danger`, `label?` | any 0–1 measure, such as goal progress |
+| `GroupedOptions` | `options: {id,name,group?}[]` | the `<option>`s inside a `<select>`, under `<optgroup>`s when options carry a `group` (owner selects in `GoalForm` and `ProjectForm`; `InlinePicker` uses it too) |
 | `ConfirmButton` | `label`, `confirmLabel?`, `onConfirm`, `variant: link \| button \| icon`, `timeoutMs?` | any destructive action. Never use `window.confirm()` |
+| `Menu` | `label`, `items: {label, href?, onSelect?, current?, divided?}[]`, `trigger?` snippet, `iconOnly?` (just a chevron, named by `label`), `align?: start \| end` | a button that opens a short list of links and actions (the notebook switcher). Handles Escape, click-outside and arrow keys. Not for picking a relationship; that's `InlinePicker` |
 | `EmptyState` | `message`, `boxed?`, `small?`, children (action) | "nothing here yet" |
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
 | `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
@@ -63,7 +72,7 @@ Use a standard component or class before writing markup or styles yourself. If n
 
 **Forms and mutations**
 - Every labelled control goes in `Field` and uses the `id` from its snippet. Don't write a raw `<label>` for a form control. Toolbar filters without a visible label are the exception; give them an `aria-label`.
-- Entity create and edit use the domain `*Form` component (`PersonForm`, `TeamForm`, `DepartmentForm`, `ProjectForm`, `TodoForm`) inside a `Popup`. Don't rebuild the form fields on a page.
+- Entity create and edit use the domain `*Form` component (`PersonForm`, `TeamForm`, `DepartmentForm`, `ProjectForm`, `GoalForm`, `PageForm`, `TodoForm`) inside a `Popup`. Don't rebuild the form fields on a page.
 - Open and close popups only through `openPopup` and `closePopup`. Never edit `?popup=` by hand. After a write, call `closePopup({ invalidate: true })`.
 - Send every tRPC mutation through `submit()` and handle `outcome.ok`. Most procedures return `Result`, so a failed call does not throw. A bare `await trpc().x.mutate(...)` drops the error without a word.
 - `InlinePicker` and `ConfirmButton` show an error only when their callback throws. In `onPick` and `onConfirm` (and a form's `onDelete`, which goes to a `ConfirmButton`), call `submitOrThrow(() => trpc()….mutate(…))`.
@@ -97,13 +106,19 @@ Use a standard component or class before writing markup or styles yourself. If n
 
 | Component | Props | Owns |
 |---|---|---|
-| `common/EntityDetailPage` | `entityType`, `entityId`, `entityName`, `breadcrumbLabel`, `breadcrumbHref`, `editPopupTitle`, `docs`, `notes`, `todos`, `reports?`, snippets `renderOverview({ openEdit })`, `renderAssetHeader`, `renderEditForm({ onSuccess, onCancel })` | Detail shell: sidebar (docs, todos, reports), right-panel notes, center pane (overview/doc/note/todo), edit popup |
+| `common/EntityDetailPage` | `entityType`, `entityId`, `entityName`, `breadcrumbLabel`, `breadcrumbHref`, `editPopupTitle`, `docs`, `notes`, `todos`, `reports?`, `relations?`, snippets `renderOverview({ openEdit })`, `renderAssetHeader`, `renderEditForm({ onSuccess, onCancel })` | Detail shell: sidebar (docs, todos, reports, related), right-panel notes, center pane (overview/doc/note/todo), edit popup. `loadEntityAssets` (`$shared/trpc/load-entity-assets`) loads docs, notes, todos, reports and relations |
 | `common/DocsManager` | `docs`, `activeDocId`, `onSelect`, `onStartAdd`, `onRemove`, `onReorder` | Doc list with reorder |
 | `common/DocEditor` | `title`, `content`, `hasSourcePdf?`, `onSave`, `onSaveTitle?`, `onUploadPdf?`, `onOpenSourcePdf?`, `onClose?` | Editor/Markdown/Preview tabs, PDF attach |
 | `common/MarkdownRenderer` | `content`, `placeholder?` | Markdown + charts + mermaid |
 | `common/NotesList` | `notes`, `onEdit?`, `onRemove?`, `maxHeight?` | Note list with clamp/expand |
 | `report/components/ReportsWidget` | `entityType`, `entityId`, `reports` | Sidebar report list + "new report" |
-| `{person,team,department,project}/components/*Form` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` (`PersonForm` also `leadOptions?`) | Create/edit forms, used in list popups, detail edit popups and Org Map |
+| `relation/components/RelationsWidget` | `groups` (`RelationGroup[]`) | Sidebar "Related" list grouped by label, with a remove button on every row except `MENTIONS`. Relations are added through the CLI or MCP |
+| `{person,team,department,project}/components/*Form` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` (`PersonForm` also `leadOptions?`, `ProjectForm` also `ownerOptions?`) | Create/edit forms, used in list popups, detail edit popups and Org Map |
+| `goal/components/GoalForm` | `initial?`, `ownerOptions`, `onSuccess`, `onCancel?`, `onDelete?` | Goal create/edit: title, description, owner, period, status, unit, baseline, target. Get `ownerOptions` (grouped by type, for this form and `ProjectForm`) from `loadOwnerOptions(client)` in `$shared/trpc/load-owner-options` |
+| `page/components/PageForm` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` | Page create/edit: title, kind, and property fields from `PAGE_KIND_FIELDS`. Content is edited on the page itself |
+| `goal/components/ProgressLineChart` | `checkIns`, `baseline?`, `target?`, `unit?` | Check-in values over time with the target line, drawn with `renderChart` |
+| `goal/components/GoalRows` | `goals`, `showOwner?`, `removeLabel?`, `onRemove?` | Goals as `.list-row`s with period, status badge and progress; used for sub-goals and a project's goals |
+| `goal/components/OwnedWork` | `goals`, `projects` | The "Goals" and "Projects owned" sections on person, team and department overviews |
 | `todo/components/TodoForm` | `entityType?`, `entityId?`, `editId?`, `onSuccess`, `onCancel?` | Todo create/edit; asks for the entity when none is given |
 | `todo/components/CreateTodoPopup` | – | Global `?popup=todo[&todo=<id>]`, a `Popup` around `TodoForm`; infers the entity from the current detail route |
 | `report/components/MarkdownReport` | `markdown`, `branding?`, `sections?` | Branded report rendering (logo, heading/table colours, charts) |

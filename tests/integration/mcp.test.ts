@@ -47,13 +47,33 @@ describe('wnotes mcp', () => {
     expect(init.result?.['serverInfo']).toMatchObject({ name: 'working-notes' });
     server.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
 
-    const tools = (await request('tools/list')).result?.['tools'] as Array<{ name: string; annotations: { destructiveHint: boolean; readOnlyHint: boolean } }>;
+    const tools = (await request('tools/list')).result?.['tools'] as Array<{ name: string; inputSchema: { properties?: Record<string, unknown> }; annotations: { destructiveHint: boolean; readOnlyHint: boolean } }>;
     const byName = new Map(tools.map((t) => [t.name, t]));
     expect(tools.length).toBeGreaterThan(60);
     expect(byName.get('person_list')?.annotations.readOnlyHint).toBe(true);
     expect(byName.get('person_delete')?.annotations.destructiveHint).toBe(true);
+    expect(byName.get('goal_delete')?.annotations.destructiveHint).toBe(true);
+    expect(byName.get('relation_remove')?.annotations.destructiveHint).toBe(true);
+    expect(byName.get('goal_checkIn')?.annotations.destructiveHint).toBe(false);
     expect(byName.has('backup_snapshot')).toBe(true);
     expect(byName.has('trpcMeta_list')).toBe(false);
+    expect(byName.get('person_list')?.inputSchema.properties?.['notebook']).toBeDefined();
+    expect(byName.get('backup_snapshot')?.inputSchema.properties?.['notebook']).toBeDefined();
+    expect(byName.get('notebook_list')?.inputSchema.properties?.['notebook']).toBeUndefined();
+  });
+
+  it('works in the default notebook unless a call passes `notebook`', async () => {
+    expect((await callTool('person_create', { name: 'Noor Other', notebook: 'other' })).isError).toBe(false);
+    const names = async (args: Record<string, unknown>) =>
+      (JSON.parse((await callTool('person_list', args)).text) as Array<{ name: string }>).map((p) => p.name);
+    expect(await names({ notebook: 'Other' })).toEqual(['Noor Other']);
+    expect(await names({})).not.toContain('Noor Other');
+
+    const unknown = await callTool('person_list', { notebook: 'nope' });
+    expect(unknown.isError).toBe(true);
+    expect(unknown.text).toContain('There is no notebook "nope"');
+
+    expect(JSON.parse((await callTool('backup_list', { notebook: 'other' })).text)).toEqual({ notebook: 'other', snapshots: [] });
   });
 
   it('writes and reads the notebook, keeping schema types', async () => {

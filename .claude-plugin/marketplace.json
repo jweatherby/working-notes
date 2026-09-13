@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Working Notes: a local notebook that Claude keeps for you",
-    "version": "0.2.1"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "working-notes",
-      "source": "./plugin",
-      "description": "Lets Claude read and write your local Working Notes notebook: org chart, projects, notes, docs, todos and branded reports. Needs a local clone of the Working Notes app, set up with `bun run setup`.",
-      "version": "0.2.1",
+      "source": { "source": "github", "repo": "jweatherby/working-notes", "ref": "dist", "path": "plugin" },
+      "description": "Lets Claude read and write your local Working Notes notebooks (work, personal projects): org chart, projects, notes, docs, todos and branded reports. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
+      "version": "0.5.0",
       "category": "productivity",
       "keywords": ["notes", "org-chart", "todos", "reports", "local-first"]
     }

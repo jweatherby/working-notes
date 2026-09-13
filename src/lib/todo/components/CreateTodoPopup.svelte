@@ -4,19 +4,15 @@
   import Popup from '$lib/common/Popup.svelte';
   import TodoForm from './TodoForm.svelte';
   import { closePopup } from '$lib/ui/popup-url';
+  import { parseEntityPath } from '$shared/utils/entity';
   import type { EntityType } from '../utils';
 
-  const ROUTE_TYPES = {
-    projects: 'PROJECT',
-    people: 'PERSON',
-    teams: 'TEAM',
-    departments: 'DEPARTMENT',
-  } as const;
+  // Detail pages whose entity a new todo belongs to.
+  const TODO_OWNERS: ReadonlySet<EntityType> = new Set(['PROJECT', 'PERSON', 'TEAM', 'DEPARTMENT', 'GOAL', 'PAGE']);
 
   const entityContext = $derived.by((): { entityType: EntityType; entityId: string } | null => {
-    const m = $page.url.pathname.match(/^\/app\/(projects|people|teams|departments)\/([^/]+)/);
-    if (!m?.[1] || !m?.[2]) return null;
-    return { entityType: ROUTE_TYPES[m[1] as keyof typeof ROUTE_TYPES], entityId: m[2] };
+    const ref = parseEntityPath($page.url.pathname);
+    return ref && TODO_OWNERS.has(ref.entityType) ? { entityType: ref.entityType, entityId: ref.entityId } : null;
   });
 
   const isOpen = $derived($page.url.searchParams.get('popup') === 'todo');

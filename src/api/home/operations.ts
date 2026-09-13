@@ -48,6 +48,8 @@ const updateHref = (u: RawUpdate): string => {
     case 'TEAM':
     case 'DEPARTMENT':
     case 'PROJECT':
+    case 'GOAL':
+    case 'PAGE':
     case 'REPORT':
       return entityPath(u.kind, u.id);
     case 'TODO':
@@ -158,10 +160,13 @@ export const listRecentUpdates = async (
   const p = reg.prisma;
 
   // People and notes about people are left out: the feed is for everything else.
-  const [teams, departments, projects, docs, notes, reports, todos] = await Promise.all([
+  const titled = { ...recent, select: { id: true, title: true, createdAt: true, updatedAt: true } };
+  const [teams, departments, projects, goals, pages, docs, notes, reports, todos] = await Promise.all([
     p.team.findMany(recent),
     p.department.findMany(recent),
     p.project.findMany(recent),
+    p.goal.findMany(titled),
+    p.page.findMany(titled),
     p.doc.findMany({ ...recent, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
     p.note.findMany({ ...recent, where: { entityType: { not: 'PERSON' } } }),
     p.report.findMany({ ...recent, select: { id: true, title: true, entityType: true, entityId: true, createdAt: true, updatedAt: true } }),
@@ -183,6 +188,8 @@ export const listRecentUpdates = async (
       teams.map((x) => ({ ...base(x), kind: 'TEAM' as const, title: x.name, parent: null })),
       departments.map((x) => ({ ...base(x), kind: 'DEPARTMENT' as const, title: x.name, parent: null })),
       projects.map((x) => ({ ...base(x), kind: 'PROJECT' as const, title: x.name, parent: null })),
+      goals.map((x) => ({ ...base(x), kind: 'GOAL' as const, title: x.title, parent: null })),
+      pages.map((x) => ({ ...base(x), kind: 'PAGE' as const, title: x.title, parent: null })),
       docs.map((x) => ({ ...base(x), kind: 'DOC' as const, title: x.title, parent: parentOf(x) })),
       notes.map((x) => ({ ...base(x), kind: 'NOTE' as const, title: summarizeContent(x.content), parent: parentOf(x) })),
       reports.map((x) => ({ ...base(x), kind: 'REPORT' as const, title: x.title, parent: parentOf(x) })),

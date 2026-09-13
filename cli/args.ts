@@ -22,6 +22,35 @@ export interface JsonSchema {
 
 export type FileReader = (path: string) => string;
 
+export interface GlobalArgs {
+  /** `--notebook <id or name>`: the notebook to call against. */
+  readonly notebook?: string;
+  /** Every other argument, in order. */
+  readonly rest: readonly string[];
+}
+
+/** Takes the options every command accepts (`--notebook`) out of argv, wherever they appear. */
+export const splitGlobalArgs = (argv: readonly string[]): Result<GlobalArgs> => {
+  const rest: string[] = [];
+  let notebook: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    let value: string | undefined;
+    if (arg === '--notebook') {
+      value = argv[i + 1];
+      i++;
+    } else if (arg.startsWith('--notebook=')) {
+      value = arg.slice('--notebook='.length);
+    } else {
+      rest.push(arg);
+      continue;
+    }
+    if (!value || value.startsWith('--')) return err(new Error('--notebook needs a notebook id or name'));
+    notebook = value;
+  }
+  return ok(notebook === undefined ? { rest } : { notebook, rest });
+};
+
 /** Every JSON type a schema accepts, including through anyOf and enum. */
 export const typesOf = (schema: JsonSchema | undefined): ReadonlySet<string> => {
   if (!schema) return new Set();

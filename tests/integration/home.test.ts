@@ -6,10 +6,11 @@ import { createTeam } from '../../src/api/org/team/operations';
 import { createTodo } from '../../src/api/aux/todo/operations';
 import { addNote } from '../../src/api/aux/note/operations';
 import { getRelationGraph, listOpenTodos, listRecentUpdates } from '../../src/api/home/operations';
+import { TEST_NOTEBOOK } from './test-notebooks';
 
 describe('home smoke', () => {
   it('todos by priority, updates without people, project-centred graph', async () => {
-    const reg = getRegistry();
+    const reg = getRegistry(TEST_NOTEBOOK);
 
     const team = await createTeam(reg, { name: 'Home Feed Team' });
     expect(team.ok).toBe(true);

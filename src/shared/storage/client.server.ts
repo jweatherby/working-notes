@@ -1,11 +1,9 @@
-// Local-disk object storage under settings.dataDir/files.
+// Local-disk object storage under a notebook's files folder.
 // Keys are relative paths (e.g. `docs/<id>/source-<uuid>.pdf`); any key that
 // resolves outside the files root is rejected.
 
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
-import { settings } from '$shared/settings/server/index.server';
-import { filesDir } from '$shared/settings/server/paths';
 
 export interface StoredObject {
   readonly bytes: Uint8Array;
@@ -32,7 +30,7 @@ export const resolveKey = (root: string, key: string): string | null => {
   return full.startsWith(base + sep) ? full : null;
 };
 
-export const createStorageClient = (root: string = filesDir(settings)): StorageClient => ({
+export const createStorageClient = (root: string): StorageClient => ({
   putObject: async (key: string, body: Uint8Array): Promise<void> => {
     const path = resolveKey(root, key);
     if (!path) throw new Error(`Invalid storage key: ${key}`);

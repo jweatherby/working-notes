@@ -10,6 +10,9 @@ const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['st
   ...overrides
 });
 
+// Removing a doc or saving its content also touches its relations.
+const relationMock = () => ({ deleteMany: vi.fn().mockResolvedValue({ count: 0 }) });
+
 describe('attachSourcePdf', () => {
   it('stores the PDF and sets sourceUrl without touching content', async () => {
     const findUnique = vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: null });
@@ -76,15 +79,17 @@ describe('getDocReadUrl', () => {
 });
 
 describe('removeDoc', () => {
-  it('deletes the doc and its PDF from storage when sourceUrl is set', async () => {
+  it('deletes the doc, its relations and its PDF from storage when sourceUrl is set', async () => {
     const del = vi.fn().mockResolvedValue({});
     const deleteObject = vi.fn().mockResolvedValue(undefined);
+    const relation = relationMock();
     const reg = createTestRegistry({
       prisma: {
         doc: {
           findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source.pdf' }),
           delete: del
-        }
+        },
+        relation
       } as unknown as Registry['prisma'],
       storage: storageMock({ deleteObject })
     });
@@ -94,6 +99,9 @@ describe('removeDoc', () => {
     expect(result.ok).toBe(true);
     expect(deleteObject).toHaveBeenCalledWith('docs/doc_1/source.pdf');
     expect(del).toHaveBeenCalledWith({ where: { id: 'doc_1' } });
+    expect(relation.deleteMany).toHaveBeenCalledWith({
+      where: { OR: [{ fromType: 'DOC', fromId: 'doc_1' }, { toType: 'DOC', toId: 'doc_1' }] }
+    });
   });
 
   it('does not call storage when sourceUrl is null', async () => {
@@ -103,7 +111,8 @@ describe('removeDoc', () => {
         doc: {
           findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: null }),
           delete: vi.fn().mockResolvedValue({})
-        }
+        },
+        relation: relationMock()
       } as unknown as Registry['prisma'],
       storage: storageMock({ deleteObject })
     });
@@ -119,7 +128,8 @@ describe('removeDoc', () => {
         doc: {
           findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', sourceUrl: 'docs/doc_1/source.pdf' }),
           delete: del
-        }
+        },
+        relation: relationMock()
       } as unknown as Registry['prisma'],
       storage: storageMock({ deleteObject: vi.fn().mockRejectedValue(new Error('disk full')) })
     });
@@ -148,11 +158,13 @@ describe('updateDoc', () => {
     });
   });
 
-  it('does not touch sourceUrl when omitted', async () => {
+  it('does not touch sourceUrl when omitted, and clears mentions for content without links', async () => {
     const update = vi.fn().mockResolvedValue({});
+    const relation = relationMock();
     const reg = createTestRegistry({
       prisma: {
-        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1' }), update }
+        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1' }), update },
+        relation
       } as unknown as Registry['prisma']
     });
 
@@ -160,6 +172,9 @@ describe('updateDoc', () => {
     expect(update).toHaveBeenCalledWith({
       where: { id: 'doc_1' },
       data: { content: 'x' }
+    });
+    expect(relation.deleteMany).toHaveBeenCalledWith({
+      where: { fromType: 'DOC', fromId: 'doc_1', kind: 'MENTIONS' }
     });
   });
 });

@@ -2,6 +2,8 @@ import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import type { EntityType } from '$shared/types/enums';
 import { fileUrl } from '$shared/utils/files';
+import { relationCleanupOp } from '$api/_entity-cleanup';
+import { syncMentions } from '$api/relation/mentions';
 
 // ----- Types -----
 
@@ -66,6 +68,7 @@ export const updateDoc = async (
       ...(input.sourceUrl !== undefined && { sourceUrl: input.sourceUrl })
     }
   });
+  if (input.content !== undefined) await syncMentions(reg, { entityType: 'DOC', entityId: id }, input.content);
   return ok({ id });
 };
 
@@ -84,6 +87,7 @@ export const removeDoc = async (
     }
   }
 
+  await relationCleanupOp(reg, 'DOC', id);
   await reg.prisma.doc.delete({ where: { id } });
   return ok({ deleted: true as const });
 };

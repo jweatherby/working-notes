@@ -7,10 +7,11 @@ import { createTeam, addTeamMember, getTeam } from '../../src/api/org/team/opera
 import { addNote, listNotes } from '../../src/api/aux/note/operations';
 import { createTodo, listTodosForEntity } from '../../src/api/aux/todo/operations';
 import { createTag, attachTag, listTagsForEntity } from '../../src/api/aux/tag/operations';
+import { TEST_NOTEBOOK } from './test-notebooks';
 
 describe('notebook smoke', () => {
   it('person → team membership → note → todo → tag', async () => {
-    const reg = getRegistry();
+    const reg = getRegistry(TEST_NOTEBOOK);
 
     const team = await createTeam(reg, { name: 'Platform' });
     expect(team.ok).toBe(true);

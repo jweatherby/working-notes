@@ -48,7 +48,8 @@ describe('createReport', () => {
     const reg = createTestRegistry({
       prisma: {
         person: { findUnique: vi.fn().mockResolvedValue({ name: 'Alice' }) },
-        report: { create }
+        report: { create },
+        relation: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) }
       } as unknown as Registry['prisma']
     });
 

@@ -5,15 +5,20 @@ import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
   const client = trpc(fetch);
-  const [result, allPersons, assets] = await Promise.all([
+  const owner = { ownerType: 'DEPARTMENT', ownerId: params.id } as const;
+  const [result, allPersons, ownedGoals, ownedProjects, assets] = await Promise.all([
     client.department.get.query({ id: params.id }),
     client.person.list.query(),
+    client.goal.list.query(owner),
+    client.project.list.query(owner),
     loadEntityAssets(client, 'DEPARTMENT', params.id)
   ]);
   if (!result.ok) throw error(404, 'Department not found');
   return {
     department: result.value,
     allPersons: allPersons.ok ? allPersons.value : [],
+    ownedGoals: ownedGoals.ok ? ownedGoals.value : [],
+    ownedProjects: ownedProjects.ok ? ownedProjects.value : [],
     ...assets
   };
 };

@@ -1,0 +1,19 @@
+import type { PageServerLoad } from './$types';
+import { trpc } from '$shared/trpc/client';
+import { loadEntityAssets } from '$shared/trpc/load-entity-assets';
+import { error } from '@sveltejs/kit';
+
+export const load: PageServerLoad = async ({ fetch, params }) => {
+  const client = trpc(fetch);
+  const [result, allPages, assets] = await Promise.all([
+    client.page.get.query({ id: params.id }),
+    client.page.list.query(),
+    loadEntityAssets(client, 'PAGE', params.id)
+  ]);
+  if (!result.ok) throw error(404, 'Page not found');
+  return {
+    page: result.value,
+    allPages: allPages.ok ? allPages.value : [],
+    ...assets
+  };
+};

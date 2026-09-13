@@ -1,14 +1,27 @@
-// tRPC context. Exposes `reg` (the Registry) to every procedure.
-// Routes forward `ctx.reg` (or a slice of it) into operations.
+// tRPC context: the notebook a call runs against, its Registry (`reg`), and the
+// notebook store for the `notebook` procedures. Routes forward `ctx.reg` (or a
+// slice of it) into operations.
 
 import type { RequestEvent } from '@sveltejs/kit';
-import { getRegistry } from '$shared/registry.server';
+import { getReadyRegistry } from '$shared/db/bootstrap.server';
+import { getNotebookStore } from '$shared/notebooks/current.server';
+import type { NotebookStore } from '$shared/notebooks/store.server';
 import type { Registry } from '$shared/registry';
+import type { NotebookInfo } from '$shared/types/notebook';
 
 export interface Context {
   readonly reg: Registry;
+  readonly notebook: NotebookInfo;
+  readonly notebooks: NotebookStore;
 }
 
-export const createContext = async (_opts: { readonly event: RequestEvent }): Promise<Context> => ({
-  reg: getRegistry()
+/** Used by the HTTP handler and by in-process callers (the CLI and MCP server). */
+export const createNotebookContext = async (notebook: NotebookInfo): Promise<Context> => ({
+  reg: await getReadyRegistry(notebook.id),
+  notebook,
+  notebooks: getNotebookStore()
 });
+
+/** `event.locals.notebook` is set by notebookHandle in hooks.server.ts. */
+export const createContext = (opts: { readonly event: RequestEvent }): Promise<Context> =>
+  createNotebookContext(opts.event.locals.notebook);

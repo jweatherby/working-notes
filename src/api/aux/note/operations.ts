@@ -1,6 +1,8 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import type { EntityType } from '$shared/types/enums';
+import { relationCleanupOp } from '$api/_entity-cleanup';
+import { syncMentions } from '$api/relation/mentions';
 
 // ----- Types -----
 
@@ -48,6 +50,7 @@ export const addNote = async (
       parentId: input.parentId
     }
   });
+  await syncMentions(reg, { entityType: 'NOTE', entityId: note.id }, input.content);
   return ok({ id: note.id });
 };
 
@@ -60,6 +63,7 @@ export const updateNote = async (
   if (!existing) return err(new Error('Note not found'));
 
   await reg.prisma.note.update({ where: { id }, data: { content: input.content } });
+  await syncMentions(reg, { entityType: 'NOTE', entityId: id }, input.content);
   return ok({ id });
 };
 
@@ -70,6 +74,7 @@ export const removeNote = async (
   const existing = await reg.prisma.note.findUnique({ where: { id } });
   if (!existing) return err(new Error('Note not found'));
 
+  await relationCleanupOp(reg, 'NOTE', id);
   await reg.prisma.note.delete({ where: { id } });
   return ok({ deleted: true as const });
 };

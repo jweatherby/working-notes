@@ -13,6 +13,6 @@ export interface Registry {
   /** UUID generation. Never call `crypto.randomUUID()` inside operations - use this. */
   readonly uuid: () => string;
   readonly logger: Logger;
-  /** Local-disk file storage under settings.dataDir/files. */
+  /** Local-disk file storage under the notebook's files/ folder. */
   readonly storage: StorageClient;
 }

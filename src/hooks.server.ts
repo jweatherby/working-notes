@@ -1,9 +1,12 @@
-// Root server hooks. `init` prepares the database before the first request;
-// `handle` sequences the local-only guard, the tRPC handle, and security headers.
+// Root server hooks. `init` puts the data directory in the notebook layout and
+// prepares the default notebook's database before the first request; `handle`
+// sequences the local-only guard, the notebook picker, the tRPC handle, and security headers.
 
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle, ServerInit } from '@sveltejs/kit';
 import { ensureDatabase } from '$shared/db/bootstrap.server';
+import { resolveCurrentNotebook } from '$shared/notebooks/current.server';
+import { notebookHandle } from '$shared/notebooks/handle.server';
 import { trpcHandle } from '$shared/trpc/handler';
 import { LOCAL_HEADER, TRPC_BASE_PATH } from '$shared/trpc/config';
 
@@ -33,6 +36,10 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
   return response;
 };
 
-export const init: ServerInit = ensureDatabase;
+export const init: ServerInit = async () => {
+  const notebook = await resolveCurrentNotebook({});
+  if (!notebook.ok) throw notebook.error;
+  await ensureDatabase(notebook.value.id);
+};
 
-export const handle = sequence(localOnlyGuard, trpcHandle, securityHeaders);
+export const handle = sequence(localOnlyGuard, notebookHandle, trpcHandle, securityHeaders);

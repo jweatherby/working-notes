@@ -4,12 +4,13 @@ import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { createBranding } from '../../src/api/branding/operations';
 import { createReport, getReport, updateReport } from '../../src/api/aux/report/operations';
+import { TEST_NOTEBOOK } from './test-notebooks';
 
 const chart = (json: string): string => ['```chart', json, '```'].join('\n');
 
 describe('reports', () => {
   it('creates a report with a valid chart, resolves default branding, rejects a bad chart on update', async () => {
-    const reg = getRegistry();
+    const reg = getRegistry(TEST_NOTEBOOK);
 
     const branding = await createBranding(reg, { name: 'Acme', primaryColor: '#123456', isDefault: true });
     expect(branding.ok).toBe(true);

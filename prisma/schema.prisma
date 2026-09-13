@@ -156,13 +156,115 @@ model Project {
   daysLikely      Int?      @map("days_likely")
   daysPessimistic Int?      @map("days_pessimistic")
   parentId        String?   @map("parent_id")
+  ownerType       String?   @map("owner_type")
+  ownerId         String?   @map("owner_id")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  parent   Project?  @relation("ProjectHierarchy", fields: [parentId], references: [id])
-  children Project[] @relation("ProjectHierarchy")
+  parent   Project?      @relation("ProjectHierarchy", fields: [parentId], references: [id])
+  children Project[]     @relation("ProjectHierarchy")
+  goals    GoalProject[]
 
+  @@index([ownerType, ownerId])
   @@map("project")
+}
+
+// ----- Goals (owner is polymorphic: PERSON, TEAM or DEPARTMENT) -----
+
+model Goal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  ownerType   String?  @map("owner_type")
+  ownerId     String?  @map("owner_id")
+  parentId    String?  @map("parent_id")
+  period      String?
+  status      String   @default("NOT_STARTED")
+  unit        String?
+  baseline    Float?
+  target      Float?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent   Goal?         @relation("GoalHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Goal[]        @relation("GoalHierarchy")
+  checkIns GoalCheckIn[]
+  projects GoalProject[]
+
+  @@index([ownerType, ownerId])
+  @@index([parentId])
+  @@index([period])
+  @@map("goal")
+}
+
+model GoalCheckIn {
+  id        String   @id @default(cuid())
+  goalId    String   @map("goal_id")
+  date      DateTime
+  value     Float?
+  status    String?
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, date])
+  @@map("goal_check_in")
+}
+
+model GoalProject {
+  id        String   @id @default(cuid())
+  goalId    String   @map("goal_id")
+  projectId String   @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  goal    Goal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, projectId])
+  @@index([projectId])
+  @@map("goal_project")
+}
+
+// ----- Wiki pages (properties is JSON, validated per kind in src/shared/types/pages.ts) -----
+
+model Page {
+  id         String   @id @default(cuid())
+  title      String
+  kind       String   @default("GENERAL")
+  parentId   String?  @map("parent_id")
+  content    String   @default("")
+  properties String   @default("{}")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  parent   Page?  @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Page[] @relation("PageHierarchy")
+
+  @@index([kind])
+  @@index([parentId])
+  @@map("page")
+}
+
+// ----- Relations: typed links between any two entities (polymorphic at both ends, no FK) -----
+
+model Relation {
+  id        String   @id @default(cuid())
+  fromType  String   @map("from_type")
+  fromId    String   @map("from_id")
+  toType    String   @map("to_type")
+  toId      String   @map("to_id")
+  kind      String   @default("RELATED")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([fromType, fromId, toType, toId, kind])
+  @@index([fromType, fromId])
+  @@index([toType, toId])
+  @@map("relation")
 }
 
 // ----- Todos -----

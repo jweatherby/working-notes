@@ -6,6 +6,8 @@ import type { ReportBrandingProfile, ReportDetail, ReportSummary } from '$shared
 import { entityPath } from '$shared/utils/entity';
 import { fileUrl } from '$shared/utils/files';
 import { resolveEntityLabel } from '$api/_entity-labels';
+import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
+import { syncMentions } from '$api/relation/mentions';
 
 // ----- Row shapes -----
 
@@ -32,7 +34,7 @@ interface ReportRow {
   readonly branding: BrandingRow | null;
 }
 
-const NAMED_ENTITIES: ReadonlySet<EntityType> = new Set(['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT']);
+const NAMED_ENTITIES: ReadonlySet<EntityType> = new Set(['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE']);
 
 const toProfile = (b: BrandingRow): ReportBrandingProfile => ({
   id: b.id,
@@ -144,6 +146,7 @@ export const createReport = async (
       brandingId: input.brandingId ?? null
     }
   });
+  if (input.content) await syncMentions(reg, { entityType: 'REPORT', entityId: row.id }, input.content);
   return ok({ id: row.id });
 };
 
@@ -177,23 +180,19 @@ export const updateReport = async (
       ...(input.brandingId !== undefined && { brandingId: input.brandingId })
     }
   });
+  if (input.content !== undefined) await syncMentions(reg, { entityType: 'REPORT', entityId: id }, input.content);
   return ok({ id });
 };
 
 export const removeReport = async (
-  reg: Pick<Registry, 'prisma'>,
+  reg: Pick<Registry, 'prisma' | 'storage' | 'logger'>,
   id: string
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.report.findUnique({ where: { id } });
   if (!existing) return err(new Error('Report not found'));
 
-  const assets = { entityType: 'REPORT', entityId: id };
-  await reg.prisma.$transaction([
-    reg.prisma.tagAttachment.deleteMany({ where: assets }),
-    reg.prisma.link.deleteMany({ where: assets }),
-    reg.prisma.comment.deleteMany({ where: assets }),
-    reg.prisma.emoji.deleteMany({ where: assets }),
-    reg.prisma.report.delete({ where: { id } })
-  ]);
+  const cleanup = await planEntityCleanup(reg, 'REPORT', id);
+  await reg.prisma.$transaction([...cleanup.ops, reg.prisma.report.delete({ where: { id } })]);
+  await removeFiles(reg, cleanup.files);
   return ok({ deleted: true as const });
 };

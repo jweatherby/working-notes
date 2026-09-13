@@ -1,5 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
+import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
 
 // ----- Types -----
 
@@ -123,14 +124,17 @@ export const updateDepartment = async (
   return ok({ id });
 };
 
+/** Also deletes what's attached to the department and its relations, and clears it as an owner. */
 export const deleteDepartment = async (
-  reg: Pick<Registry, 'prisma'>,
+  reg: Pick<Registry, 'prisma' | 'storage' | 'logger'>,
   id: string
 ): Promise<Result<{ readonly deleted: true }>> => {
   const existing = await reg.prisma.department.findFirst({ where: { id } });
   if (!existing) return err(new Error('Department not found'));
 
-  await reg.prisma.department.delete({ where: { id } });
+  const cleanup = await planEntityCleanup(reg, 'DEPARTMENT', id);
+  await reg.prisma.$transaction([...cleanup.ops, reg.prisma.department.delete({ where: { id } })]);
+  await removeFiles(reg, cleanup.files);
   return ok({ deleted: true as const });
 };
 

@@ -1,6 +1,6 @@
-// Snapshots of the notebook: a consistent copy of the database (VACUUM INTO),
-// the uploaded files and a manifest, in <data dir>/Backups/<id>/. Taken only
-// when the data changed, unless forced.
+// Snapshots of one notebook: a consistent copy of its database (VACUUM INTO), its
+// uploaded files and a manifest, in <data dir>/Backups/<notebook>/<id>/. Taken
+// only when the data changed, unless forced.
 
 import { createHash } from 'node:crypto';
 import { copyFile, link, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -18,8 +18,10 @@ export interface FileEntry {
 }
 
 export interface SnapshotManifest {
-  readonly version: 1;
+  /** 2 added `notebook`. Snapshots from before notebooks are version 1. */
+  readonly version: 1 | 2;
   readonly id: string;
+  readonly notebook?: string;
   readonly createdAt: string;
   readonly reason: string;
   /** Hash of every table's rows, the applied migrations and the file list. */
@@ -44,6 +46,8 @@ export interface SnapshotOutcome {
 }
 
 export interface SnapshotOptions {
+  /** Notebook id. */
+  readonly notebook: string;
   readonly force?: boolean;
   readonly reason?: string;
   readonly now?: Date;
@@ -99,9 +103,9 @@ const fingerprintData = async (
   return { fingerprint: hash.digest('hex'), counts, migrations };
 };
 
-/** Complete snapshots, newest first. */
-export const listSnapshots = async (): Promise<readonly Snapshot[]> => {
-  const root = backupsDir(settings);
+/** A notebook's complete snapshots, newest first. */
+export const listSnapshots = async (notebook: string): Promise<readonly Snapshot[]> => {
+  const root = backupsDir(settings, notebook);
   const names = await readdir(root).catch(() => [] as string[]);
   const snapshots: Snapshot[] = [];
   for (const id of names.filter((n) => parseSnapshotId(n) !== null)) {
@@ -115,8 +119,8 @@ export const listSnapshots = async (): Promise<readonly Snapshot[]> => {
   return snapshots.sort((a, b) => b.id.localeCompare(a.id));
 };
 
-export const pruneSnapshots = async (now: Date): Promise<readonly string[]> => {
-  const root = backupsDir(settings);
+export const pruneSnapshots = async (notebook: string, now: Date): Promise<readonly string[]> => {
+  const root = backupsDir(settings, notebook);
   const names = await readdir(root).catch(() => [] as string[]);
   const ids = names.filter((n) => parseSnapshotId(n) !== null);
   const keep = selectSnapshotsToKeep(ids, now);
@@ -140,18 +144,19 @@ const freeId = (taken: ReadonlySet<string>, now: Date): string => {
   return snapshotId(new Date(t));
 };
 
-export const createSnapshot = async (options: SnapshotOptions = {}): Promise<SnapshotOutcome> => {
+export const createSnapshot = async (options: SnapshotOptions): Promise<SnapshotOutcome> => {
+  const { notebook } = options;
   const now = options.now ?? new Date();
-  await ensureDatabase();
+  await ensureDatabase(notebook);
 
-  const root = backupsDir(settings);
+  const root = backupsDir(settings, notebook);
   await mkdir(root, { recursive: true });
-  const files = await listFiles(filesDir(settings));
-  const client = createClient({ url: databaseUrl(settings) });
+  const files = await listFiles(filesDir(settings, notebook));
+  const client = createClient({ url: databaseUrl(settings, notebook) });
 
   try {
     const { fingerprint, counts, migrations } = await fingerprintData(client, files);
-    const existing = await listSnapshots();
+    const existing = await listSnapshots(notebook);
     const latest = existing[0] ?? null;
     if (!options.force && latest?.manifest.fingerprint === fingerprint) {
       return { status: 'unchanged', snapshot: latest, pruned: [] };
@@ -177,13 +182,14 @@ export const createSnapshot = async (options: SnapshotOptions = {}): Promise<Sna
       const linked = latest && prev && prev.size === f.size && prev.mtimeMs === f.mtimeMs
         ? await link(join(latest.path, 'files', f.path), dest).then(() => true, () => false)
         : false;
-      if (!linked) await copyFile(join(filesDir(settings), f.path), dest);
+      if (!linked) await copyFile(join(filesDir(settings, notebook), f.path), dest);
       bytes += f.size;
     }
 
     const manifest: SnapshotManifest = {
-      version: 1,
+      version: 2,
       id,
+      notebook,
       createdAt: now.toISOString(),
       reason: options.reason ?? 'manual',
       fingerprint,
@@ -196,7 +202,7 @@ export const createSnapshot = async (options: SnapshotOptions = {}): Promise<Sna
     await writeFile(join(partial, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
     await rename(partial, final);
 
-    const pruned = await pruneSnapshots(now);
+    const pruned = await pruneSnapshots(notebook, now);
     return { status: 'created', snapshot: { id, path: final, manifest }, pruned };
   } finally {
     client.close();

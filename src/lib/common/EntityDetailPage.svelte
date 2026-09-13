@@ -3,6 +3,8 @@
   import { onDestroy } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
+  import type { EntityType } from '$shared/types/enums';
+  import type { RelationGroup } from '$shared/types/relations';
   import DetailLayout from '$lib/common/DetailLayout.svelte';
   import DocsManager from '$lib/common/DocsManager.svelte';
   import DocEditor from '$lib/common/DocEditor.svelte';
@@ -11,6 +13,7 @@
   import TodoWidget from '$lib/todo/components/TodoWidget.svelte';
   import TodoForm from '$lib/todo/components/TodoForm.svelte';
   import ReportsWidget from '$lib/report/components/ReportsWidget.svelte';
+  import RelationsWidget from '$lib/relation/components/RelationsWidget.svelte';
   import { createDocHandlers } from '$lib/common/use-doc-handlers';
   import { createNoteHandlers } from '$lib/common/use-note-handlers';
   import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
@@ -68,6 +71,7 @@
     readonly notes: readonly NoteItem[];
     readonly todos: readonly TodoItem[];
     readonly reports?: readonly ReportItem[];
+    readonly relations?: readonly RelationGroup[];
     readonly renderOverview: Snippet<[OverviewCtx]>;
     readonly renderAssetHeader: Snippet;
     readonly renderEditForm: Snippet<[EditFormCtx]>;
@@ -84,6 +88,7 @@
     notes,
     todos,
     reports = [],
+    relations = [],
     renderOverview,
     renderAssetHeader,
     renderEditForm,
@@ -217,7 +222,7 @@
   const handleEditSuccess = () => closePopup({ invalidate: true });
   const handleEditCancel = () => { closePopup(); };
 
-  const todoEntityType = $derived(entityType as 'PROJECT' | 'PERSON' | 'TEAM' | 'DEPARTMENT');
+  const todoEntityType = $derived(entityType as EntityType);
 </script>
 
 <svelte:head><title>{entityName}</title></svelte:head>
@@ -245,6 +250,9 @@
     </div>
     <div class="section">
       <ReportsWidget {entityType} {entityId} {reports} />
+    </div>
+    <div class="section">
+      <RelationsWidget groups={relations} />
     </div>
   {/snippet}
 

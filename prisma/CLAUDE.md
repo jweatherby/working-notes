@@ -7,8 +7,9 @@ SQLite, one file per user: `~/Library/Application Support/Working Notes/working-
 - snake_case **singular** table names and snake_case columns via `@@map` / `@map`
 - **No enums** (the SQLite connector rejects them). Enum-like columns are `String` with a string `@default`, validated by Zod against the unions in `src/shared/types/enums.ts`. Add new values there.
 - **No native type attributes** (`@db.Text` etc.) and no `String[]`
-- No users, orgs or ownership columns. Don't add `createdById` or `orgId`.
+- No users or orgs, and no columns that record which user or org owns a row. Don't add `createdById` or `orgId`. An org-chart owner (the team that owns a project) is data, and is allowed.
 - Polymorphic assets use `entityType String` + `entityId String` with `@@index([entityType, entityId])`, and no foreign key to the entity
+- The same no-FK convention covers goal and project owners (`ownerType` + `ownerId`, indexed together) and relations, where both ends are polymorphic (`fromType`/`fromId`, `toType`/`toId`, each indexed). Deletes clean these up in code with `planEntityCleanup` (`src/api/_entity-cleanup.ts`).
 - The Prisma client is generated to `generated/prisma` (gitignored); import it only in `src/shared/registry.ts` / `registry.server.ts`
 
 ## Migrations

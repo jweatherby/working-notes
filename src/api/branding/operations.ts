@@ -21,15 +21,28 @@ export const listBrandings = async (
   })));
 };
 
+export interface DefaultBranding {
+  readonly id: string;
+  readonly iconUrl: string | null;
+  /** Colours the app chrome for this notebook (see `.branded` in styles/_tokens.scss). */
+  readonly primaryColor: string;
+  readonly primaryFontColor: string;
+}
+
 export const getDefaultBranding = async (
   reg: Pick<Registry, 'prisma'>
-): Promise<Result<{ readonly id: string; readonly iconUrl: string | null } | null>> => {
+): Promise<Result<DefaultBranding | null>> => {
   const row = await reg.prisma.branding.findFirst({
     where: { isDefault: true },
-    select: { id: true, iconUrl: true }
+    select: { id: true, iconUrl: true, primaryColor: true, primaryFontColor: true }
   });
   if (!row) return ok(null);
-  return ok({ id: row.id, iconUrl: row.iconUrl ? fileUrl(row.iconUrl) : null });
+  return ok({
+    id: row.id,
+    iconUrl: row.iconUrl ? fileUrl(row.iconUrl) : null,
+    primaryColor: row.primaryColor,
+    primaryFontColor: row.primaryFontColor
+  });
 };
 
 export const getBranding = async (

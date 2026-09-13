@@ -10,16 +10,18 @@
 ## Integration tests — `tests/integration/*.test.ts`
 
 - Run against real SQLite in `./data/test` (`APP_ENV=test`). `setup.ts` **refuses to run** unless the data dir resolves to `./data/test`, so it can never wipe the real notebook.
-- Before each file, `setup.ts` deletes `./data/test`, creates the database through `ensureDatabase()` (the real migrator), and seeds three people: `person_alice`, `person_bob`, `person_carol`.
-- Call operations with `getRegistry()`. Tests run single-fork and share the database within a file.
+- Before each file, `setup.ts` deletes `./data/test` and calls `ensureDatabase(TEST_NOTEBOOK)`, so the real layout code creates the default notebook `notebook` and the real migrator builds its database. It then adds an empty second notebook, `other`, and seeds three people in the first: `person_alice`, `person_bob`, `person_carol`.
+- Call operations with `getRegistry(TEST_NOTEBOOK)` (ids in `tests/integration/test-notebooks.ts`). Tests run single-fork and share the notebooks within a file.
 - Coverage:
   - `health`
+  - `notebooks`: isolation of data and files, the `notebook` procedures, resolving the current notebook, `notebookHandle` (`?notebook=`, cookie, fallback), the files route, and moving a pre-notebooks data directory
   - `notebook`: person → team → note → todo → tag
   - `reports`: branding resolution, chart validation
+  - `goals-wiki`: project owner, goal cascade, check-ins and progress, project links, page properties, mentions from content, relation and attachment cleanup on delete
   - `migrate`: fresh, idempotent, edited-migration refusal
-  - `backup`: change detection, hard links, restore round trip, refusal while the app runs
-  - `cli`: `bin/wnotes` from another directory with no server
-  - `mcp`: `wnotes mcp` over stdio: tool list, calls, errors as tool results, stdout kept to protocol messages
+  - `backup`: change detection, hard links, restore round trip, snapshots kept per notebook, refusal while the app runs
+  - `cli`: `bin/wnotes` from another directory with no server, including `--notebook`
+  - `mcp`: `wnotes mcp` over stdio: tool list, calls, the `notebook` argument, errors as tool results, stdout kept to protocol messages
 - Run: `bun run test:integration`
 
 ## Manual verification
