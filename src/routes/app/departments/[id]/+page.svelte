@@ -6,6 +6,8 @@
   import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { submitOrThrow } from '$lib/ui/submit';
 
   const { data } = $props<{ data: PageData }>();
   const department = $derived(data.department);
@@ -22,12 +24,12 @@
   );
 
   const handleAddMember = async (personId: string) => {
-    await trpc().department.addMember.mutate({ departmentId: department.id, personId });
+    await submitOrThrow(() => trpc().department.addMember.mutate({ departmentId: department.id, personId }));
     await invalidateAll();
   };
 
   const handleRemoveMember = async (personId: string) => {
-    await trpc().department.removeMember.mutate({ departmentId: department.id, personId });
+    await submitOrThrow(() => trpc().department.removeMember.mutate({ departmentId: department.id, personId }));
     await invalidateAll();
   };
 </script>
@@ -68,7 +70,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">No members yet.</p>
+        <EmptyState message="No members yet." />
       {/if}
       <div class="section-footer">
         <InlinePicker label="Add member" options={availablePersons} placeholder="Select a person…" onPick={handleAddMember} />

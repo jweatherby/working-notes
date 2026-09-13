@@ -52,6 +52,7 @@
   .col-left { position: relative; }
   .drawer-backdrop { display: none; }
 
+  // Not a mixin: the three-column layout needs ~850px before the sidebar becomes a drawer.
   @media (max-width: 849px) {
     .columns { display: block; height: auto; }
     .drawer-backdrop { display: block; }

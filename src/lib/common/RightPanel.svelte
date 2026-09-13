@@ -1,6 +1,7 @@
 <script lang="ts">
   import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
   import NotesList from '$lib/common/NotesList.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   let drawerOpen = $state(false);
 
@@ -38,7 +39,7 @@
         onRemove={$rightPanelNotes.onRemove}
       />
     {:else}
-      <p class="empty">Open a person, team, department or project to see its notes.</p>
+      <div class="panel-empty"><EmptyState message="Open a person, team, department or project to see its notes." /></div>
     {/if}
   </div>
 </aside>
@@ -74,7 +75,7 @@
     overflow-y: auto;
     padding: var(--sp-3) var(--sp-4);
   }
-  .empty { padding-top: var(--sp-4); text-align: center; }
+  .panel-empty { padding-top: var(--sp-4); text-align: center; }
 
   @include below-md {
     .drawer-handle { display: flex; }

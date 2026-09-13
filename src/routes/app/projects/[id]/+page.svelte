@@ -6,7 +6,8 @@
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
-  import { submit } from '$lib/ui/submit';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { submit, submitOrThrow } from '$lib/ui/submit';
   import { statusBadgeClass } from '$lib/project/utils';
 
   const { data } = $props<{ data: PageData }>();
@@ -36,18 +37,21 @@
   const nextStatus = $derived(canAdvance ? STATUS_FLOW[statusIndex + 1] : null);
   const prevStatus = $derived(canRevert ? STATUS_FLOW[statusIndex - 1] : null);
 
+  let statusError = $state('');
+
   const handleStatusChange = async (newStatus: string) => {
-    await trpc().project.update.mutate({ id: project.id, status: newStatus });
-    await invalidateAll();
+    const outcome = await submit(() => trpc().project.update.mutate({ id: project.id, status: newStatus }));
+    statusError = outcome.ok ? '' : outcome.error;
+    if (outcome.ok) await invalidateAll();
   };
 
   const handleSetParent = async (parentId: string | null) => {
-    await trpc().project.update.mutate({ id: project.id, parentId });
+    await submitOrThrow(() => trpc().project.update.mutate({ id: project.id, parentId }));
     await invalidateAll();
   };
 
   const handleUnlinkChild = async (childId: string) => {
-    await trpc().project.update.mutate({ id: childId, parentId: null });
+    await submitOrThrow(() => trpc().project.update.mutate({ id: childId, parentId: null }));
     await invalidateAll();
   };
 
@@ -104,6 +108,7 @@
               {#if canAdvance}
                 <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(nextStatus!)}>{nextStatus} →</button>
               {/if}
+              {#if statusError}<span class="inline-error" role="alert">{statusError}</span>{/if}
             </dd>
           </div>
         {/if}
@@ -144,7 +149,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">No sub-projects.</p>
+        <EmptyState message="No sub-projects." />
       {/if}
 
       <form class="toolbar child-form" onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleCreateChild(); }}>

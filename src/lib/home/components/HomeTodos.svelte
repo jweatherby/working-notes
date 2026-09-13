@@ -6,6 +6,8 @@
   import PriorityBadge from '$lib/todo/components/PriorityBadge.svelte';
   import { nextStatus, formatTodoDate, type TodoStatus } from '$lib/todo/utils';
   import { openPopup } from '$lib/ui/popup-url';
+  import { submit } from '$lib/ui/submit';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Props {
     readonly todos: readonly TodoSummary[];
@@ -13,11 +15,14 @@
 
   const { todos }: Props = $props();
 
+  let statusError = $state('');
+
   const openEdit = (id: string) => openPopup('todo', { todo: id });
 
   const advance = async (id: string, status: TodoStatus) => {
-    await trpc().todo.update.mutate({ id, status: nextStatus(status) });
-    await invalidateAll();
+    const outcome = await submit(() => trpc().todo.update.mutate({ id, status: nextStatus(status) }));
+    statusError = outcome.ok ? '' : outcome.error;
+    if (outcome.ok) await invalidateAll();
   };
 </script>
 
@@ -27,8 +32,10 @@
     <a href="/app/todos" class="text-sm">All todos →</a>
   </header>
 
+  {#if statusError}<p class="form-error" role="alert">{statusError}</p>{/if}
+
   {#if todos.length === 0}
-    <p class="empty">Nothing open. Nice.</p>
+    <EmptyState message="Nothing open. Nice." />
   {:else}
     <ul class="list divided">
       {#each todos as todo (todo.id)}

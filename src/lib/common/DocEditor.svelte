@@ -31,7 +31,12 @@
     editingTitle = false;
     const trimmed = titleDraft.trim();
     if (!trimmed || trimmed === title || !onSaveTitle) return;
-    await onSaveTitle(trimmed);
+    error = '';
+    try {
+      await onSaveTitle(trimmed);
+    } catch (e: unknown) {
+      error = messageOf(e);
+    }
   };
 
   const cancelTitle = () => {
@@ -68,6 +73,9 @@
   let mode = $state<'write' | 'editor' | 'preview'>('editor');
   let saving = $state(false);
   let uploading = $state(false);
+  let error = $state('');
+
+  const messageOf = (e: unknown): string => (e instanceof Error ? e.message : 'Could not save.');
 
   $effect(() => {
     const md = content;
@@ -90,8 +98,11 @@
     const file = input.files?.[0];
     if (!file || !onUploadPdf) return;
     uploading = true;
+    error = '';
     try {
       await onUploadPdf(file);
+    } catch (e: unknown) {
+      error = messageOf(e);
     } finally {
       uploading = false;
       input.value = '';
@@ -121,10 +132,13 @@
   const handleSave = async () => {
     if (!isDirty) return;
     saving = true;
+    error = '';
     try {
       let toSave = draft;
       toSave = await uploadPendingImages(toSave);
       await onSave(toSave);
+    } catch (e: unknown) {
+      error = messageOf(e);
     } finally {
       saving = false;
     }
@@ -159,6 +173,7 @@
       <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>
     {/if}
   </div>
+  {#if error}<p class="form-error" role="alert">{error}</p>{/if}
   {#if uploading}
     <div class="status" aria-busy="true">Attaching PDF…</div>
   {:else if resolving}

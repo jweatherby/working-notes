@@ -6,6 +6,8 @@
   import PersonForm from '$lib/person/components/PersonForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { submitOrThrow } from '$lib/ui/submit';
 
   const { data } = $props<{ data: PageData }>();
   const person = $derived(data.person);
@@ -30,27 +32,27 @@
   );
 
   const handleSetLead = async (leadId: string | null) => {
-    await trpc().person.update.mutate({ id: person.id, leadId });
+    await submitOrThrow(() => trpc().person.update.mutate({ id: person.id, leadId }));
     await invalidateAll();
   };
 
   const handleAddTeam = async (teamId: string) => {
-    await trpc().team.addMember.mutate({ teamId, personId: person.id });
+    await submitOrThrow(() => trpc().team.addMember.mutate({ teamId, personId: person.id }));
     await invalidateAll();
   };
 
   const handleRemoveTeam = async (teamId: string) => {
-    await trpc().team.removeMember.mutate({ teamId, personId: person.id });
+    await submitOrThrow(() => trpc().team.removeMember.mutate({ teamId, personId: person.id }));
     await invalidateAll();
   };
 
   const handleAddDept = async (departmentId: string) => {
-    await trpc().department.addMember.mutate({ departmentId, personId: person.id });
+    await submitOrThrow(() => trpc().department.addMember.mutate({ departmentId, personId: person.id }));
     await invalidateAll();
   };
 
   const handleRemoveDept = async (departmentId: string) => {
-    await trpc().department.removeMember.mutate({ departmentId, personId: person.id });
+    await submitOrThrow(() => trpc().department.removeMember.mutate({ departmentId, personId: person.id }));
     await invalidateAll();
   };
 </script>
@@ -113,7 +115,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">No direct reports.</p>
+        <EmptyState message="No direct reports." />
       {/if}
     </section>
 
@@ -133,7 +135,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">Not on any team.</p>
+        <EmptyState message="Not on any team." />
       {/if}
       <div class="section-footer">
         <InlinePicker label="Add to team" options={availableTeams} placeholder="Select a team…" onPick={handleAddTeam} />

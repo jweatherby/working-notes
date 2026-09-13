@@ -3,6 +3,7 @@
   import { trpc } from '$shared/trpc/client';
   import type { EntityType } from '$shared/types/enums';
   import { submit } from '$lib/ui/submit';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface ReportItem {
     readonly id: string;
@@ -47,7 +48,7 @@
     <p class="form-error">{error}</p>
   {/if}
   {#if reports.length === 0}
-    <p class="empty text-sm">No reports yet.</p>
+    <EmptyState message="No reports yet." small />
   {:else}
     <ul class="list">
       {#each reports as report (report.id)}

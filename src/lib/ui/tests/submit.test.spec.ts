@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, submit } from '../submit';
+import { errorMessage, submit, submitOrThrow } from '../submit';
 import { err, ok } from '$shared/utils/result';
 
 describe('submit', () => {
@@ -30,5 +30,15 @@ describe('submit', () => {
     expect(errorMessage(new Error(zod))).toBe('Name is required');
     expect(errorMessage('plain text')).toBe('plain text');
     expect(errorMessage(undefined)).toBe('Something went wrong.');
+  });
+});
+
+describe('submitOrThrow', () => {
+  it('returns the value of an ok Result', async () => {
+    await expect(submitOrThrow(async () => ok({ id: 'p1' }))).resolves.toEqual({ id: 'p1' });
+  });
+
+  it('throws the message of an err Result', async () => {
+    await expect(submitOrThrow(async () => err(new Error('Team not found')))).rejects.toThrow('Team not found');
   });
 });

@@ -1,4 +1,8 @@
 import { invalidateAll } from '$app/navigation';
+import { submitOrThrow } from '$lib/ui/submit';
+
+// Handlers throw the API's error message; DocEditor, DocsManager's
+// ConfirmButton and EntityDetailPage's create flow catch and show it.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface DocTrpc {
@@ -42,41 +46,42 @@ export const createDocHandlers = (
   setActiveDocId: (id: string | null) => void,
 ): DocHandlers => ({
   handleAddDoc: async (title: string) => {
-    const result = await docTrpc.add.mutate({ entityType, entityId, title });
+    const doc = await submitOrThrow(() => docTrpc.add.mutate({ entityType, entityId, title }));
     await invalidateAll();
-    if (result.ok) setActiveDocId(result.value.id);
+    setActiveDocId(doc.id);
   },
 
   handleSaveDoc: async (content: string) => {
     const docId = getActiveDocId();
     if (!docId) return;
-    await docTrpc.update.mutate({ id: docId, content });
+    await submitOrThrow(() => docTrpc.update.mutate({ id: docId, content }));
     await invalidateAll();
   },
 
   handleSaveTitle: async (title: string) => {
     const docId = getActiveDocId();
     if (!docId) return;
-    await docTrpc.update.mutate({ id: docId, title });
+    await submitOrThrow(() => docTrpc.update.mutate({ id: docId, title }));
     await invalidateAll();
   },
 
   handleRemoveDoc: async (id: string) => {
-    await docTrpc.remove.mutate({ id });
+    await submitOrThrow(() => docTrpc.remove.mutate({ id }));
     if (getActiveDocId() === id) setActiveDocId(null);
     await invalidateAll();
   },
 
   handleReorderDocs: async (docIds: readonly string[]) => {
-    await docTrpc.reorder.mutate({ entityType, entityId, docIds: [...docIds] });
+    await submitOrThrow(() => docTrpc.reorder.mutate({ entityType, entityId, docIds: [...docIds] }));
     await invalidateAll();
   },
 
   handleUploadPdf: async (file: File) => {
     const docId = getActiveDocId();
-    if (!docId || !docTrpc.attachSource) return;
+    const attachSource = docTrpc.attachSource;
+    if (!docId || !attachSource) return;
     const dataBase64 = await fileToBase64(file);
-    await docTrpc.attachSource.mutate({ docId, contentType: 'application/pdf', dataBase64 });
+    await submitOrThrow(() => attachSource.mutate({ docId, contentType: 'application/pdf', dataBase64 }));
     await invalidateAll();
   },
 

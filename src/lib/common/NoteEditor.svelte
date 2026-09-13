@@ -12,6 +12,7 @@
 
   let draft = $state(content);
   let saving = $state(false);
+  let error = $state('');
   let lastSavedId = $state(noteId);
 
   $effect(() => {
@@ -24,8 +25,11 @@
   const handleSave = async () => {
     if (!draft.trim() || draft === content) return;
     saving = true;
+    error = '';
     try {
       await onSave(draft);
+    } catch (e: unknown) {
+      error = e instanceof Error ? e.message : 'Could not save.';
     } finally {
       saving = false;
     }
@@ -40,6 +44,7 @@
     {/if}
   </div>
   <MarkdownEditor value={draft} onChange={(md) => draft = md} />
+  {#if error}<p class="form-error" role="alert">{error}</p>{/if}
   <div class="form-actions">
     <button
       type="button"

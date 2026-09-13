@@ -63,7 +63,7 @@
         {/each}
       </select>
       <button type="button" class="btn ghost sm" onclick={close}>Cancel</button>
-      {#if error}<span class="text-sm" style="color: var(--danger)">{error}</span>{/if}
+      {#if error}<span class="inline-error" role="alert">{error}</span>{/if}
     </div>
   {:else}
     <button type="button" class="btn link text-sm" onclick={() => { open = true; }}>+ {label}</button>

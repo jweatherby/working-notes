@@ -237,6 +237,7 @@
     flex-direction: column;
   }
 
+  // Not a mixin: the notes panel only fits beside list pages from ~1150px, so it collapses in this band.
   @media (min-width: 768px) and (max-width: 1149px) {
     .app-layout.has-panel.collapse-medium {
       grid-template-columns: minmax(0, 1fr);

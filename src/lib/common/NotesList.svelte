@@ -1,6 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Note {
     readonly id: string;
@@ -91,7 +92,7 @@
     {/each}
   </div>
 {:else}
-  <p class="empty text-sm">No notes yet.</p>
+  <EmptyState message="No notes yet." small />
 {/if}
 
 <style lang="scss">
@@ -112,7 +113,7 @@
     min-height: 20px;
     margin-bottom: var(--sp-1);
   }
-  .note-actions { opacity: 0; transition: opacity var(--ease); }
+  .note-actions { opacity: 0; transition: opacity var(--ease); &:has(:global(.inline-error)) { opacity: 1; } }
   .note-body {
     font-size: var(--fs-md);
     line-height: 1.5;

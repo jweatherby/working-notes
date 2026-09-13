@@ -20,6 +20,7 @@
 
   let armed = $state(false);
   let busy = $state(false);
+  let error = $state('');
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const disarm = () => {
@@ -30,14 +31,18 @@
 
   const arm = () => {
     armed = true;
+    error = '';
     if (timer) clearTimeout(timer);
     timer = setTimeout(disarm, timeoutMs);
   };
 
   const confirm = async () => {
     busy = true;
+    error = '';
     try {
       await onConfirm();
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : 'Could not complete that.';
     } finally {
       busy = false;
       disarm();
@@ -61,6 +66,7 @@
     {#if variant === 'icon'}&times;{:else}{label}{/if}
   </button>
 {/if}
+{#if error}<span class="inline-error" role="alert">{error}</span>{/if}
 
 <style lang="scss">
   .confirm {

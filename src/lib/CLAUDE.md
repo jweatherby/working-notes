@@ -44,12 +44,47 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `Field` | `label`, `hint?`, `error?`, children snippet `({ id })` | every labelled form control |
 | `InlinePicker` | `label`, `options: {id,name}[]`, `placeholder?`, `onPick(id)` | single-pick relationship edits (assign lead, add member, set parent). Renders nothing when there are no options |
 | `ConfirmButton` | `label`, `confirmLabel?`, `onConfirm`, `variant: link \| button \| icon`, `timeoutMs?` | any destructive action. Never use `window.confirm()` |
-| `EmptyState` | `message`, `boxed?`, children (action) | "nothing here yet" |
+| `EmptyState` | `message`, `boxed?`, `small?`, children (action) | "nothing here yet" |
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
+| `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
 | `popup-url.ts` | `openPopup(id, extra?)`, `closePopup({ invalidate?, clear? })` | opening and closing `Popup` (`?popup=<id>`) |
-| `submit.ts` | `submit(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |
+| `submit.ts` | `submit(fn)`, `submitOrThrow(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |
 
 `Popup` (`common/Popup.svelte`, props `id`, `title`, `size?`, `clearParams?`) is for entity create/edit only; small edits render inline.
+
+### Rules for UI code
+
+Use a standard component or class before writing markup or styles yourself. If none fits, extend the primitive in `src/lib/ui/` or the partial in `src/routes/styles/`, and update the tables above. Don't make a one-off copy.
+
+**Pages**
+- A list page is `<div class="page">`, then `PageHeader` (its primary action is `.btn primary`), then the content, then `EmptyState boxed` with the same action when the list is empty. `src/routes/app/people/+page.svelte` is the reference.
+- An entity detail page is `EntityDetailPage`. It supplies only `renderOverview`, `renderAssetHeader` and `renderEditForm`. Never rebuild the sidebar, notes panel, breadcrumb or edit popup.
+- Inside an overview, group content in `.section`, with a `.section-header` holding an `h4` and `.count`. Render collections as `.list` + `.list-row`, with per-row actions in `.row-actions`. Put a wide table in `.table-wrap`.
+
+**Forms and mutations**
+- Every labelled control goes in `Field` and uses the `id` from its snippet. Don't write a raw `<label>` for a form control. Toolbar filters without a visible label are the exception; give them an `aria-label`.
+- Entity create and edit use the domain `*Form` component (`PersonForm`, `TeamForm`, `DepartmentForm`, `ProjectForm`, `TodoForm`) inside a `Popup`. Don't rebuild the form fields on a page.
+- Open and close popups only through `openPopup` and `closePopup`. Never edit `?popup=` by hand. After a write, call `closePopup({ invalidate: true })`.
+- Send every tRPC mutation through `submit()` and handle `outcome.ok`. Most procedures return `Result`, so a failed call does not throw. A bare `await trpc().x.mutate(...)` drops the error without a word.
+- `InlinePicker` and `ConfirmButton` show an error only when their callback throws. In `onPick` and `onConfirm` (and a form's `onDelete`, which goes to a `ConfirmButton`), call `submitOrThrow(() => trpc()….mutate(…))`.
+- Everywhere else, use `submit()` and render `outcome.error`. Show a form or list error in `.form-error`, a field error through `Field`'s `error` prop, and an error beside an inline control in `.inline-error`. Don't write inline `style="color: …"`.
+
+**Actions**
+- Use `ConfirmButton` for every destructive action (delete, remove, detach). Use `variant="icon"` inside `.row-actions`, `link` in text and `button` in form actions. Never call `window.confirm()` or `alert()`.
+- Use `InlinePicker` to set or add one relationship (lead, member, parent). Don't write `<details>`/`<select onchange>` pickers.
+- Edit affordances are `PencilIcon` inside `.btn icon sm`, with an `aria-label` that names the entity.
+- Every clickable control is `.btn` plus modifiers, or an `<a>`. A bare `<button>` is unstyled on purpose. Show loading with `disabled` + `aria-busy` and a text swap, not a spinner.
+- Show todo state with `todo/components/StatusDot` and `PriorityBadge`. Don't restyle status or priority locally.
+
+**Empty and loading states**
+- Use `EmptyState` for every "nothing here" message: `boxed` for a whole page, plain inside a section, `small` in sidebar widgets. Don't hand-write `<p class="empty">`.
+
+**Styling**
+- Component `<style>` blocks handle layout only (flex, grid, positioning). Colour, font size, spacing, radius, shadow and z-index come from tokens (`var(--…)`). Don't use hex, `rgb()`, named colours or `px` for these.
+- Pixel literals are allowed only for fixed geometry the token scale can't express: hairline borders (`1px`), icon and dot sizes, chart and org-map cell widths.
+- Brand colours from a `Branding` record are the only values allowed in `style=` attributes (for example, swatches and the branding preview). Pass dynamic numbers as CSS custom properties (`style="--depth: {n}"`), not as whole declarations.
+- Don't restyle a global class (`.btn`, `.card`, `.list-row`, `.badge`, inputs) from inside a component. Add a modifier to the partial instead.
+- Use the breakpoint mixins (`mobile`, `below-md`, `tablet-up`, `desktop-up`) from `_variables.scss`. A raw `@media` width is only for shell layout that needs its own breakpoint (today, `DetailLayout` at 849px and `AppShell` at 768–1149px). Leave a comment saying why.
 
 ## Charts and diagrams
 

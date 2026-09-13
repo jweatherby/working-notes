@@ -1,5 +1,6 @@
 <script lang="ts">
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Doc {
     readonly id: string;
@@ -61,7 +62,7 @@
       {/each}
     </ul>
   {:else}
-    <p class="empty text-sm">No docs yet.</p>
+    <EmptyState message="No docs yet." small />
   {/if}
 </div>
 

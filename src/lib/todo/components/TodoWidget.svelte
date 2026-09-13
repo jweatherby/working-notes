@@ -5,6 +5,8 @@
   import PriorityBadge from './PriorityBadge.svelte';
   import { nextStatus, formatTodoDate, type TodoStatus } from '../utils';
   import { openPopup } from '$lib/ui/popup-url';
+  import { submit } from '$lib/ui/submit';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Todo {
     readonly id: string;
@@ -44,9 +46,12 @@
     openPopup('todo', { todo: id });
   };
 
+  let statusError = $state('');
+
   const handleStatusChange = async (id: string, status: TodoStatus) => {
-    await trpc().todo.update.mutate({ id, status });
-    await invalidateAll();
+    const outcome = await submit(() => trpc().todo.update.mutate({ id, status }));
+    statusError = outcome.ok ? '' : outcome.error;
+    if (outcome.ok) await invalidateAll();
   };
 </script>
 
@@ -58,6 +63,8 @@
       <button type="button" class="btn icon sm chevron" class:open={expanded} onclick={() => (expanded = !expanded)} aria-label={expanded ? 'Collapse' : 'Expand'} aria-expanded={expanded}>▸</button>
     </span>
   </div>
+
+  {#if statusError}<p class="form-error" role="alert">{statusError}</p>{/if}
 
   {#if expanded}
     {#if activeTodos.length > 0}
@@ -72,7 +79,7 @@
         {/each}
       </ul>
     {:else}
-      <p class="empty text-sm">No active todos.</p>
+      <EmptyState message="No active todos." small />
     {/if}
 
     {#if completedTodos.length > 0}

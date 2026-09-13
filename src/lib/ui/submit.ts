@@ -62,3 +62,15 @@ export const submit = async <T>(
     return { ok: false, error: errorMessage(e) };
   }
 };
+
+/**
+ * `submit()` for callers that show failures by catching them:
+ * `InlinePicker.onPick` and `ConfirmButton.onConfirm`.
+ */
+export const submitOrThrow = async <T>(
+  run: () => Promise<Result<T> | T>,
+): Promise<T> => {
+  const outcome = await submit(run);
+  if (!outcome.ok) throw new Error(outcome.error);
+  return outcome.value;
+};

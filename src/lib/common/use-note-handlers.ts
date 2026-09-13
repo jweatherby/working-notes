@@ -1,4 +1,8 @@
 import { invalidateAll } from '$app/navigation';
+import { submitOrThrow } from '$lib/ui/submit';
+
+// Handlers throw the API's error message; NoteEditor and NotesList's
+// ConfirmButton catch and show it.
 
 interface NoteTrpc {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,17 +25,17 @@ export const createNoteHandlers = (
   entityId: string,
 ): NoteHandlers => ({
   handleAddNote: async (content: string, parentId?: string) => {
-    await noteTrpc.add.mutate({ entityType, entityId, parentId, content });
+    await submitOrThrow(() => noteTrpc.add.mutate({ entityType, entityId, parentId, content }));
     await invalidateAll();
   },
 
   handleUpdateNote: async (id: string, content: string) => {
-    await noteTrpc.update.mutate({ id, content });
+    await submitOrThrow(() => noteTrpc.update.mutate({ id, content }));
     await invalidateAll();
   },
 
   handleRemoveNote: async (id: string) => {
-    await noteTrpc.remove.mutate({ id });
+    await submitOrThrow(() => noteTrpc.remove.mutate({ id }));
     await invalidateAll();
   },
 });

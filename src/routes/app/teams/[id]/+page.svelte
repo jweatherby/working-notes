@@ -6,6 +6,8 @@
   import TeamForm from '$lib/team/components/TeamForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { submitOrThrow } from '$lib/ui/submit';
 
   const { data } = $props<{ data: PageData }>();
   const team = $derived(data.team);
@@ -22,12 +24,12 @@
   );
 
   const handleAddMember = async (personId: string) => {
-    await trpc().team.addMember.mutate({ teamId: team.id, personId });
+    await submitOrThrow(() => trpc().team.addMember.mutate({ teamId: team.id, personId }));
     await invalidateAll();
   };
 
   const handleRemoveMember = async (personId: string) => {
-    await trpc().team.removeMember.mutate({ teamId: team.id, personId });
+    await submitOrThrow(() => trpc().team.removeMember.mutate({ teamId: team.id, personId }));
     await invalidateAll();
   };
 </script>
@@ -68,7 +70,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">No members yet.</p>
+        <EmptyState message="No members yet." />
       {/if}
       <div class="section-footer">
         <InlinePicker label="Add member" options={availablePersons} placeholder="Select a person…" onPick={handleAddMember} />

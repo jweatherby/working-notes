@@ -42,7 +42,7 @@ describe('createDocHandlers.handleAddDoc', () => {
     expect(invalidateOrder).toBeLessThan(setActiveOrder);
   });
 
-  it('does not call setActiveDocId when the mutation fails', async () => {
+  it('throws the error and does not call setActiveDocId when the mutation fails', async () => {
     const add = vi.fn().mockResolvedValue({ ok: false, error: new Error('nope') });
     const setActiveDocId = vi.fn();
 
@@ -59,8 +59,36 @@ describe('createDocHandlers.handleAddDoc', () => {
       setActiveDocId,
     );
 
-    await handlers.handleAddDoc('New');
+    await expect(handlers.handleAddDoc('New')).rejects.toThrow('nope');
     expect(setActiveDocId).not.toHaveBeenCalled();
+    expect(invalidateAll).not.toHaveBeenCalled();
+  });
+});
+
+describe('createDocHandlers.handleRemoveDoc', () => {
+  beforeEach(() => {
+    invalidateAll.mockClear();
+  });
+
+  it('throws the error of a failed remove and keeps the active doc', async () => {
+    const remove = vi.fn().mockResolvedValue({ ok: false, error: { message: 'Doc not found' } });
+    const setActiveDocId = vi.fn();
+    const handlers = createDocHandlers(
+      {
+        add: { mutate: vi.fn() },
+        update: { mutate: vi.fn() },
+        remove: { mutate: remove },
+        reorder: { mutate: vi.fn() },
+      },
+      'PROJECT',
+      'proj_1',
+      () => 'doc_1',
+      setActiveDocId,
+    );
+
+    await expect(handlers.handleRemoveDoc('doc_1')).rejects.toThrow('Doc not found');
+    expect(setActiveDocId).not.toHaveBeenCalled();
+    expect(invalidateAll).not.toHaveBeenCalled();
   });
 });
 

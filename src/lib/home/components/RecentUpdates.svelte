@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { RecentUpdate, UpdateKind } from '$shared/types/home';
   import { timeAgo } from '../utils';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Props {
     readonly updates: readonly RecentUpdate[];
@@ -15,7 +16,7 @@
   <header class="section-header"><h2>Latest updates</h2></header>
 
   {#if updates.length === 0}
-    <p class="empty">No activity yet.</p>
+    <EmptyState message="No activity yet." />
   {:else}
     <ul class="list divided">
       {#each updates as u (`${u.kind}:${u.id}`)}

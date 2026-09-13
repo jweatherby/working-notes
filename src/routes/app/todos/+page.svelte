@@ -7,6 +7,7 @@
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { openPopup } from '$lib/ui/popup-url';
+  import { submit } from '$lib/ui/submit';
   import { nextStatus, formatTodoDate, type TodoStatus, type EntityType } from '$lib/todo/utils';
 
   const { data } = $props<{ data: PageData }>();
@@ -60,9 +61,12 @@
 
   const openEdit = (id: string) => openPopup('todo', { todo: id });
 
+  let statusError = $state('');
+
   const handleStatusChange = async (id: string, status: TodoStatus) => {
-    await trpc().todo.update.mutate({ id, status });
-    await invalidateAll();
+    const outcome = await submit(() => trpc().todo.update.mutate({ id, status }));
+    statusError = outcome.ok ? '' : outcome.error;
+    if (outcome.ok) await invalidateAll();
   };
 
   const entityPath = (entityType: EntityType, entityId: string): string => {
@@ -109,6 +113,8 @@
       <option value="DEPARTMENT">Departments</option>
     </select>
   </div>
+
+  {#if statusError}<p class="form-error" role="alert">{statusError}</p>{/if}
 
   {#if activeGroups.length > 0}
     {#each activeGroups as group (`${group.entityType}:${group.entityId}`)}

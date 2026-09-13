@@ -151,3 +151,4 @@ Config is plain TypeScript in `src/shared/settings/`: `base/` is client-safe and
 - **No barrel re-exports from domains.** Import the file you need.
 - **`const` arrow functions** over `function` declarations.
 - **No code in `index.ts`.** Name files explicitly.
+- **UI uses the standard components.** Pages, forms, popups, destructive actions, empty states and styles follow `src/lib/CLAUDE.md` § Rules for UI code. Extend a primitive in `src/lib/ui/`; don't write a one-off.

@@ -11,6 +11,7 @@
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
+  import { submitOrThrow } from '$lib/ui/submit';
   import OrgTree from '$lib/org/components/OrgTree.svelte';
   import { buildOrgTree } from '$lib/org/org-tree';
   import type { PageData } from './$types';
@@ -57,20 +58,24 @@
   };
   const cancel = () => { closePopup(); };
 
+  // Passed to each form's delete ConfirmButton, which shows a thrown error.
   const deleteDept = async () => {
     if (!editDept) return;
-    const result = await trpc().department.delete.mutate({ id: editDept.id });
-    if (result.ok) await finish();
+    const id = editDept.id;
+    await submitOrThrow(() => trpc().department.delete.mutate({ id }));
+    await finish();
   };
   const deleteTeam = async () => {
     if (!editTeam) return;
-    const result = await trpc().team.delete.mutate({ id: editTeam.id });
-    if (result.ok) await finish();
+    const id = editTeam.id;
+    await submitOrThrow(() => trpc().team.delete.mutate({ id }));
+    await finish();
   };
   const deletePerson = async () => {
     if (!editPerson) return;
-    const result = await trpc().person.delete.mutate({ id: editPerson.id });
-    if (result.ok) await finish();
+    const id = editPerson.id;
+    await submitOrThrow(() => trpc().person.delete.mutate({ id }));
+    await finish();
   };
 
   // ----- Memberships (derived from loaded org data so add/remove refreshes automatically) -----
@@ -106,19 +111,19 @@
   const availableLeads = $derived(persons.filter((p: any) => p.id !== editPersonId));
 
   const addDeptMember = async (departmentId: string, personId: string) => {
-    await trpc().department.addMember.mutate({ departmentId, personId });
+    await submitOrThrow(() => trpc().department.addMember.mutate({ departmentId, personId }));
     await invalidateAll();
   };
   const removeDeptMember = async (departmentId: string, personId: string) => {
-    await trpc().department.removeMember.mutate({ departmentId, personId });
+    await submitOrThrow(() => trpc().department.removeMember.mutate({ departmentId, personId }));
     await invalidateAll();
   };
   const addTeamMember = async (teamId: string, personId: string) => {
-    await trpc().team.addMember.mutate({ teamId, personId });
+    await submitOrThrow(() => trpc().team.addMember.mutate({ teamId, personId }));
     await invalidateAll();
   };
   const removeTeamMember = async (teamId: string, personId: string) => {
-    await trpc().team.removeMember.mutate({ teamId, personId });
+    await submitOrThrow(() => trpc().team.removeMember.mutate({ teamId, personId }));
     await invalidateAll();
   };
 </script>
@@ -182,7 +187,7 @@
     <div class="members">
       <div class="section-header"><h4>Members <span class="count">{editDept.members.length}</span></h4></div>
       {#if editDept.members.length === 0}
-        <p class="empty">No members yet.</p>
+        <EmptyState message="No members yet." />
       {:else}
         <ul class="list">
           {#each editDept.members as m (m.personId)}
@@ -205,7 +210,7 @@
     <div class="members">
       <div class="section-header"><h4>Members <span class="count">{editTeam.members.length}</span></h4></div>
       {#if editTeam.members.length === 0}
-        <p class="empty">No members yet.</p>
+        <EmptyState message="No members yet." />
       {:else}
         <ul class="list">
           {#each editTeam.members as m (m.personId)}
@@ -230,7 +235,7 @@
     <div class="members">
       <div class="section-header"><h4>Departments</h4></div>
       {#if personDeptMemberships.length === 0}
-        <p class="empty">Not in any department.</p>
+        <EmptyState message="Not in any department." />
       {:else}
         <ul class="list">
           {#each personDeptMemberships as d (d.id)}
@@ -246,7 +251,7 @@
     <div class="members">
       <div class="section-header"><h4>Teams</h4></div>
       {#if personTeamMemberships.length === 0}
-        <p class="empty">Not on any team.</p>
+        <EmptyState message="Not on any team." />
       {:else}
         <ul class="list">
           {#each personTeamMemberships as t (t.id)}
