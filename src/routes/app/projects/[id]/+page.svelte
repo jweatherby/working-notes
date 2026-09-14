@@ -244,7 +244,7 @@
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: var(--sp-2) var(--sp-4);
-    margin: 0 0 var(--sp-3);
+    margin: 0;
     font-size: var(--fs-md);
     > div { display: contents; }
     dt { color: var(--text-3); }

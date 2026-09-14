@@ -200,8 +200,10 @@
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: var(--sp-2) var(--sp-4);
-    margin: 0 0 var(--sp-3);
+    margin: 0;
     font-size: var(--fs-md);
+    // Only the "Fill in the details" link can follow the list inside its section.
+    &:not(:last-child) { margin-bottom: var(--sp-3); }
     > div { display: contents; }
     dt { color: var(--text-3); }
     dd { display: flex; align-items: center; gap: var(--sp-2); margin: 0; min-height: 22px; }
