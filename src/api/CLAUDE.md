@@ -58,7 +58,7 @@ export const updateNote = async (
 - Never call `new Date()`, `crypto.randomUUID()` or `console.log` in an operation. Use `reg.now()`, `reg.uuid()`, `reg.logger`.
 - `new PrismaClient()` appears only in `src/shared/registry.server.ts`, which keeps one Registry per notebook: `getRegistry(notebookId)`. Outside tRPC (a load function, a script), use `getReadyRegistry(notebookId)` from `$shared/db/bootstrap.server`, which migrates that notebook first. Tests build registries with `createTestRegistry()` from `src/shared/registry.test.ts`.
 - Operations never know which notebook they're in. The Registry they're given already points at one.
-- There is no LLM on the registry, and there must not be one. Claude does that work from outside.
+- There is no LLM on the registry, and there must not be one. Claude does that work from outside. The one model-backed thing, the web app's PDF conversion, is `ctx.pdfConverter` on the HTTP tRPC context only (see § Files).
 
 ## Result
 
@@ -67,7 +67,7 @@ Operations that can fail return `Result<T>`: `ok(value)` or `err(new Error(messa
 ## tRPC
 
 - `src/shared/trpc/init.ts` exports `router`, `procedure`, `middleware`. There is one kind of procedure: no auth, no org scoping.
-- Context is `{ reg, notebook, notebooks }` (`context.server.ts`): the Registry of the notebook the call runs against, that notebook, and the notebook store. Over HTTP the notebook comes from `event.locals.notebook`; the CLI and MCP server build the context with `createNotebookContext(notebook)`. Domain routes pass only `ctx.reg`.
+- Context is `{ reg, notebook, notebooks, pdfConverter? }` (`context.server.ts`): the Registry of the notebook the call runs against, that notebook, the notebook store, and (over HTTP only) the PDF converter. Over HTTP the notebook comes from `event.locals.notebook`; the CLI and MCP server build the context with `createNotebookContext(notebook)`. Domain routes pass only `ctx.reg`.
 - Validate inputs with Zod inline in `routes.ts`. Use `z.enum(ENTITY_TYPES)` / `z.enum(TODO_STATUSES)` from `$shared/types/enums`. SQLite has no enums, so these unions are the source of truth.
 - Register new routers in `src/shared/trpc/router.ts`. The CLI (`wnotes`) and its MCP server (`wnotes mcp`) call every procedure in-process through `cli/api.ts` and `createCallerFactory`, and build their help and tool lists from `src/shared/trpc/meta.ts`, so new procedures need no CLI or MCP changes.
 
@@ -124,7 +124,12 @@ There is no `notebook.delete`, on purpose: Claude should never be one tool call 
 
 `reg.storage` stores bytes under the notebook's `files/<key>` (`~/Library/Application Support/Working Notes/Notebooks/<id>/files`). Keys don't include the notebook, and the files route reads from the request's notebook. Keys look like `docs/<docId>/source-<uuid>.pdf` or `branding/<id>/logo-<uuid>.png`. The storage client rejects keys that resolve outside the files root. Hand clients a URL with `fileUrl(key)` (`$shared/utils/files`), which is served by `src/routes/files/[...key]/+server.ts`.
 
-- **Docs:** `attachSourcePdf` stores the PDF and sets `sourceUrl`; it never converts. Claude reads the PDF and calls `doc.update`.
+- **Docs:** `attachSourcePdf` stores the PDF and sets `sourceUrl`; it never converts. From the CLI or MCP, Claude reads the PDF and calls `doc.update`.
+- **Converting a PDF in the web app** (`aux/doc/convert.ts`):
+  - `doc.convertPdf` starts by looking for `claude` (`findClaude` in `$shared/assist/claude-cli`: PATH, then where installers put it). Without it, the result is `{ started: false, warning }`.
+  - Otherwise it starts a background job (`$shared/assist/pdf-converter.server`) that runs `claude -p` in the PDF's folder with only the Read tool, and saves the markdown through `updateDoc`. The UI polls `doc.pdfConversion`.
+  - Both procedures are excluded from the CLI and MCP in `cli/api.ts`.
+  - `storage.pathFor(key)` gives the file's path on disk.
 - **Branding:** images upload as base64 through `branding.uploadImage`, which returns a storage key. `branding.update` saves the key and deletes any file it replaces.
 
 ## Reports

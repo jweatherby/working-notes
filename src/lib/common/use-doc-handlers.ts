@@ -12,8 +12,12 @@ interface DocTrpc {
   reorder: { mutate: (input: any) => Promise<any> };
   attachSource?: { mutate: (input: any) => Promise<any> };
   getReadUrl?: { query: (input: any) => Promise<any> };
+  convertPdf?: { mutate: (input: any) => Promise<any> };
+  pdfConversion?: { query: (input: any) => Promise<any> };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const fileToBase64 = async (file: File): Promise<string> => {
   const buffer = await file.arrayBuffer();
@@ -34,6 +38,12 @@ export interface DocHandlers {
   readonly handleReorderDocs: (docIds: readonly string[]) => Promise<void>;
   readonly handleUploadPdf: (file: File) => Promise<void>;
   readonly handleOpenSourcePdf: () => Promise<void>;
+  /**
+   * Converts the doc's PDF with the local Claude Code CLI and waits for it to
+   * finish. Returns a warning when `claude` isn't installed; throws when the
+   * conversion fails.
+   */
+  readonly handleConvertPdf: (docId: string) => Promise<string | null>;
   readonly handleUploadImage: (file: File) => Promise<string>;
   readonly handleResolveImages: (keys: string[]) => Promise<Record<string, string>>;
 }
@@ -44,6 +54,7 @@ export const createDocHandlers = (
   entityId: string,
   getActiveDocId: () => string | null,
   setActiveDocId: (id: string | null) => void,
+  pollMs = 3000,
 ): DocHandlers => ({
   handleAddDoc: async (title: string) => {
     const doc = await submitOrThrow(() => docTrpc.add.mutate({ entityType, entityId, title }));
@@ -90,6 +101,21 @@ export const createDocHandlers = (
     if (!docId || !docTrpc.getReadUrl) return;
     const result = await docTrpc.getReadUrl.query({ id: docId });
     if (result.ok) window.open(result.value.url, '_blank');
+  },
+
+  handleConvertPdf: async (docId: string): Promise<string | null> => {
+    const { convertPdf, pdfConversion } = docTrpc;
+    if (!convertPdf || !pdfConversion) return null;
+    const started = await submitOrThrow(() => convertPdf.mutate({ id: docId }));
+    if (!started.started) return started.warning;
+    for (;;) {
+      await wait(pollMs);
+      const status = await submitOrThrow(() => pdfConversion.query({ id: docId }));
+      if (status.state === 'running') continue;
+      await invalidateAll();
+      if (status.state === 'failed') throw new Error(status.message ?? "Claude couldn't convert the PDF.");
+      return null;
+    }
   },
 
   handleUploadImage: async (_file: File): Promise<string> => {

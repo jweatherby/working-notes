@@ -19,6 +19,7 @@ Scoped docs:
 - **Local-only, single user.** There are no users, auth, orgs, permissions or sharing. Don't add them.
 - **Notebooks are separate databases, not tenants.** No table has a notebook column, and nothing reads or links across notebooks. Keep it that way: a feature that needs two notebooks at once needs a different design.
 - **No LLM, no secrets, no outbound network.** Claude is the intelligence; the app never calls a model or any external service. Don't add API keys, SDKs, analytics, CDNs or remote storage.
+  - **One exception:** in the web app, `doc.convertPdf` runs the user's own Claude Code CLI (`claude -p`, only the Read tool) to turn an attached PDF into markdown. The app holds no key and makes no request itself. When `claude` isn't installed, the request returns a warning and the PDF just stays attached. The CLI and MCP don't offer it. Don't widen this into other model calls without asking.
 - **Data never leaves this Mac.** No cloud sync and no git for data; backups are local snapshots.
 - **The network boundary is the security boundary** (`src/hooks.server.ts`). Keep all three parts:
   - the server binds to `127.0.0.1`
@@ -76,7 +77,7 @@ wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --t
 
 ### Importing a PDF
 
-The app stores PDFs; it does not read them. Read the PDF yourself, write the markdown with `doc.add` and `doc.update --content-file`, and optionally attach the original with `doc.attachSource --dataBase64-file` (base64 of the PDF).
+From the CLI or MCP, the app stores PDFs but doesn't read them. (The web app's "Convert with Claude" runs the local `claude` CLI instead; see § Ground rules.) Read the PDF yourself, write the markdown with `doc.add` and `doc.update --content-file`, and optionally attach the original with `doc.attachSource --dataBase64-file` (base64 of the PDF).
 
 ### Reports and charts
 

@@ -2,21 +2,30 @@
   import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
   import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
 
+  interface PdfNotice {
+    readonly tone: 'warning' | 'error';
+    readonly message: string;
+  }
+
   interface Props {
     readonly title: string;
     readonly content: string;
     readonly hasSourcePdf?: boolean;
+    /** The attached PDF is being converted with Claude. */
+    readonly converting?: boolean;
+    readonly pdfNotice?: PdfNotice | null;
     readonly onSave: (content: string) => Promise<void>;
     readonly onSaveTitle?: (title: string) => Promise<void>;
     readonly onUploadPdf?: (file: File) => Promise<void>;
     readonly onOpenSourcePdf?: () => Promise<void>;
+    readonly onConvertPdf?: () => Promise<void>;
     readonly onUploadImage?: (file: File) => Promise<string>;
     readonly onResolveImages?: (keys: string[]) => Promise<Record<string, string>>;
     readonly onClose?: () => void;
     readonly autoEditTitle?: boolean;
   }
 
-  const { title, content, hasSourcePdf, onSave, onSaveTitle, onUploadPdf, onOpenSourcePdf, onUploadImage, onResolveImages, onClose, autoEditTitle = false }: Props = $props();
+  const { title, content, hasSourcePdf, converting = false, pdfNotice = null, onSave, onSaveTitle, onUploadPdf, onOpenSourcePdf, onConvertPdf, onUploadImage, onResolveImages, onClose, autoEditTitle = false }: Props = $props();
 
   let editingTitle = $state(autoEditTitle);
   let titleDraft = $state(title);
@@ -169,13 +178,19 @@
     {#if hasSourcePdf && onOpenSourcePdf}
       <button type="button" class="badge source-badge" onclick={onOpenSourcePdf}>PDF source</button>
     {/if}
+    {#if hasSourcePdf && onConvertPdf && !converting && !content.trim()}
+      <button type="button" class="btn ghost sm" onclick={onConvertPdf}>Convert with Claude</button>
+    {/if}
     {#if onClose}
       <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>
     {/if}
   </div>
   {#if error}<p class="form-error" role="alert">{error}</p>{/if}
+  {#if pdfNotice}<p class={pdfNotice.tone === 'error' ? 'form-error' : 'form-warning'} role="alert">{pdfNotice.message}</p>{/if}
   {#if uploading}
     <div class="status" aria-busy="true">Attaching PDF…</div>
+  {:else if converting}
+    <div class="status" aria-busy="true">Converting PDF with Claude… This can take a minute or two.</div>
   {:else if resolving}
     <div class="status" aria-busy="true">Loading…</div>
   {:else}
@@ -188,7 +203,7 @@
       {#if mode === 'write'}
         <div class="toolbar write-actions">
           <span class="spacer"></span>
-          {#if onUploadPdf}
+          {#if onUploadPdf && !hasSourcePdf}
             <label class="btn ghost sm">
               Attach PDF
               <input type="file" accept=".pdf,application/pdf" onchange={handlePdfUpload} hidden />
@@ -202,7 +217,7 @@
         {#key resolvedContent}
           <MarkdownEditor value={draft} onChange={(md) => (draft = md)} {pendingImages}>
             {#snippet toolbarEnd()}
-              {#if onUploadPdf}
+              {#if onUploadPdf && !hasSourcePdf}
                 <label class="btn ghost sm">
                   Attach PDF
                   <input type="file" accept=".pdf,application/pdf" onchange={handlePdfUpload} hidden />

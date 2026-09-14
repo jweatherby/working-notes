@@ -19,7 +19,7 @@
   import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
-  import { submit } from '$lib/ui/submit';
+  import { errorMessage, submit } from '$lib/ui/submit';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
   import { features } from '$shared/settings/base/features';
   import { acceptsDocs } from '$shared/utils/entity';
@@ -219,9 +219,39 @@
     newDocTitleDraft = title;
   };
 
+  // ----- PDF conversion (the local Claude Code CLI, run by the server) -----
+  interface PdfJob {
+    readonly docId: string;
+    readonly running: boolean;
+    readonly notice: { readonly tone: 'warning' | 'error'; readonly message: string } | null;
+  }
+  let pdfJob = $state<PdfJob | null>(null);
+
+  const runPdfConversion = async (docId: string): Promise<void> => {
+    pdfJob = { docId, running: true, notice: null };
+    try {
+      const warning = await docHandlers.handleConvertPdf(docId);
+      pdfJob = warning ? { docId, running: false, notice: { tone: 'warning', message: warning } } : null;
+    } catch (e: unknown) {
+      pdfJob = { docId, running: false, notice: { tone: 'error', message: errorMessage(e) } };
+    }
+  };
+
+  const handleConvertActiveDoc = async () => {
+    if (activeDoc) await runPdfConversion(activeDoc.id);
+  };
+
+  // Attaching a PDF to an empty doc converts it straight away.
+  const handleUploadPdfToDoc = async (file: File) => {
+    const doc = activeDoc;
+    await docHandlers.handleUploadPdf(file);
+    if (doc && doc.content.trim() === '') void runPdfConversion(doc.id);
+  };
+
   const handleCreateDocFromPdf = async (file: File) => {
     await docHandlers.handleAddDoc(newDocTitleDraft);
     await docHandlers.handleUploadPdf(file);
+    if (activeDocId) void runPdfConversion(activeDocId);
   };
 
   // ----- Edit popup -----
@@ -335,10 +365,13 @@
         title={activeDoc.title}
         content={activeDoc.content}
         hasSourcePdf={!!activeDoc.sourceUrl}
+        converting={pdfJob?.docId === activeDoc.id && pdfJob.running}
+        pdfNotice={pdfJob?.docId === activeDoc.id ? pdfJob.notice : null}
         onSave={docHandlers.handleSaveDoc}
         onSaveTitle={docHandlers.handleSaveTitle}
-        onUploadPdf={docHandlers.handleUploadPdf}
+        onUploadPdf={handleUploadPdfToDoc}
         onOpenSourcePdf={docHandlers.handleOpenSourcePdf}
+        onConvertPdf={handleConvertActiveDoc}
         onUploadImage={docHandlers.handleUploadImage}
         onResolveImages={docHandlers.handleResolveImages}
         onClose={closeCenter}

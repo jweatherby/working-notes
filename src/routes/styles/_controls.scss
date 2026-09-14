@@ -132,6 +132,11 @@
   background: var(--danger-soft);
   border-radius: var(--r-md);
 }
+.form-warning {
+  @extend .form-error;
+  color: var(--warning);
+  background: var(--warning-soft);
+}
 .error-msg { @extend .form-error; margin-bottom: var(--sp-3); }
 .inline-error { font-size: var(--fs-sm); color: var(--danger); }
 

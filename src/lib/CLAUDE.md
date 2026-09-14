@@ -112,7 +112,7 @@ Use a standard component or class before writing markup or styles yourself. If n
 |---|---|---|
 | `common/EntityDetailPage` | `entityType`, `entityId`, `entityName`, `breadcrumbLabel`, `breadcrumbHref`, `editPopupTitle`, `docs`, `notes`, `todos`, `reports?`, `relations?`, snippets `renderOverview({ openEdit })`, `renderAssetHeader`, `renderEditForm({ onSuccess, onCancel })` | Detail shell: sidebar (docs unless `acceptsDocs` says no, as on wiki pages; todos, reports, related), right-panel notes, center pane (overview/doc/note/todo), edit popup. `loadEntityAssets` (`$shared/trpc/load-entity-assets`) loads docs, notes, todos, reports and relations |
 | `common/DocsManager` | `docs`, `activeDocId`, `onSelect`, `onStartAdd`, `onRemove`, `onReorder` | Doc list with reorder |
-| `common/DocEditor` | `title`, `content`, `hasSourcePdf?`, `onSave`, `onSaveTitle?`, `onUploadPdf?`, `onOpenSourcePdf?`, `onClose?` | Editor/Markdown/Preview tabs, PDF attach |
+| `common/DocEditor` | `title`, `content`, `hasSourcePdf?`, `converting?`, `pdfNotice?` (`{ tone: warning \| error, message }`), `onSave`, `onSaveTitle?`, `onUploadPdf?`, `onOpenSourcePdf?`, `onConvertPdf?`, `onClose?` | Editor/Markdown/Preview tabs, "Attach PDF" (only while no PDF is attached), "Convert with Claude" (only while the doc has a PDF and no content). `EntityDetailPage` owns the conversion state and converts a PDF attached to an empty doc straight away |
 | `common/MarkdownRenderer` | `content`, `placeholder?` | Markdown + charts + mermaid |
 | `common/NotesList` | `notes`, `onEdit?`, `onRemove?`, `maxHeight?` | Note list with clamp/expand |
 | `report/components/ReportsWidget` | `entityType`, `entityId`, `reports` | Sidebar report list + "new report" |

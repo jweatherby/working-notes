@@ -14,6 +14,8 @@ export interface StorageClient {
   readonly putObject: (key: string, body: Uint8Array, contentType: string) => Promise<void>;
   readonly readObject: (key: string) => Promise<StoredObject | null>;
   readonly deleteObject: (key: string) => Promise<void>;
+  /** Absolute path of `key` on disk, or null for a key outside the files root. */
+  readonly pathFor: (key: string) => string | null;
 }
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -56,5 +58,7 @@ export const createStorageClient = (root: string): StorageClient => ({
     const path = resolveKey(root, key);
     if (!path) return;
     await rm(path, { force: true });
-  }
+  },
+
+  pathFor: (key: string): string | null => resolveKey(root, key)
 });

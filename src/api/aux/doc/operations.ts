@@ -120,8 +120,9 @@ export const reorderDocs = async (
 };
 
 /**
- * Store a PDF as the doc's source file. The app does not convert it: turning
- * the PDF into markdown is Claude's job (read the PDF, then `doc.update`).
+ * Store a PDF as the doc's source file. This doesn't convert it: from the CLI
+ * or MCP, Claude reads the PDF and calls `doc.update`; the web app can run the
+ * local Claude Code CLI through `doc.convertPdf` (convert.ts).
  */
 export const attachSourcePdf = async (
   reg: Pick<Registry, 'prisma' | 'storage' | 'uuid' | 'logger'>,

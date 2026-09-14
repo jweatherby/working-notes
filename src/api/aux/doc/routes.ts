@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ENTITY_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
 import { listDocs, addDoc, updateDoc, removeDoc, reorderDocs, attachSourcePdf, getDocReadUrl } from './operations';
+import { convertDocPdf, getPdfConversion } from './convert';
 
 // Base64 inflates by a third; this stays under the 25M BODY_SIZE_LIMIT (~18 MB of PDF).
 const MAX_PDF_BASE64_CHARS = 24_000_000;
@@ -49,5 +50,14 @@ export const docRouter = router({
 
   getReadUrl: procedure
     .input(z.object({ id: z.string() }))
-    .query(({ ctx, input }) => getDocReadUrl(ctx.reg, input.id))
+    .query(({ ctx, input }) => getDocReadUrl(ctx.reg, input.id)),
+
+  // Web app only (hidden from the CLI and MCP in cli/api.ts).
+  convertPdf: procedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ ctx, input }) => convertDocPdf(ctx.reg, ctx.pdfConverter, ctx.notebook.id, input.id)),
+
+  pdfConversion: procedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) => getPdfConversion(ctx.pdfConverter, ctx.notebook.id, input.id))
 });
