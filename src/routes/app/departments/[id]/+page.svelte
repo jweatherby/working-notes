@@ -51,11 +51,11 @@
   {relations}
 >
   {#snippet renderOverview()}
-    <section class="section">
-      {#if department.description}
-        <p class="description">{department.description}</p>
-      {/if}
-    </section>
+    {#if department.description}
+      <section class="section">
+        <p class="description pre-line">{department.description}</p>
+      </section>
+    {/if}
 
     <section class="section">
       <div class="section-header">
@@ -95,6 +95,6 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
+  .description { margin: 0; color: var(--text-2); }
   .section-footer { margin-top: var(--sp-2); }
 </style>

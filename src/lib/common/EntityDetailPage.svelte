@@ -437,10 +437,10 @@
     margin-bottom: var(--sp-3);
     h2 { margin: 0; font-size: var(--fs-base); }
   }
+  // Overview children are `.section`s, which space themselves (`margin-top`, none on the first).
   .overview {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-6);
     max-width: 720px;
   }
 </style>

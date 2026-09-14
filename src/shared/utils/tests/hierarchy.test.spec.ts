@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTree, flattenTree, wouldCreateCycle } from '../hierarchy';
+import { buildTree, flattenTree, scopeTree, wouldCreateCycle } from '../hierarchy';
 
 const parentsOf = (map: Readonly<Record<string, string | null>>) => (id: string) => map[id];
 
@@ -44,5 +44,51 @@ describe('buildTree', () => {
     const items = [{ id: 'x', parentId: 'y' }, { id: 'y', parentId: 'x' }];
     const ids = flattenTree(buildTree(items, (i) => i.parentId)).map((n) => n.item.id);
     expect([...ids].sort()).toEqual(['x', 'y']);
+  });
+});
+
+describe('flattenTree', () => {
+  const forest = buildTree(
+    [
+      { id: 'a', parentId: null },
+      { id: 'b', parentId: 'a' },
+      { id: 'c', parentId: 'b' },
+      { id: 'd', parentId: null }
+    ],
+    (i) => i.parentId
+  );
+
+  it('keeps a collapsed node but skips its descendants', () => {
+    const ids = flattenTree(forest, (n) => n.item.id === 'b').map((n) => n.item.id);
+    expect(ids).toEqual(['a', 'b', 'd']);
+  });
+});
+
+describe('scopeTree', () => {
+  const forest = buildTree(
+    [
+      { id: 'root', parentId: null, team: 'none' },
+      { id: 'mine', parentId: 'root', team: 'x' },
+      { id: 'theirs', parentId: 'root', team: 'y' },
+      { id: 'deep', parentId: 'theirs', team: 'x' },
+      { id: 'other', parentId: null, team: 'y' },
+      { id: 'other-child', parentId: 'other', team: 'y' }
+    ],
+    (i) => i.parentId
+  );
+
+  it('keeps matches and marks the ancestors leading to them as context, keeping depth', () => {
+    const rows = flattenTree(scopeTree(forest, (i) => i.team === 'x')).map((n) => [n.item.id, n.depth, n.context]);
+    expect(rows).toEqual([
+      ['root', 0, true],
+      ['mine', 1, false],
+      ['theirs', 1, true],
+      ['deep', 2, false]
+    ]);
+  });
+
+  it('drops non-matching children of a match and subtrees with no match', () => {
+    const ids = flattenTree(scopeTree(forest, (i) => i.id === 'root' || i.id === 'other')).map((n) => n.item.id);
+    expect(ids).toEqual(['root', 'other']);
   });
 });

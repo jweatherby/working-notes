@@ -37,7 +37,7 @@
           {#each teams as item (item.id)}
             <tr>
               <td><a href="/app/teams/{item.id}">{item.name}</a>{#if item.archivedAt} <span class="badge muted">Archived</span>{/if}</td>
-              <td class="text-2">{item.description ?? ''}</td>
+              <td class="text-2 pre-line">{item.description ?? ''}</td>
             </tr>
           {/each}
         </tbody>

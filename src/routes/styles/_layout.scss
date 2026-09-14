@@ -160,5 +160,7 @@
 .text-sm { font-size: var(--fs-sm); }
 .mono { font-family: var(--font-mono); }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+// Plain-text fields (descriptions) keep the line breaks they were written with.
+.pre-line { white-space: pre-line; }
 .ml-auto { margin-left: auto; }
 .sr-only { @include visually-hidden; }

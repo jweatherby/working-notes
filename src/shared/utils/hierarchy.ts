@@ -63,6 +63,34 @@ export const buildTree = <T extends { readonly id: string }>(
   return forest;
 };
 
-/** Depth-first rows for rendering a tree as a flat, indented list. */
-export const flattenTree = <T>(forest: readonly TreeNode<T>[]): readonly TreeNode<T>[] =>
-  forest.flatMap((node) => [node, ...flattenTree(node.children)]);
+/**
+ * Depth-first rows for rendering a tree as a flat, indented list. A node that
+ * `isCollapsed` is still a row, but its descendants are not.
+ */
+export const flattenTree = <N extends { readonly children: readonly N[] }>(
+  forest: readonly N[],
+  isCollapsed?: (node: N) => boolean
+): readonly N[] =>
+  forest.flatMap((node) => [node, ...(isCollapsed?.(node) ? [] : flattenTree(node.children, isCollapsed))]);
+
+export interface ScopedNode<T> {
+  readonly item: T;
+  readonly depth: number;
+  /** True when the item doesn't match but is kept because a descendant does. */
+  readonly context: boolean;
+  readonly children: readonly ScopedNode<T>[];
+}
+
+/**
+ * The part of a forest that `matches`: matching nodes, plus the ancestors that
+ * lead to them (marked `context`). Everything else is dropped; depths stay.
+ */
+export const scopeTree = <T>(
+  forest: readonly TreeNode<T>[],
+  matches: (item: T) => boolean
+): readonly ScopedNode<T>[] =>
+  forest.flatMap((node) => {
+    const children = scopeTree(node.children, matches);
+    const isMatch = matches(node.item);
+    return isMatch || children.length > 0 ? [{ item: node.item, depth: node.depth, context: !isMatch, children }] : [];
+  });

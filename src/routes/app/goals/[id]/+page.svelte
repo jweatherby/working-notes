@@ -161,7 +161,7 @@
   {#snippet renderOverview({ openEdit })}
     <section class="section">
       {#if goal.description}
-        <p class="description">{goal.description}</p>
+        <p class="description pre-line">{goal.description}</p>
       {/if}
       <dl class="meta-list">
         <div>

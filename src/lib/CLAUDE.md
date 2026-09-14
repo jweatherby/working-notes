@@ -41,7 +41,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 - **Buttons:** a bare `<button>` is a reset (no background, border or padding). Add `.btn` for a control, plus `primary`, `ghost`, `danger` (`danger solid` for filled), `link`, `sm`, `icon`, `block`. Loading is `aria-busy` plus a text swap. `.btn` also works on `<a>`.
 - **Inputs** are styled at the element level (32px). Add `.sm` for 26px inline rows. Wrap label + control in `Field` (`$lib/ui/Field.svelte`), lay out with `.form-grid`, `.form-row` (`.thirds`) and `.form-actions`; show failures with `.form-error`.
 - **Mutations** go through `submit()` from `$lib/ui/submit`, which turns both `Result`-returning and throwing procedures into `{ ok, value } | { ok, error }` so every form renders its error.
-- **Layout classes** (`styles/_layout.scss`): `.page`, `.page-header`, `.card` (`compact`, `hover`), `.section` + `.section-header` (with `.count`), `.eyebrow`, `.list` + `.list-row` (`.grow`, `.meta`, `.row-actions` shown on hover, `.active`; `.list.divided` for bordered rows), `.badge` (`accent success warning danger muted`), `.empty` (`boxed`), `.tabs` + `.tab`, `.toolbar`, `.drawer-handle`, `.drawer-backdrop`, utilities `.muted .text-2 .text-xs .text-sm .mono .truncate .ml-auto`.
+- **Layout classes** (`styles/_layout.scss`): `.page`, `.page-header`, `.card` (`compact`, `hover`), `.section` + `.section-header` (with `.count`), `.eyebrow`, `.list` + `.list-row` (`.grow`, `.meta`, `.row-actions` shown on hover, `.active`; `.list.divided` for bordered rows), `.badge` (`accent success warning danger muted`), `.empty` (`boxed`), `.tabs` + `.tab`, `.toolbar`, `.drawer-handle`, `.drawer-backdrop`, utilities `.muted .text-2 .text-xs .text-sm .mono .truncate .pre-line .ml-auto`. Put `.pre-line` on every plain-text description so its line breaks show.
 
 ### UI primitives (`src/lib/ui/`)
 
@@ -55,7 +55,9 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `Menu` | `label`, `items: {label, href?, onSelect?, current?, divided?}[]`, `trigger?` snippet, `iconOnly?` (just a chevron, named by `label`), `align?: start \| end` | a button that opens a short list of links and actions (the notebook switcher). Handles Escape, click-outside and arrow keys. Not for picking a relationship; that's `InlinePicker` |
 | `EmptyState` | `message`, `boxed?`, `small?`, children (action) | "nothing here yet" |
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
-| `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
+| `ParamSelect` | `param`, `options: {id,name,group?}[]`, `defaultValue`, `ariaLabel` | a list page's toolbar select whose value lives in one query parameter (picking `defaultValue` removes it). The projects page's team filter (`?team=`) and grouping (`?group=`) use it |
+| `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`, built on `ParamSelect`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
+| `DisclosureButton` | `expanded`, `label`, `onToggle` | the chevron that shows or hides a tree row's children (collapsible sub-projects). Use `flattenTree(forest, isCollapsed)` from `$shared/utils/hierarchy` for the rows |
 | `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
 | `popup-url.ts` | `openPopup(id, extra?)`, `closePopup({ invalidate?, clear? })` | opening and closing `Popup` (`?popup=<id>`) |
 | `submit.ts` | `submit(fn)`, `submitOrThrow(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |

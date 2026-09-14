@@ -51,11 +51,13 @@
   {relations}
 >
   {#snippet renderOverview()}
-    <section class="section">
-      {#if team.description}
-        <p class="description">{team.description}</p>
-      {/if}
-    </section>
+    {#if team.description}
+      <section class="section">
+        <p class="description pre-line">{team.description}</p>
+      </section>
+    {/if}
+
+    <OwnedWork goals={data.ownedGoals} projects={data.ownedProjects} />
 
     <section class="section">
       <div class="section-header">
@@ -80,8 +82,6 @@
         <InlinePicker label="Add member" options={availablePersons} placeholder="Select a person…" onPick={handleAddMember} />
       </div>
     </section>
-
-    <OwnedWork goals={data.ownedGoals} projects={data.ownedProjects} />
   {/snippet}
 
   {#snippet renderAssetHeader()}
@@ -95,6 +95,6 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
+  .description { margin: 0; color: var(--text-2); }
   .section-footer { margin-top: var(--sp-2); }
 </style>

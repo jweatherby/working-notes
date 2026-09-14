@@ -137,7 +137,7 @@
   {#snippet renderOverview()}
     <section class="section">
       {#if project.description}
-        <p class="description">{project.description}</p>
+        <p class="description pre-line">{project.description}</p>
       {/if}
       <dl class="meta-list">
         {#if project.status}
