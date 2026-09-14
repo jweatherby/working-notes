@@ -14,11 +14,11 @@
 
 <style lang="scss">
   .priority {
-    font-size: var(--fs-xs);
-    font-weight: 700;
+    font-size: var(--fs-sm);
+    font-weight: 800;
     letter-spacing: -0.05em;
     flex-shrink: 0;
-    &[data-level='1'] { color: var(--text-3); }
+    &[data-level='1'] { color: var(--text-2); }
     &[data-level='2'] { color: var(--warning); }
     &[data-level='3'] { color: var(--danger); }
   }

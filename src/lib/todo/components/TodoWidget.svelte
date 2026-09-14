@@ -3,7 +3,7 @@
   import { trpc } from '$shared/trpc/client';
   import StatusDot from './StatusDot.svelte';
   import PriorityBadge from './PriorityBadge.svelte';
-  import { nextStatus, formatTodoDate, type TodoStatus } from '../utils';
+  import { nextStatus, describeDueDate, formatDueDateFull, formatTodoDate, type TodoStatus } from '../utils';
   import { openPopup } from '$lib/ui/popup-url';
   import { submit } from '$lib/ui/submit';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -70,11 +70,20 @@
     {#if activeTodos.length > 0}
       <ul class="list">
         {#each activeTodos as todo (todo.id)}
+          {@const due = describeDueDate(todo.targetDate)}
           <li class="list-row todo-row">
-            <StatusDot status={todo.status} clickable onclick={() => handleStatusChange(todo.id, nextStatus(todo.status))} />
-            <button type="button" class="grow truncate todo-title" onclick={() => openEdit(todo.id)}>{todo.title}</button>
-            <PriorityBadge priority={todo.priority} />
-            {#if todo.targetDate}<span class="meta">{formatTodoDate(todo.targetDate)}</span>{/if}
+            <span class="first-line">
+              <StatusDot status={todo.status} clickable onclick={() => handleStatusChange(todo.id, nextStatus(todo.status))} />
+            </span>
+            <div class="grow todo-main">
+              <button type="button" class="truncate todo-title" onclick={() => openEdit(todo.id)}>{todo.title}</button>
+              {#if due && todo.targetDate}
+                <span class="due" class:overdue={due.overdue} title="Due {formatDueDateFull(todo.targetDate)}">{due.label}</span>
+              {/if}
+            </div>
+            {#if todo.priority > 0}
+              <span class="first-line"><PriorityBadge priority={todo.priority} /></span>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -106,6 +115,21 @@
     &.open { transform: rotate(90deg); }
   }
   .todo-row { padding-top: 3px; padding-bottom: 3px; }
+  // Title on top, due date underneath: the sidebar is too narrow for both on one line.
+  .todo-main { display: flex; flex-direction: column; }
+  // The toggle and priority sit level with the title's first line, not the middle of the row.
+  .todo-row:not(.done) { align-items: flex-start; }
+  .first-line {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: calc(var(--fs-md) * 1.5);
+  }
+  .due {
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    &.overdue { color: var(--danger); }
+  }
   .todo-title {
     text-align: left;
     font-size: var(--fs-md);
