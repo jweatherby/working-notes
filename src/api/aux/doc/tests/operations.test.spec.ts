@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import { attachSourcePdf, getDocReadUrl, removeDoc, updateDoc } from '../operations';
+import { addDoc, attachSourcePdf, getDocReadUrl, removeDoc, updateDoc } from '../operations';
 
 const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['storage'] => ({
   putObject: vi.fn().mockResolvedValue(undefined),
@@ -12,6 +12,21 @@ const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['st
 
 // Removing a doc or saving its content also touches its relations.
 const relationMock = () => ({ deleteMany: vi.fn().mockResolvedValue({ count: 0 }) });
+
+describe('addDoc', () => {
+  it('refuses a wiki page without writing', async () => {
+    const create = vi.fn();
+    const reg = createTestRegistry({
+      prisma: { doc: { create } } as unknown as Registry['prisma']
+    });
+
+    const result = await addDoc(reg, 'PAGE', 'page_1', { title: 'Notes' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain("Wiki pages don't take docs");
+    expect(create).not.toHaveBeenCalled();
+  });
+});
 
 describe('attachSourcePdf', () => {
   it('stores the PDF and sets sourceUrl without touching content', async () => {

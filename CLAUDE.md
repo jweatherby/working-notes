@@ -69,7 +69,7 @@ wnotes relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <page
 - **Notebooks:** every call runs against the default notebook, unless it passes `--notebook <id or name>` (anywhere in the arguments) or `WNOTES_NOTEBOOK` is set. `notebook.list`, `notebook.create --name`, `notebook.rename` and `notebook.setDefault` manage them. There is deliberately no delete: the user moves a folder out of `Notebooks/` by hand.
 - **Typing:** values are coerced by each procedure's JSON Schema. `--title 2024` stays a string, `--priority 2` becomes a number, and `--leadId null` clears a field.
 - **Input:** `--<field>-file <path>` reads a value from a file (use it for markdown), and `--input '<json>'` passes the whole input.
-- **Entity types:** `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`.
+- **Entity types:** `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
 - **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities with a kind and a note. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
 - **The Claude skill** in `plugin/skills/working-notes/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).
 

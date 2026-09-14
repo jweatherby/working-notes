@@ -89,7 +89,7 @@ Deleting a person, team, department, project, goal, page or report also deletes 
 
 Todo `status` is one of `PENDING ACTIVE COMPLETE CANCELLED`. `todo.list` returns each todo's `entityLabel` (the person/team/project name) and `entityPath`.
 
-Docs are for longer reference material (a career plan, an imported PDF). Notes are short, dated observations. Reports are switched off for now, so write finished write-ups as docs.
+Docs are for longer reference material (a career plan, an imported PDF). They attach to anything except a wiki page: `doc.add` on a `PAGE` fails, because the page's own `content` is the place for that material. Notes are short, dated observations. Reports are switched off for now, so write finished write-ups as docs.
 
 ## Branding
 

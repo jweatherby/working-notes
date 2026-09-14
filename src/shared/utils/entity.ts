@@ -46,6 +46,9 @@ export const entityPath = (entityType: EntityType, entityId: string): string => 
 
 export const entityTypeLabel = (entityType: EntityType): string => TYPE_LABELS[entityType];
 
+/** Whether docs can attach to this entity type. A wiki page is its own content, so it takes none. */
+export const acceptsDocs = (entityType: string): boolean => entityType !== 'PAGE';
+
 // The app only listens on loopback, so an absolute link to it uses one of these hosts.
 const LOOPBACK_ORIGIN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?=\/)/i;
 const APP_PATH = /^\/app\/([a-z]+)\/([A-Za-z0-9_-]+)(?:[/?#].*)?$/;

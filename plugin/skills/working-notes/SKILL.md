@@ -86,7 +86,7 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "We pay Datadog $40k a year; it renews in March" | `page.create --title Datadog --kind SOFTWARE --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'` |
 | "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --kind USES --note "Alerting"` |
 
-Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`. They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
+Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`, except that docs don't attach to a `PAGE` (put the material in the page's content, or a sub-page). They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
 
 ## Linking things
 
@@ -96,7 +96,7 @@ Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PRO
 
 ## Write-ups
 
-Reports are switched off for now. When the user asks for a report or write-up, write it as a doc on the person, team, department, project, goal or page.
+Reports are switched off for now. When the user asks for a report or write-up, write it as a doc on the person, team, department, project or goal. A wiki page takes no docs; write into its content instead.
 
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md).

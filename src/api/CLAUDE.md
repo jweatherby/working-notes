@@ -73,7 +73,7 @@ Operations that can fail return `Result<T>`: `ok(value)` or `err(new Error(messa
 
 ## Polymorphic assets
 
-Docs, notes, reports, todos, links, comments, emoji and tag attachments hang off any entity through `entityType` + `entityId`. Prisma returns `entityType` as `string`; cast to `EntityType` when mapping to typed results. `entityPath()` (`$shared/utils/entity`) gives the app route; `resolveEntityLabel()` (`$api/_entity-labels`) gives the display name.
+Docs, notes, reports, todos, links, comments, emoji and tag attachments hang off any entity through `entityType` + `entityId`. The exception is docs on a wiki page: `addDoc` refuses a type that fails `acceptsDocs` (`$shared/utils/entity`), and `EntityDetailPage` hides the docs list for it. Prisma returns `entityType` as `string`; cast to `EntityType` when mapping to typed results. `entityPath()` (`$shared/utils/entity`) gives the app route; `resolveEntityLabel()` (`$api/_entity-labels`) gives the display name.
 
 Goal and project owners (`ownerType` + `ownerId`) and both ends of a relation are polymorphic in the same way, with no foreign key.
 

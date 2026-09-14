@@ -3,6 +3,7 @@ import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
 import type { EntityType } from '$shared/types/enums';
 import { fileUrl } from '$shared/utils/files';
+import { acceptsDocs } from '$shared/utils/entity';
 import { relationCleanupOp } from '$api/_entity-cleanup';
 import { syncMentions } from '$api/relation/mentions';
 
@@ -38,6 +39,9 @@ export const addDoc = async (
   entityId: string,
   input: { readonly title: string }
 ): Promise<Result<{ readonly id: string }>> => {
+  if (!acceptsDocs(entityType)) {
+    return err(new Error("Wiki pages don't take docs. Write it into the page's content with page.update, or add a sub-page with page.create --parentId <pageId>."));
+  }
   const writable = await ensureWritable(reg, entityType, entityId);
   if (!writable.ok) return err(writable.error);
   const maxOrder = await reg.prisma.doc.aggregate({

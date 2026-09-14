@@ -22,6 +22,7 @@
   import { submit } from '$lib/ui/submit';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
   import { features } from '$shared/settings/base/features';
+  import { acceptsDocs } from '$shared/utils/entity';
 
   interface DocItem {
     readonly id: string;
@@ -270,16 +271,18 @@
 
 <DetailLayout {leftOpen} onToggleLeft={toggleLeft}>
   {#snippet sidebar()}
-    <div class="section">
-      <DocsManager
-        {docs}
-        {activeDocId}
-        onSelect={openDoc}
-        onStartAdd={openNewDoc}
-        onRemove={docHandlers.handleRemoveDoc}
-        onReorder={docHandlers.handleReorderDocs}
-      />
-    </div>
+    {#if acceptsDocs(entityType)}
+      <div class="section">
+        <DocsManager
+          {docs}
+          {activeDocId}
+          onSelect={openDoc}
+          onStartAdd={openNewDoc}
+          onRemove={docHandlers.handleRemoveDoc}
+          onReorder={docHandlers.handleReorderDocs}
+        />
+      </div>
+    {/if}
     <div class="section">
       <TodoWidget
         {entityType}
