@@ -91,7 +91,7 @@ describe('wnotes mcp', () => {
     expect(missing.text).toContain('name');
 
     const chart = ['```chart', '{"type":"bar","labels":["a","b","c"],"series":[{"values":[1,2]}]}', '```'].join('\n');
-    const bad = await callTool('report_create', { entityType: 'PERSON', entityId: 'person_alice', title: 'Q3', content: chart });
+    const bad = await callTool('page_create', { title: 'Q3 velocity', content: chart });
     expect(bad.isError).toBe(true);
     expect(bad.text).toContain('chart block at line 1');
   });

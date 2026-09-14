@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { features } from '$shared/settings/base/features';
 
 const WNOTES = resolve('bin/wnotes');
 const cwd = mkdtempSync(join(tmpdir(), 'wnotes-cli-'));
@@ -24,7 +25,9 @@ describe('wnotes CLI', () => {
   it('lists procedures, and shows a procedure\'s inputs', () => {
     const help = wnotes('help');
     expect(help.code).toBe(0);
-    expect(help.stdout).toContain('report.create (mutation)');
+    expect(help.stdout).toContain('page.create (mutation)');
+    // report.* stays out of the CLI while reports are switched off.
+    expect(help.stdout.includes('report.create (mutation)')).toBe(features.reports);
     expect(help.stdout).not.toMatch(/\b(auth|org|forms)\./);
 
     const one = wnotes('help', 'todo.create');
@@ -51,11 +54,11 @@ describe('wnotes CLI', () => {
     writeFileSync(join(cwd, 'good.md'), ['# Q3', '', '```chart', '{"type":"bar","labels":["a","b"],"series":[{"values":[1,2]}]}', '```'].join('\n'));
     writeFileSync(join(cwd, 'bad.md'), ['# Q3', '', '```chart', '{"type":"bar","labels":["a","b","c"],"series":[{"values":[1,2]}]}', '```'].join('\n'));
 
-    const good = wnotes('report.create', '--entityType', 'PERSON', '--entityId', 'person_alice', '--title', 'Q3', '--content-file', 'good.md');
+    const good = wnotes('page.create', '--title', 'Q3 velocity', '--content-file', 'good.md');
     expect(good.code).toBe(0);
     expect(good.json?.ok).toBe(true);
 
-    const bad = wnotes('report.create', '--entityType', 'PERSON', '--entityId', 'person_alice', '--title', 'Q3', '--content-file', 'bad.md');
+    const bad = wnotes('page.create', '--title', 'Q3 velocity draft', '--content-file', 'bad.md');
     expect(bad.code).toBe(1);
     expect(bad.json?.error?.message).toContain('chart block at line 3');
   });
