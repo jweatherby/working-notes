@@ -1,16 +1,13 @@
-// Relations: typed, directional links between any two entities, with an
-// optional note. MENTIONS relations are derived from app links in content.
+// Relations: links between any two entities, with an optional note. RELATED
+// has no direction; DEPENDS_ON does. MENTIONS relations are derived from app
+// links in content.
 
 import type { RelatableType, RelationKind } from './enums';
 
-/** How a relation reads from each end: "Payments owns Checkout" / "Checkout is owned by Payments". */
+/** How a relation reads from each end: "Checkout depends on Payments" / "Payments is needed by Checkout". */
 export const RELATION_LABELS: Readonly<Record<RelationKind, { readonly forward: string; readonly inverse: string }>> = {
   RELATED: { forward: 'Related to', inverse: 'Related to' },
-  OWNS: { forward: 'Owns', inverse: 'Owned by' },
-  USES: { forward: 'Uses', inverse: 'Used by' },
-  APPLIES_TO: { forward: 'Applies to', inverse: 'Subject to' },
   DEPENDS_ON: { forward: 'Depends on', inverse: 'Needed by' },
-  SUPERSEDES: { forward: 'Supersedes', inverse: 'Superseded by' },
   MENTIONS: { forward: 'Mentions', inverse: 'Mentioned in' }
 };
 

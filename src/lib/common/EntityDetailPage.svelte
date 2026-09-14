@@ -298,7 +298,7 @@
       </div>
     {/if}
     <div class="section">
-      <RelationsWidget groups={relations} />
+      <RelationsWidget {entityType} {entityId} groups={relations} readOnly={!!archivedAt} />
     </div>
   {/snippet}
 

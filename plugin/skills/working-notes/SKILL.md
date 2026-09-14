@@ -84,14 +84,15 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "The Q4 migration is part of the uptime goal" | `goal.addProject --goalId <goal> --projectId <project>` |
 | "Add the expense policy, version 2, effective 1 October" | `page.list`, then `page.create --title "Expense policy" --kind POLICY --properties '{"status":"ACTIVE","version":"2","effectiveDate":"2026-10-01"}' --content-file policy.md` |
 | "We pay Datadog $40k a year; it renews in March" | `page.create --title Datadog --kind SOFTWARE --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'` |
-| "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --kind USES --note "Alerting"` |
+| "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --note "Uses it for alerting"` (kind defaults to `RELATED`) |
+| "Checkout can't ship until the payments API is done" | `relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <payments api> --kind DEPENDS_ON` |
 
 Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`, except that docs don't attach to a `PAGE` (put the material in the page's content, or a sub-page). They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
 
 ## Linking things
 
-- **Owners:** a project or goal's owner is its `ownerType` + `ownerId` (a person, team or department). Set that instead of adding an `OWNS` relation.
-- **Relations:** `relation.add --fromType --fromId --toType --toId --kind --note` links any two of `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT`. Kinds are `RELATED` (the default), `OWNS`, `USES`, `APPLIES_TO`, `DEPENDS_ON` and `SUPERSEDES`. Write it in the direction it reads: "Platform uses Datadog" is from Platform to Datadog. `relation.forEntity` shows both directions, grouped by label ("Uses", "Used by"). Change a note or kind with `relation.update`.
+- **Owners:** a project or goal's owner is its `ownerType` + `ownerId` (a person, team or department). There is no ownership relation.
+- **Relations:** `relation.add --fromType --fromId --toType --toId --kind --note` links any two of `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT`. There are two kinds. `RELATED` (the default) has no direction, so linking B to A when A is already related to B is a duplicate. `DEPENDS_ON` reads from `from` to `to`: "Checkout depends on the payments API" is from Checkout to the payments API, and the API shows it as "Needed by". For anything else ("uses", "replaces", "applies to"), add `RELATED` and say how in `--note`. `relation.forEntity` shows both directions, grouped by label. Change a note or kind with `relation.update`.
 - **Linking in content:** in a page, doc, note or report, write `[Title](<path>)` using the `path` from a get or create result. Saving the content turns the link into a backlink: the target shows "Mentioned in". Other paths are `/app/people/<id>`, `/app/teams/<id>`, `/app/departments/<id>`, `/app/projects/<id>`, `/app/goals/<id>`, and `/app/wiki/<id>`. Links inside code blocks don't count. Don't add `MENTIONS` with `relation.add`; to remove a backlink, remove the link from the content.
 
 ## Write-ups

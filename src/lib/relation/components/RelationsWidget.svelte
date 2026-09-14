@@ -1,22 +1,30 @@
 <script lang="ts">
   // Sidebar list of everything linked to an entity, grouped by how the link
-  // reads from this side. Relations are added through the CLI or MCP; MENTIONS
-  // come from links in content, so they can't be removed here.
+  // reads from this side. "+" in the header opens AddRelation (not while
+  // read-only). MENTIONS come from links in content, so they can't be removed here.
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import type { RelationGroup } from '$shared/types/relations';
   import { entityTypeLabel } from '$shared/utils/entity';
+  import { relationEnd } from '$shared/utils/relations';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submitOrThrow } from '$lib/ui/submit';
+  import AddRelation from './AddRelation.svelte';
 
   interface Props {
+    readonly entityType: string;
+    readonly entityId: string;
     readonly groups: readonly RelationGroup[];
+    readonly readOnly?: boolean;
   }
 
-  const { groups }: Props = $props();
+  const { entityType, entityId, groups, readOnly = false }: Props = $props();
 
+  const self = $derived(readOnly ? null : relationEnd(entityType, entityId));
   const count = $derived(groups.reduce((n, group) => n + group.items.length, 0));
+
+  let adding = $state(false);
 
   const handleRemove = async (id: string) => {
     await submitOrThrow(() => trpc().relation.remove.mutate({ id }));
@@ -27,9 +35,22 @@
 <div class="relations-widget">
   <div class="section-header">
     <h4>Related <span class="count">{count}</span></h4>
+    {#if self}
+      <button
+        type="button"
+        class="btn icon sm"
+        onclick={() => (adding = !adding)}
+        title="Add link"
+        aria-label="Add link"
+        aria-expanded={adding}
+      >+</button>
+    {/if}
   </div>
+  {#if self && adding}
+    <AddRelation {self} onDone={() => (adding = false)} />
+  {/if}
   {#if count === 0}
-    <EmptyState message="Nothing linked yet." small />
+    {#if !adding}<EmptyState message="Nothing linked yet." small />{/if}
   {:else}
     {#each groups as group (group.label)}
       <p class="eyebrow">{group.label}</p>

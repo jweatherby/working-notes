@@ -56,19 +56,16 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 ## Relations
 
-A relation links two entities in one direction, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE` or `REPORT`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
+A relation links two entities, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE` or `REPORT`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
 
 | Kind | From the `from` side | From the `to` side |
 |---|---|---|
-| `RELATED` (default) | Related to | Related to |
-| `OWNS` | Owns | Owned by |
-| `USES` | Uses | Used by |
-| `APPLIES_TO` | Applies to | Subject to |
+| `RELATED` (default, no direction) | Related to | Related to |
 | `DEPENDS_ON` | Depends on | Needed by |
-| `SUPERSEDES` | Supersedes | Superseded by |
 | `MENTIONS` (derived) | Mentions | Mentioned in |
 
-- Only one relation of each kind can exist between the same two entities, and an entity can't relate to itself.
+- Only one relation of each kind can exist between the same two entities (for `RELATED`, in either direction), and an entity can't relate to itself.
+- For a link that's neither ("uses", "replaces"), use `RELATED` with a `note`.
 - `relation.forEntity` returns both directions, grouped by the label from that entity's side, and each item has the other entity's name and `path`.
 - **`MENTIONS` is derived.** When a page, doc, note or report's content is saved, each markdown link to an app path (`/app/wiki/<id>`, relative or on `http://127.0.0.1:5173`) becomes a `MENTIONS` relation from that page, doc, note or report to the target. Paths are `/app/people/`, `/app/teams/`, `/app/departments/`, `/app/projects/`, `/app/goals/`, `/app/wiki/` and `/app/reports/`, each followed by the id. Links in code blocks and links to ids that don't exist are ignored. `relation.add`, `update` and `remove` refuse `MENTIONS`.
 

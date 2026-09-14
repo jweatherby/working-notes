@@ -101,7 +101,7 @@ Archiving is not a status. `Project.status` is free text and separate; don't der
 
 ## Relations and mentions
 
-A `Relation` is a directional link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` and an optional `note`, unique per pair and kind. `RELATION_LABELS` (`$shared/types/relations`) gives the forward and inverse label for each kind, and `relation.forEntity` groups by the label from the asking entity's side ("Owns", "Owned by").
+A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` and an optional `note`, unique per pair and kind. The kinds are `RELATED`, which has no direction (so `findDuplicate` in `relation/operations.ts` also checks the reverse pair), `DEPENDS_ON`, and the derived `MENTIONS`. Keep the list short: a new kind needs a real reason, and anything else is `RELATED` with a note. `RELATION_LABELS` (`$shared/types/relations`) gives the forward and inverse label for each kind, and `relation.forEntity` groups by the label from the asking entity's side ("Depends on", "Needed by").
 
 - `MENTIONS` relations are derived. `syncMentions` (`relation/mentions.ts`) runs whenever page, doc, note or report content is saved. It reads app links with `extractEntityLinks` (`$shared/utils/mentions`, which skips code blocks and uses `parseEntityPath`), keeps the ones whose entity exists, and replaces that source's `MENTIONS` rows. Nothing matches by title, so a rename needs no rescan.
 - `relation.add`, `update` and `remove` refuse `MENTIONS`; only the sync writes them.

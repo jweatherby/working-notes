@@ -68,7 +68,7 @@ describe('archiving', () => {
 
     expect((await updateProject(reg, old.value.id, { status: 'done' })).ok).toBe(false);
     expect((await addRelation(reg, {
-      fromType: 'PROJECT', fromId: next.value.id, toType: 'PROJECT', toId: old.value.id, kind: 'SUPERSEDES'
+      fromType: 'PROJECT', fromId: next.value.id, toType: 'PROJECT', toId: old.value.id, kind: 'DEPENDS_ON'
     })).ok).toBe(true);
     expect((await addRelation(reg, {
       fromType: 'PROJECT', fromId: old.value.id, toType: 'PROJECT', toId: next.value.id, kind: 'RELATED'

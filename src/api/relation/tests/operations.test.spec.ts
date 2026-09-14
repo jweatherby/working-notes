@@ -19,22 +19,52 @@ describe('groupRelations', () => {
   it('orders groups by kind, outgoing before incoming, with mentions last', () => {
     const groups = groupRelations([
       item({ id: '1', kind: 'MENTIONS', direction: 'incoming', label: 'Mentioned in' }),
-      item({ id: '2', kind: 'OWNS', direction: 'incoming', label: 'Owned by' }),
-      item({ id: '3', kind: 'USES', direction: 'outgoing', label: 'Uses' }),
-      item({ id: '4', kind: 'OWNS', direction: 'outgoing', label: 'Owns' }),
-      item({ id: '5', kind: 'OWNS', direction: 'incoming', label: 'Owned by' })
+      item({ id: '2', kind: 'DEPENDS_ON', direction: 'incoming', label: 'Needed by' }),
+      item({ id: '3', kind: 'RELATED', direction: 'outgoing', label: 'Related to' }),
+      item({ id: '4', kind: 'DEPENDS_ON', direction: 'outgoing', label: 'Depends on' }),
+      item({ id: '5', kind: 'DEPENDS_ON', direction: 'incoming', label: 'Needed by' }),
+      item({ id: '6', kind: 'RELATED', direction: 'incoming', label: 'Related to' })
     ]);
     expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
-      ['Owns', ['4']],
-      ['Owned by', ['2', '5']],
-      ['Uses', ['3']],
+      ['Related to', ['3', '6']],
+      ['Depends on', ['4']],
+      ['Needed by', ['2', '5']],
       ['Mentioned in', ['1']]
     ]);
   });
 });
 
 describe('addRelation', () => {
-  const input = { fromType: 'PAGE', fromId: 'p1', toType: 'TEAM', toId: 't1', kind: 'OWNS' } as const;
+  const input = { fromType: 'PAGE', fromId: 'p1', toType: 'TEAM', toId: 't1', kind: 'DEPENDS_ON' } as const;
+  const labels = {
+    page: { findUnique: vi.fn().mockResolvedValue({ title: 'Checkout' }) },
+    team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
+  };
+
+  it('treats RELATED in the other direction as the same link', async () => {
+    const findUnique = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'rel_2' });
+    const create = vi.fn();
+    const reg = createTestRegistry({
+      prisma: { ...labels, relation: { findUnique, create } } as unknown as Registry['prisma']
+    });
+    const result = await addRelation(reg, { ...input, kind: 'RELATED' });
+    expect(!result.ok && result.error.message).toContain('relation rel_2');
+    expect(findUnique).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { fromType_fromId_toType_toId_kind: { fromType: 'TEAM', fromId: 't1', toType: 'PAGE', toId: 'p1', kind: 'RELATED' } }
+    }));
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('lets DEPENDS_ON run both ways', async () => {
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const create = vi.fn().mockResolvedValue({ id: 'rel_3' });
+    const reg = createTestRegistry({
+      prisma: { ...labels, relation: { findUnique, create } } as unknown as Registry['prisma']
+    });
+    const result = await addRelation(reg, input);
+    expect(result.ok && result.value).toEqual({ id: 'rel_3' });
+    expect(findUnique).toHaveBeenCalledTimes(1);
+  });
 
   it('rejects a relation from an entity to itself', async () => {
     const reg = createTestRegistry();

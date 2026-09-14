@@ -9,7 +9,7 @@ import { resolveEntityLabel } from '$api/_entity-labels';
 // ----- Pure helpers -----
 
 /**
- * Groups by label ("Owns", "Used by", …). Groups follow RELATION_KINDS order,
+ * Groups by label ("Depends on", "Needed by", …). Groups follow RELATION_KINDS order,
  * outgoing before incoming, so mentions come last.
  */
 export const groupRelations = (items: readonly RelationItem[]): readonly RelationGroup[] => {
@@ -73,6 +73,28 @@ export const listRelationsForEntity = async (
 
 // ----- Mutations -----
 
+interface RelationEnds {
+  readonly fromType: string;
+  readonly fromId: string;
+  readonly toType: string;
+  readonly toId: string;
+}
+
+/** A relation of `kind` between the same two entities. RELATED has no direction, so it also matches the reverse. */
+const findDuplicate = async (
+  reg: Pick<Registry, 'prisma'>,
+  ends: RelationEnds,
+  kind: RelationKind
+): Promise<{ readonly id: string } | null> => {
+  const find = (fromType: string, fromId: string, toType: string, toId: string) =>
+    reg.prisma.relation.findUnique({
+      where: { fromType_fromId_toType_toId_kind: { fromType, fromId, toType, toId, kind } },
+      select: { id: true }
+    });
+  return (await find(ends.fromType, ends.fromId, ends.toType, ends.toId))
+    ?? (kind === 'RELATED' ? await find(ends.toType, ends.toId, ends.fromType, ends.fromId) : null);
+};
+
 export interface AddRelationInput {
   readonly fromType: RelatableType;
   readonly fromId: string;
@@ -105,7 +127,7 @@ export const addRelation = async (
   if (toLabel === null) return err(new Error(`${input.toType} ${input.toId} not found`));
 
   const key = { fromType: input.fromType, fromId: input.fromId, toType: input.toType, toId: input.toId, kind: input.kind };
-  const existing = await reg.prisma.relation.findUnique({ where: { fromType_fromId_toType_toId_kind: key } });
+  const existing = await findDuplicate(reg, input, input.kind);
   if (existing) {
     return err(new Error(
       `"${fromLabel}" ${RELATION_LABELS[input.kind].forward.toLowerCase()} "${toLabel}" already (relation ${existing.id}); use relation.update to change its note`
@@ -130,17 +152,7 @@ export const updateRelation = async (
   }
 
   if (input.kind !== undefined && input.kind !== existing.kind) {
-    const clash = await reg.prisma.relation.findUnique({
-      where: {
-        fromType_fromId_toType_toId_kind: {
-          fromType: existing.fromType,
-          fromId: existing.fromId,
-          toType: existing.toType,
-          toId: existing.toId,
-          kind: input.kind
-        }
-      }
-    });
+    const clash = await findDuplicate(reg, existing, input.kind);
     if (clash) return err(new Error(`A ${input.kind} relation between these entities already exists (relation ${clash.id})`));
   }
 

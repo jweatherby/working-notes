@@ -50,6 +50,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `Field` | `label`, `hint?`, `error?`, children snippet `({ id })` | every labelled form control |
 | `InlinePicker` | `label`, `options: {id,name,group?}[]`, `placeholder?`, `onPick(id)` | single-pick relationship edits (assign lead, add member, set parent). Options with a `group` render in an `<optgroup>`; owner pickers use composite ids like `TEAM:<id>`. Renders nothing when there are no options |
 | `ProgressBar` | `value: number \| null` (0–1), `tone?: accent \| success \| warning \| danger`, `label?` | any 0–1 measure, such as goal progress |
+| `SearchPicker` | `label`, `options: {id,name,scope?}[]`, `scopes?: {id,label,slash}[]`, `loading?`, `onPick(id)`, `onCancel` | picking one item from a list too long for a `<select>` (link targets). Type to search; a query starting with `/` names a scope (singular words: `/person`, `/project`). `/` lists them, `/team console` searches teams, and a partly typed word completes in the box once a space follows it (`/pro ` → `/project `, the highlighted one when several match). The query stays plain text, never a chip. Enter picks the highlighted row; Escape cancels. Parsing and matching are in `search-picker.ts`. Shows an error only when `onPick` throws |
 | `GroupedOptions` | `options: {id,name,group?}[]` | the `<option>`s inside a `<select>`, under `<optgroup>`s when options carry a `group` (owner selects in `GoalForm` and `ProjectForm`; `InlinePicker` uses it too) |
 | `ConfirmButton` | `label`, `confirmLabel?`, `onConfirm`, `variant: link \| button \| icon`, `timeoutMs?` | any destructive action. Never use `window.confirm()` |
 | `Menu` | `label`, `items: {label, href?, onSelect?, current?, divided?}[]`, `trigger?` snippet, `iconOnly?` (just a chevron, named by `label`), `align?: start \| end` | a button that opens a short list of links and actions (the notebook switcher). Handles Escape, click-outside and arrow keys. Not for picking a relationship; that's `InlinePicker` |
@@ -83,7 +84,7 @@ Use a standard component or class before writing markup or styles yourself. If n
 
 **Actions**
 - Use `ConfirmButton` for every destructive action (delete, remove, detach). Use `variant="icon"` inside `.row-actions`, `link` in text and `button` in form actions. Never call `window.confirm()` or `alert()`.
-- Use `InlinePicker` to set or add one relationship (lead, member, parent). Don't write `<details>`/`<select onchange>` pickers.
+- Use `InlinePicker` to set or add one relationship (lead, member, parent), or `SearchPicker` when the choices span several entity types or are too many to scroll. Don't write `<details>`/`<select onchange>` pickers.
 - Edit affordances are `PencilIcon` inside `.btn icon sm`, with an `aria-label` that names the entity.
 - Every clickable control is `.btn` plus modifiers, or an `<a>`. A bare `<button>` is unstyled on purpose. Show loading with `disabled` + `aria-busy` and a text swap, not a spinner.
 - Show todo state with `todo/components/StatusDot` and `PriorityBadge`. Don't restyle status or priority locally.
@@ -115,7 +116,8 @@ Use a standard component or class before writing markup or styles yourself. If n
 | `common/MarkdownRenderer` | `content`, `placeholder?` | Markdown + charts + mermaid |
 | `common/NotesList` | `notes`, `onEdit?`, `onRemove?`, `maxHeight?` | Note list with clamp/expand |
 | `report/components/ReportsWidget` | `entityType`, `entityId`, `reports` | Sidebar report list + "new report" |
-| `relation/components/RelationsWidget` | `groups` (`RelationGroup[]`) | Sidebar "Related" list grouped by label, with a remove button on every row except `MENTIONS`. Relations are added through the CLI or MCP |
+| `relation/components/RelationsWidget` | `entityType`, `entityId`, `groups` (`RelationGroup[]`), `readOnly?` | Sidebar "Related" list grouped by label, with a remove button on every row except `MENTIONS`. The header's "+" (hidden when `readOnly`, i.e. archived) opens `AddRelation` |
+| `relation/components/AddRelation` | `self` (`RelationEnd` from `relationEnd()` in `$shared/utils/relations`), `onDone` | Kind select ("Related to", "Depends on", "Needed by"; the inverse swaps the ends via `toRelationInput`), then a `SearchPicker` over `loadRelationTargets` (`$shared/trpc/load-relation-targets`) scoped by `RELATION_TARGET_SCOPES`. Picking a target adds the link. No note field for now |
 | `{person,team,department,project}/components/*Form` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` (`PersonForm` also `leadOptions?`, `ProjectForm` also `ownerOptions?`) | Create/edit forms, used in list popups, detail edit popups and Org Map |
 | `goal/components/GoalForm` | `initial?`, `ownerOptions`, `onSuccess`, `onCancel?`, `onDelete?` | Goal create/edit: title, description, owner, period, status, unit, baseline, target. Get `ownerOptions` (grouped by type, for this form and `ProjectForm`) from `loadOwnerOptions(client)` in `$shared/trpc/load-owner-options` |
 | `page/components/PageForm` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` | Page create/edit: title, kind, and property fields from `PAGE_KIND_FIELDS`. Content is edited on the page itself |

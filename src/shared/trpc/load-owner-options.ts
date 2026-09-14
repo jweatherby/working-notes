@@ -4,6 +4,7 @@
 import type { CreateTRPCClient } from '@trpc/client';
 import type { AppRouter } from './router';
 import { OWNER_TYPES, type OwnerType } from '$shared/types/enums';
+import { parseTypedIdValue, typedIdValue } from '$shared/utils/entity';
 
 export interface OwnerOption {
   readonly id: string;
@@ -11,15 +12,13 @@ export interface OwnerOption {
   readonly group: string;
 }
 
-export const ownerOptionValue = (ownerType: OwnerType, ownerId: string): string => `${ownerType}:${ownerId}`;
+export const ownerOptionValue = (ownerType: OwnerType, ownerId: string): string => typedIdValue(ownerType, ownerId);
 
 export const parseOwnerOptionValue = (
   value: string
 ): { readonly ownerType: OwnerType; readonly ownerId: string } | null => {
-  const at = value.indexOf(':');
-  const ownerType = value.slice(0, at) as OwnerType;
-  const ownerId = value.slice(at + 1);
-  return at > 0 && ownerId && OWNER_TYPES.includes(ownerType) ? { ownerType, ownerId } : null;
+  const parsed = parseTypedIdValue(value, OWNER_TYPES);
+  return parsed ? { ownerType: parsed.type, ownerId: parsed.id } : null;
 };
 
 export const loadOwnerOptions = async (client: CreateTRPCClient<AppRouter>): Promise<readonly OwnerOption[]> => {

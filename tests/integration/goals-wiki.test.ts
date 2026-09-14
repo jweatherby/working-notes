@@ -97,13 +97,14 @@ describe('wiki pages and relations', () => {
 
     const team = await createTeam(reg, { name: 'Billing' });
     if (!team.ok) throw new Error('team create failed');
-    const uses = await addRelation(reg, { fromType: 'TEAM', fromId: team.value.id, toType: 'PAGE', toId: page.value.id, kind: 'USES', note: 'Card payments' });
-    expect(uses.ok).toBe(true);
+    const related = await addRelation(reg, { fromType: 'TEAM', fromId: team.value.id, toType: 'PAGE', toId: page.value.id, kind: 'RELATED', note: 'Card payments' });
+    expect(related.ok).toBe(true);
     const teamRelations = await listRelationsForEntity(reg, 'TEAM', team.value.id);
     expect(teamRelations.ok && teamRelations.value.map((g) => [g.label, g.items.map((i) => [i.other.label, i.note])])).toEqual([
-      ['Uses', [['Stripe Billing', 'Card payments']]]
+      ['Related to', [['Stripe Billing', 'Card payments']]]
     ]);
-    const duplicate = await addRelation(reg, { fromType: 'TEAM', fromId: team.value.id, toType: 'PAGE', toId: page.value.id, kind: 'USES' });
+    // RELATED has no direction, so the reverse is the same link.
+    const duplicate = await addRelation(reg, { fromType: 'PAGE', fromId: page.value.id, toType: 'TEAM', toId: team.value.id, kind: 'RELATED' });
     expect(!duplicate.ok && duplicate.error.message).toContain('relation.update');
 
     await addNote(reg, 'PAGE', page.value.id, { content: 'Contract renews in January' });

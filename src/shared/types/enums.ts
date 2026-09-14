@@ -37,8 +37,8 @@ export const PAGE_KINDS = ['GENERAL', 'POLICY', 'PRODUCT', 'SOFTWARE', 'DECISION
 
 export type PageKind = (typeof PAGE_KINDS)[number];
 
-/** Kinds `relation.add` accepts. MENTIONS is derived from app links in content and never written by hand. */
-export const MANUAL_RELATION_KINDS = ['RELATED', 'OWNS', 'USES', 'APPLIES_TO', 'DEPENDS_ON', 'SUPERSEDES'] as const;
+/** Kinds `relation.add` accepts: RELATED has no direction, DEPENDS_ON does. MENTIONS is derived from app links in content and never written by hand. */
+export const MANUAL_RELATION_KINDS = ['RELATED', 'DEPENDS_ON'] as const;
 
 export const RELATION_KINDS = [...MANUAL_RELATION_KINDS, 'MENTIONS'] as const;
 

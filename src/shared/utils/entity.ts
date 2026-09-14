@@ -49,6 +49,20 @@ export const entityTypeLabel = (entityType: EntityType): string => TYPE_LABELS[e
 /** Whether docs can attach to this entity type. A wiki page is its own content, so it takes none. */
 export const acceptsDocs = (entityType: string): boolean => entityType !== 'PAGE';
 
+/** `TYPE:id`, so one <select> can offer entities of several types. */
+export const typedIdValue = (type: string, id: string): string => `${type}:${id}`;
+
+/** Reads a `typedIdValue` back, or null when it's malformed or its type isn't one of `types`. */
+export const parseTypedIdValue = <T extends string>(
+  value: string,
+  types: readonly T[]
+): { readonly type: T; readonly id: string } | null => {
+  const at = value.indexOf(':');
+  const type = value.slice(0, at) as T;
+  const id = value.slice(at + 1);
+  return at > 0 && id && types.includes(type) ? { type, id } : null;
+};
+
 // The app only listens on loopback, so an absolute link to it uses one of these hosts.
 const LOOPBACK_ORIGIN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?=\/)/i;
 const APP_PATH = /^\/app\/([a-z]+)\/([A-Za-z0-9_-]+)(?:[/?#].*)?$/;
