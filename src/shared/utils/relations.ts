@@ -24,16 +24,6 @@ export interface RelationAddInput {
   readonly kind: ManualRelationKind;
 }
 
-/** Types the add-link search offers, in order, with the singular word `/` picks each by. */
-export const RELATION_TARGET_SCOPES: readonly { readonly id: RelatableType; readonly label: string; readonly slash: string }[] = [
-  { id: 'PERSON', label: 'Person', slash: 'person' },
-  { id: 'TEAM', label: 'Team', slash: 'team' },
-  { id: 'DEPARTMENT', label: 'Department', slash: 'department' },
-  { id: 'PROJECT', label: 'Project', slash: 'project' },
-  { id: 'GOAL', label: 'Goal', slash: 'goal' },
-  { id: 'PAGE', label: 'Wiki', slash: 'wiki' }
-];
-
 /** The entity as one end of a relation, or null for a type relations can't point at. */
 export const relationEnd = (entityType: string, entityId: string): RelationEnd | null =>
   (RELATABLE_TYPES as readonly string[]).includes(entityType) && entityId

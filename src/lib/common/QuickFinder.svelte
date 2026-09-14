@@ -1,83 +1,102 @@
 <script lang="ts">
+  // ⌘K: search people, teams, departments, projects, goals, wiki pages, the
+  // app's sections and notebooks. Queries read like the add-link search:
+  // "/team console" searches teams and "/pro " completes to "/project ". The "/"
+  // list also holds commands ("/todo", "/notebook"). Rows come from quick-finder.ts.
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { trpc } from '$shared/trpc/client';
+  import { loadEntityOptions, type EntityOption } from '$shared/trpc/load-entity-options';
+  import { RELATABLE_TYPES } from '$shared/types/enums';
   import type { NotebookSummary } from '$shared/types/notebook';
-  import { quickFinderOpen } from '$lib/stores/quick-finder';
-  import { openPopup } from '$lib/ui/popup-url';
-  import { switchNotebook } from '$lib/notebook/switch';
-  import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
+  import { ENTITY_SEARCH_SCOPES, entityPath, parseTypedIdValue } from '$shared/utils/entity';
   import { features } from '$shared/settings/base/features';
-
-  interface FinderItem {
-    readonly label: string;
-    readonly href?: string;
-    readonly action?: () => void;
-    readonly section: string;
-    readonly indent?: boolean;
-  }
+  import { quickFinderOpen } from '$lib/stores/quick-finder';
+  import { switchNotebook } from '$lib/notebook/switch';
+  import EmptyState from '$lib/ui/EmptyState.svelte';
+  import { openPopup } from '$lib/ui/popup-url';
+  import { completeScopeWord } from '$lib/ui/search-picker';
+  import { finderRows, type FinderEntry, type FinderRow } from './quick-finder';
 
   const CACHE_TTL = 24 * 60 * 60 * 1000;
-  // One cache per notebook, so another notebook's projects never show up.
+  // One cache per notebook, so another notebook's entities never show up.
   const cacheKey = $derived(`quick-finder-cache:${$page.data.notebook?.id ?? ''}`);
 
+  const ROUTES: readonly { readonly name: string; readonly href: string }[] = [
+    { name: 'Home', href: '/app' },
+    { name: 'People', href: '/app/people' },
+    { name: 'Teams', href: '/app/teams' },
+    { name: 'Departments', href: '/app/departments' },
+    { name: 'Projects', href: '/app/projects' },
+    { name: 'Goals', href: '/app/goals' },
+    { name: 'Wiki', href: '/app/wiki' },
+    { name: 'Org Map', href: '/app/orgmap' },
+    { name: 'Todos', href: '/app/todos' },
+    ...(features.reports ? [{ name: 'Reports', href: '/app/reports' }] : []),
+    { name: 'Branding', href: '/app/branding' },
+    { name: 'Notebooks', href: '/app/notebooks' }
+  ];
+
+  const COMMANDS = [
+    { id: 'todo', label: 'New todo', slash: 'todo', run: () => openPopup('todo') },
+    { id: 'notebook', label: 'New notebook', slash: 'notebook', run: () => openPopup('new-notebook') }
+  ];
+
+  const routeEntries: readonly FinderEntry[] = ROUTES.map((r) => ({ id: `route:${r.href}`, name: r.name, meta: 'Go to' }));
+
   // From the /app layout. A page's own data can shadow the key, so check it's the list.
-  const notebookItems = $derived.by((): readonly FinderItem[] => {
+  const notebookEntries = $derived.by((): readonly FinderEntry[] => {
     const notebooks: unknown = $page.data.notebooks;
     if (!Array.isArray(notebooks)) return [];
     return (notebooks as readonly NotebookSummary[])
       .filter((n) => !n.isCurrent)
-      .map((n) => ({ label: `Switch to ${n.name}`, section: 'Notebooks', action: () => switchNotebook(n.id) }));
+      .map((n) => ({ id: `notebook:${n.id}`, name: `Switch to ${n.name}`, meta: 'Notebook' }));
   });
 
-  const STATIC_ROUTES: readonly FinderItem[] = [
-    { label: 'Home', href: '/app', section: 'Pages' },
-    { label: 'People', href: '/app/people', section: 'Pages' },
-    { label: 'Teams', href: '/app/teams', section: 'Pages' },
-    { label: 'Departments', href: '/app/departments', section: 'Pages' },
-    { label: 'Projects', href: '/app/projects', section: 'Pages' },
-    { label: 'Goals', href: '/app/goals', section: 'Pages' },
-    { label: 'Wiki', href: '/app/wiki', section: 'Pages' },
-    { label: 'Org Map', href: '/app/orgmap', section: 'Pages' },
-    { label: 'Todos', href: '/app/todos', section: 'Pages' },
-    ...(features.reports ? [{ label: 'Reports', href: '/app/reports', section: 'Pages' }] : []),
-    { label: 'Branding', href: '/app/branding', section: 'Pages' },
-    { label: 'Notebooks', href: '/app/notebooks', section: 'Pages' },
-  ];
-
-  const COMMANDS: readonly FinderItem[] = [
-    {
-      label: '/todos — New todo',
-      section: 'Commands',
-      action: () => { openPopup('todo'); }
-    },
-    {
-      label: '/notebook — New notebook',
-      section: 'Commands',
-      action: () => { openPopup('new-notebook'); }
-    },
-  ];
+  const scopeLabel = (scope: string): string => ENTITY_SEARCH_SCOPES.find((s) => s.id === scope)?.label ?? '';
 
   let query = $state('');
-  let selectedIndex = $state(0);
-  let dynamicItems = $state<readonly FinderItem[]>([]);
+  let active = $state(0);
+  let entities = $state<readonly EntityOption[]>([]);
   let loading = $state(false);
-  let inputEl: HTMLInputElement | undefined = $state();
+  let inputEl = $state<HTMLInputElement | null>(null);
 
-  const filtered = $derived.by(() => {
-    const q = query.toLowerCase().trim();
-    const isSlash = q.startsWith('/');
+  const rows = $derived(
+    finderRows(query, {
+      scopes: ENTITY_SEARCH_SCOPES,
+      commands: COMMANDS,
+      entries: [...entities.map((e) => ({ ...e, meta: scopeLabel(e.scope) })), ...routeEntries, ...notebookEntries],
+      home: routeEntries
+    })
+  );
 
-    if (isSlash) {
-      const cmd = q;
-      return COMMANDS.filter((c) => c.label.toLowerCase().includes(cmd));
+  const close = () => quickFinderOpen.set(false);
+
+  const handleInput = (value: string) => {
+    const scopeIndex = rows[active]?.kind === 'scope' ? active : 0;
+    query = completeScopeWord(value, ENTITY_SEARCH_SCOPES, scopeIndex);
+    active = 0;
+  };
+
+  const openEntry = (id: string): void => {
+    const target = parseTypedIdValue(id, RELATABLE_TYPES);
+    if (id.startsWith('route:')) void goto(id.slice('route:'.length));
+    else if (id.startsWith('notebook:')) void switchNotebook(id.slice('notebook:'.length));
+    else if (target) void goto(entityPath(target.type, target.id));
+  };
+
+  const select = (row: FinderRow) => {
+    if (row.kind === 'scope') {
+      query = `/${row.scope.slash} `;
+      active = 0;
+      inputEl?.focus();
+      return;
     }
-
-    const all = [...dynamicItems, ...STATIC_ROUTES, ...notebookItems];
-    if (!q) return [...COMMANDS, ...all];
-    return all.filter((item) => item.label.toLowerCase().includes(q));
-  });
+    close();
+    if (row.kind === 'command') COMMANDS.find((c) => c.id === row.command.id)?.run();
+    else openEntry(row.entry.id);
+  };
 
   const handleKeydown = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -86,199 +105,155 @@
     }
   };
 
-  // Reset and load whenever the finder opens, from the shortcut or the nav button.
-  $effect(() => {
-    if ($quickFinderOpen) {
-      query = '';
-      selectedIndex = 0;
-      loadDynamic(false);
-    }
-  });
-
   const handleModalKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      quickFinderOpen.set(false);
-    } else if (e.key === 'ArrowDown') {
+      close();
+    } else if (e.key === 'ArrowDown' && rows.length > 0) {
       e.preventDefault();
-      selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
-    } else if (e.key === 'ArrowUp') {
+      active = Math.min(active + 1, rows.length - 1);
+    } else if (e.key === 'ArrowUp' && rows.length > 0) {
       e.preventDefault();
-      selectedIndex = Math.max(selectedIndex - 1, 0);
+      active = Math.max(active - 1, 0);
     } else if (e.key === 'Enter') {
-      const item = filtered[selectedIndex];
-      if (!item) return;
+      const row = rows[active];
+      if (!row) return;
       e.preventDefault();
-      select(item);
+      select(row);
     }
   };
-
-  const select = (item: FinderItem) => {
-    quickFinderOpen.set(false);
-    if (item.action) {
-      item.action();
-    } else if (item.href) {
-      goto(item.href);
-    }
-  };
-
-  interface CachedEntity {
-    readonly id: string;
-    readonly name: string;
-    readonly parentId: string | null;
-  }
 
   interface CacheData {
     readonly ts: number;
-    readonly projects: readonly CachedEntity[];
-    readonly goals: readonly CachedEntity[];
-    readonly pages: readonly CachedEntity[];
+    readonly entities: readonly EntityOption[];
   }
 
-  const readCache = (): CacheData | null => {
+  const readCache = (): readonly EntityOption[] | null => {
     try {
       const raw = localStorage.getItem(cacheKey);
       if (!raw) return null;
-      const data: CacheData = JSON.parse(raw);
-      if (Date.now() - data.ts > CACHE_TTL) return null;
-      // Caches written before goals and pages existed are stale.
-      if (!data.goals || !data.pages) return null;
-      return data;
+      const data = JSON.parse(raw) as Partial<CacheData>;
+      // Caches from before people, teams and departments were searchable have no `entities`.
+      if (!Array.isArray(data.entities) || !data.ts || Date.now() - data.ts > CACHE_TTL) return null;
+      return data.entities;
     } catch {
       return null;
     }
   };
 
-  // Archived projects, goals and pages leave the finder: forget the cache when one changes.
-  $effect(() => {
-    const key = cacheKey;
-    const forget = () => {
-      try { localStorage.removeItem(key); } catch { /* storage unavailable — ignore */ }
-      dynamicItems = [];
-    };
-    window.addEventListener(ARCHIVE_CHANGED_EVENT, forget);
-    return () => window.removeEventListener(ARCHIVE_CHANGED_EVENT, forget);
-  });
-
-  const writeCache = (data: Omit<CacheData, 'ts'>) => {
+  const writeCache = (list: readonly EntityOption[]) => {
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({ ...data, ts: Date.now() }));
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), entities: list }));
     } catch { /* quota exceeded — ignore */ }
   };
 
-  // Every level of the tree, children indented under their parent.
-  const treeItems = (items: readonly CachedEntity[], section: string, base: string): readonly FinderItem[] =>
-    flattenTree(buildTree(items, (item) => item.parentId)).map(({ item, depth }) => ({
-      label: item.name,
-      href: `${base}/${item.id}`,
-      section,
-      indent: depth > 0,
-    }));
-
-  const buildDynamicItems = (cache: Omit<CacheData, 'ts'>): readonly FinderItem[] => [
-    ...treeItems(cache.projects, 'Projects', '/app/projects'),
-    ...treeItems(cache.goals, 'Goals', '/app/goals'),
-    ...treeItems(cache.pages, 'Wiki', '/app/wiki'),
-  ];
-
-  const loadDynamic = async (force: boolean) => {
-    if (!force) {
-      const cached = readCache();
-      if (cached) {
-        dynamicItems = buildDynamicItems(cached);
-        return;
-      }
+  const loadEntities = async (force: boolean) => {
+    const cached = force ? null : readCache();
+    if (cached) {
+      entities = cached;
+      return;
     }
     loading = true;
     try {
-      const client = trpc();
-      const [projectsResult, goalsResult, pagesResult] = await Promise.all([
-        client.project.list.query(),
-        client.goal.list.query(),
-        client.page.list.query(),
-      ]);
-      const projects = projectsResult.ok ? projectsResult.value.map((p) => ({ id: p.id, name: p.name, parentId: p.parentId })) : [];
-      const goals = goalsResult.ok ? goalsResult.value.map((g) => ({ id: g.id, name: g.title, parentId: g.parentId })) : [];
-      const pages = pagesResult.ok ? pagesResult.value.map((p) => ({ id: p.id, name: p.title, parentId: p.parentId })) : [];
-      writeCache({ projects, goals, pages });
-      dynamicItems = buildDynamicItems({ projects, goals, pages });
+      entities = await loadEntityOptions(trpc());
+      writeCache(entities);
     } catch {
-      dynamicItems = [];
+      entities = [];
     } finally {
       loading = false;
     }
   };
 
+  // Archived entities leave the finder: forget the cache when one changes.
+  $effect(() => {
+    const key = cacheKey;
+    const forget = () => {
+      try { localStorage.removeItem(key); } catch { /* storage unavailable — ignore */ }
+      entities = [];
+    };
+    window.addEventListener(ARCHIVE_CHANGED_EVENT, forget);
+    return () => window.removeEventListener(ARCHIVE_CHANGED_EVENT, forget);
+  });
+
+  // Reset and load whenever the finder opens, from the shortcut or the nav button.
+  $effect(() => {
+    if ($quickFinderOpen) {
+      query = '';
+      active = 0;
+      void loadEntities(false);
+    }
+  });
+
+  $effect(() => {
+    if ($quickFinderOpen && inputEl) inputEl.focus();
+  });
+
   const handleRefresh = (e: MouseEvent) => {
     e.stopPropagation();
-    loadDynamic(true);
+    void loadEntities(true);
   };
-
-  $effect(() => {
-    if ($quickFinderOpen && inputEl) {
-      inputEl.focus();
-    }
-  });
-
-  $effect(() => {
-    // reset selection when filtered results change
-    filtered;
-    selectedIndex = 0;
-  });
-
-  let currentSection = $derived.by(() => {
-    const sections: string[] = [];
-    for (const item of filtered) {
-      if (!sections.includes(item.section)) sections.push(item.section);
-    }
-    return sections;
-  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 {#if $quickFinderOpen}
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-  <div class="backdrop" onclick={() => quickFinderOpen.set(false)} onkeydown={handleModalKeydown}>
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="finder" onclick={(e) => e.stopPropagation()}>
+  <div class="backdrop" onclick={(e) => { if (e.target === e.currentTarget) close(); }} onkeydown={handleModalKeydown}>
+    <div class="finder">
       <div class="finder-header">
         <input
           bind:this={inputEl}
-          bind:value={query}
           type="text"
-          placeholder="Search or type / for commands…"
+          role="combobox"
+          aria-label="Search"
+          aria-autocomplete="list"
+          aria-controls="quick-finder-results"
+          aria-expanded={rows.length > 0}
+          aria-activedescendant={rows.length > 0 ? `quick-finder-row-${active}` : undefined}
+          placeholder="Search, or / for a type or command"
           autocomplete="off"
           spellcheck="false"
+          value={query}
+          oninput={(e) => handleInput(e.currentTarget.value)}
         />
         <button type="button" class="btn icon sm" onclick={handleRefresh} title="Refresh data" aria-label="Refresh data" disabled={loading}>
           {#if loading}…{:else}↻{/if}
         </button>
       </div>
-      <div class="results">
-        {#each currentSection as section}
-          <div class="section-label eyebrow">{section}</div>
-          {#each filtered.filter((f) => f.section === section) as item, _i}
-            {@const globalIndex = filtered.indexOf(item)}
-            <button
-              type="button"
+      {#if rows.length > 0}
+        <ul class="results" id="quick-finder-results" role="listbox" aria-label="Results">
+          {#each rows as row, i (row.key)}
+            <li
+              id="quick-finder-row-{i}"
               class="result-item"
-              class:selected={globalIndex === selectedIndex}
-              class:indented={item.indent}
-              onmouseenter={() => (selectedIndex = globalIndex)}
-              onclick={() => select(item)}
+              class:selected={i === active}
+              role="option"
+              aria-selected={i === active}
+              tabindex="-1"
+              onmouseenter={() => (active = i)}
+              onmousedown={(e) => { e.preventDefault(); select(row); }}
             >
-              {item.label}
-            </button>
+              {#if row.kind === 'scope'}
+                <span class="name mono">/{row.scope.slash}</span>
+              {:else if row.kind === 'command'}
+                <span class="name mono">/{row.command.slash}</span>
+                <span class="kind">{row.command.label}</span>
+              {:else}
+                <span class="name truncate">{row.entry.name}</span>
+                <span class="kind">{row.entry.meta}</span>
+              {/if}
+            </li>
           {/each}
-        {/each}
-        {#if filtered.length === 0}
-          <div class="empty">No results</div>
-        {/if}
-      </div>
+        </ul>
+      {:else}
+        <div class="no-results">
+          <EmptyState message={loading ? 'Loading…' : 'No results'} small />
+        </div>
+      {/if}
       <div class="finder-footer">
         <span><kbd>↑↓</kbd> navigate</span>
         <span><kbd>↵</kbd> open</span>
+        <span><kbd>/</kbd> type or command</span>
         <span><kbd>esc</kbd> close</span>
       </div>
     </div>
@@ -331,31 +306,37 @@
   }
 
   .results {
+    list-style: none;
+    margin: 0;
     overflow-y: auto;
     flex: 1;
     padding: var(--sp-1) 0;
   }
 
-  .section-label {
-    padding: var(--sp-2) var(--sp-3) var(--sp-1);
-  }
-
   .result-item {
-    display: block;
-    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
     height: var(--control-h);
     padding: 0 var(--sp-3);
-    text-align: left;
     font-size: var(--fs-md);
     color: var(--text);
+    cursor: pointer;
     &.selected { background: var(--surface-hover); }
-    &.indented { padding-left: var(--sp-6); color: var(--text-2); }
-    &:focus-visible { box-shadow: none; background: var(--surface-hover); }
   }
 
-  .empty {
-    padding: var(--sp-6);
-    text-align: center;
+  .name {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kind {
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+
+  .no-results {
+    padding: var(--sp-4);
   }
 
   .finder-footer {

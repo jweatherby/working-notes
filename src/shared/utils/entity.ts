@@ -1,4 +1,4 @@
-import type { EntityType } from '$shared/types/enums';
+import type { EntityType, RelatableType } from '$shared/types/enums';
 
 export interface EntityRef {
   readonly entityType: EntityType;
@@ -62,6 +62,16 @@ export const parseTypedIdValue = <T extends string>(
   const id = value.slice(at + 1);
   return at > 0 && id && types.includes(type) ? { type, id } : null;
 };
+
+/** Types an entity search offers (the add-link form, the ⌘K finder), in order, with the singular word `/` picks each by. */
+export const ENTITY_SEARCH_SCOPES: readonly { readonly id: RelatableType; readonly label: string; readonly slash: string }[] = [
+  { id: 'PERSON', label: 'Person', slash: 'person' },
+  { id: 'TEAM', label: 'Team', slash: 'team' },
+  { id: 'DEPARTMENT', label: 'Department', slash: 'department' },
+  { id: 'PROJECT', label: 'Project', slash: 'project' },
+  { id: 'GOAL', label: 'Goal', slash: 'goal' },
+  { id: 'PAGE', label: 'Wiki', slash: 'wiki' }
+];
 
 // The app only listens on loopback, so an absolute link to it uses one of these hosts.
 const LOOPBACK_ORIGIN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?=\/)/i;

@@ -1,23 +1,22 @@
-// What an entity's page can link to: every active person, team, department,
-// project, goal and wiki page except the entity itself. Each option's id is
-// `TYPE:id` and its scope is the type, for SearchPicker.
+// Every active person, team, department, project, goal and wiki page as a
+// search option: id `TYPE:id`, scope the type. The add-link form leaves out the
+// entity it's on; the ⌘K finder takes them all.
 
 import type { CreateTRPCClient } from '@trpc/client';
 import type { AppRouter } from './router';
 import type { RelatableType } from '$shared/types/enums';
 import { typedIdValue } from '$shared/utils/entity';
-import type { RelationEnd } from '$shared/utils/relations';
 
-export interface RelationTargetOption {
+export interface EntityOption {
   readonly id: string;
   readonly name: string;
   readonly scope: RelatableType;
 }
 
-export const loadRelationTargets = async (
+export const loadEntityOptions = async (
   client: CreateTRPCClient<AppRouter>,
-  self: RelationEnd
-): Promise<readonly RelationTargetOption[]> => {
+  exclude: { readonly entityType: RelatableType; readonly entityId: string } | null = null
+): Promise<readonly EntityOption[]> => {
   const [people, teams, departments, projects, goals, pages] = await Promise.all([
     client.person.list.query(),
     client.team.list.query(),
@@ -28,7 +27,7 @@ export const loadRelationTargets = async (
   ]);
   const options = (type: RelatableType, rows: readonly { readonly id: string; readonly name: string }[]) =>
     rows
-      .filter((row) => !(type === self.entityType && row.id === self.entityId))
+      .filter((row) => !(type === exclude?.entityType && row.id === exclude.entityId))
       .map((row) => ({ id: typedIdValue(type, row.id), name: row.name, scope: type }));
   const titled = (rows: readonly { readonly id: string; readonly title: string }[]) =>
     rows.map((row) => ({ id: row.id, name: row.title }));

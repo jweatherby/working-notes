@@ -5,10 +5,10 @@
   import { onMount } from 'svelte';
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
-  import { loadRelationTargets, type RelationTargetOption } from '$shared/trpc/load-relation-targets';
+  import { loadEntityOptions, type EntityOption } from '$shared/trpc/load-entity-options';
   import { RELATABLE_TYPES } from '$shared/types/enums';
-  import { parseTypedIdValue } from '$shared/utils/entity';
-  import { RELATION_TARGET_SCOPES, relationChoices, toRelationInput, type RelationEnd } from '$shared/utils/relations';
+  import { ENTITY_SEARCH_SCOPES, parseTypedIdValue } from '$shared/utils/entity';
+  import { relationChoices, toRelationInput, type RelationEnd } from '$shared/utils/relations';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import { errorMessage, submitOrThrow } from '$lib/ui/submit';
 
@@ -22,13 +22,13 @@
   const choices = relationChoices();
 
   let choice = $state('RELATED:out');
-  let options = $state<readonly RelationTargetOption[]>([]);
+  let options = $state<readonly EntityOption[]>([]);
   let loading = $state(true);
   let loadError = $state('');
 
   onMount(async () => {
     try {
-      options = await loadRelationTargets(trpc(), self);
+      options = await loadEntityOptions(trpc(), self);
     } catch (e: unknown) {
       loadError = errorMessage(e);
     } finally {
@@ -50,7 +50,7 @@
   <select class="sm" bind:value={choice} aria-label="How it's linked">
     {#each choices as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
   </select>
-  <SearchPicker label="Link to" {options} scopes={RELATION_TARGET_SCOPES} {loading} onPick={handlePick} onCancel={onDone} />
+  <SearchPicker label="Link to" {options} scopes={ENTITY_SEARCH_SCOPES} {loading} onPick={handlePick} onCancel={onDone} />
   {#if loadError}<span class="inline-error" role="alert">{loadError}</span>{/if}
 </div>
 
