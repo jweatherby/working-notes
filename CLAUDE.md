@@ -79,6 +79,8 @@ The app stores PDFs; it does not read them. Read the PDF yourself, write the mar
 
 ### Reports and charts
 
+**Reports are switched off while they're unfinished:** `features.reports` in `src/shared/settings/base/features.ts`. Off, the UI hides them (nav, finder, sidebar widget, home feed and graph), `/app/reports` is a 404, and `report.*` is left out of the CLI and MCP. The router, tables and data stay. To turn them back on, set the flag and restore the Reports section of the skill (`plugin/skills/working-notes/SKILL.md`, `references/schema.md`) and "reports" in the MCP instructions (`cli/mcp.ts`).
+
 Reports are markdown with fenced `chart` blocks, rendered with the report's branding and printed to PDF from `/app/reports/<id>/print`. See `src/api/CLAUDE.md` § Reports and `plugin/skills/working-notes/references/charts.md`. Invalid chart blocks are rejected on save, and the error names the line.
 
 ## Claude plugin and MCP server

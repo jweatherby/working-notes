@@ -36,7 +36,7 @@ const { resolveCurrentNotebook } = await import('../src/shared/notebooks/current
 const { appLaunchCommand, appUrl, openApp } = await import('./app-launch');
 
 const INSTRUCTIONS = [
-  "Working Notes holds the user's local notebooks. Each notebook (for example work, or a personal project) has its own org chart (people, teams, departments), projects, goals with check-ins, wiki pages, relations between entities, notes, docs, todos, tags and reports.",
+  "Working Notes holds the user's local notebooks. Each notebook (for example work, or a personal project) has its own org chart (people, teams, departments), projects, goals with check-ins, wiki pages, relations between entities, notes, docs, todos and tags.",
   "Every tool except notebook_* works on one notebook: the default, unless you pass `notebook` (an id or name). Call notebook_list first. If there is more than one notebook and the user hasn't made clear which one they mean, ask. Say which notebook you read or wrote.",
   'Each tool is one procedure: person_create is person.create. Find ids with the list and get tools before writing, and never create a second person, team or project with an existing name, or a second goal or page with an existing title, in the same notebook.',
   'Confirm with the user before any delete, remove or detach tool, and call backup_snapshot first before deletes or more than about five writes in one go.',

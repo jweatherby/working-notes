@@ -4,6 +4,7 @@
   import NotebookSwitcher from '$lib/notebook/components/NotebookSwitcher.svelte';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
+  import { features } from '$shared/settings/base/features';
 
   interface Props {
     readonly children: any;
@@ -30,7 +31,7 @@
     { href: '/app/projects', label: 'Projects' },
     { href: '/app/goals', label: 'Goals' },
     { href: '/app/wiki', label: 'Wiki' },
-    { href: '/app/reports', label: 'Reports' },
+    ...(features.reports ? [{ href: '/app/reports', label: 'Reports' }] : []),
     { href: '/app/todos', label: 'Todos' },
   ];
 

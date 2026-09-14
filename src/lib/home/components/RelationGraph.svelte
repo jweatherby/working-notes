@@ -7,6 +7,7 @@
     type RelationGraph
   } from '$shared/types/home';
   import { layoutGraph, type Point } from '../graph-layout';
+  import { features } from '$shared/settings/base/features';
 
   interface Props {
     readonly graph: RelationGraph;
@@ -16,6 +17,7 @@
 
   const WIDTH = 1000;
   const HEIGHT = 560;
+  const NODE_TYPES = GRAPH_NODE_TYPES.filter((t) => features.reports || t !== 'REPORT');
 
   const TYPE_LABEL: Record<GraphNodeType, string> = {
     PROJECT: 'Projects',
@@ -91,7 +93,7 @@
   <header class="section-header">
     <h2>Relations</h2>
     <div class="legend">
-      {#each GRAPH_NODE_TYPES as t}
+      {#each NODE_TYPES as t}
         <button type="button" class="chip" class:off={!enabled[t]} data-type={t} onclick={() => toggle(t)}>
           <span class="swatch"></span>{TYPE_LABEL[t]}
         </button>

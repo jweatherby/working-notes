@@ -9,6 +9,7 @@ import type {
   UpdateKind
 } from '$shared/types/home';
 import { entityPath } from '$shared/utils/entity';
+import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
 import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
 import type { TodoSummary } from '$api/aux/todo/operations';
@@ -196,7 +197,7 @@ export const listRecentUpdates = async (
       pages.map((x) => ({ ...base(x), kind: 'PAGE' as const, title: x.title, parent: null })),
       docs.map((x) => ({ ...base(x), kind: 'DOC' as const, title: x.title, parent: parentOf(x) })),
       notes.map((x) => ({ ...base(x), kind: 'NOTE' as const, title: summarizeContent(x.content), parent: parentOf(x) })),
-      reports.map((x) => ({ ...base(x), kind: 'REPORT' as const, title: x.title, parent: parentOf(x) })),
+      features.reports ? reports.map((x) => ({ ...base(x), kind: 'REPORT' as const, title: x.title, parent: parentOf(x) })) : [],
       todos.map((x) => ({ ...base(x), kind: 'TODO' as const, title: x.title, parent: parentOf(x) }))
     ],
     limit
@@ -232,5 +233,5 @@ export const getRelationGraph = async (
     p.report.findMany(onProjects),
     p.todo.findMany({ ...onProjects, where: { entityType: 'PROJECT', status: { in: [...OPEN_STATUSES] } } })
   ]);
-  return ok(buildGraph({ projects, docs, reports, todos }));
+  return ok(buildGraph({ projects, docs, reports: features.reports ? reports : [], todos }));
 };

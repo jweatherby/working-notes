@@ -9,8 +9,12 @@ import { createNotebookContext } from '$shared/trpc/context.server';
 import { listProcedures, type ProcedureMeta } from '$shared/trpc/meta';
 import { resolveCurrentNotebook } from '$shared/notebooks/current.server';
 import { closeRegistries } from '$shared/registry.server';
+import { features } from '$shared/settings/base/features';
 
-export const procedures: readonly ProcedureMeta[] = listProcedures(appRouter, new Set(['trpcMeta.list']));
+// report.* stays out while reports are switched off.
+export const procedures: readonly ProcedureMeta[] = listProcedures(appRouter, new Set(['trpcMeta.list'])).filter(
+  (p) => features.reports || !p.name.startsWith('report.')
+);
 
 export interface InputIssue {
   /** Dotted path of the offending field; empty for the input as a whole. */

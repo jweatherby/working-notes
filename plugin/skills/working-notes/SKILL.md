@@ -1,6 +1,6 @@
 ---
 name: working-notes
-description: Read and write the user's local Working Notes notebooks (separate ones for work and for personal projects) — their org chart (people, reporting lines, teams, departments), projects and who owns them, goals with targets and check-ins, a wiki of pages (policies, products, software, decisions), relations between any of these, notes, docs, todos, tags, and branded reports with charts. Use whenever the user talks about the people or teams they work with, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, or wants a PDF imported into their notes.
+description: Read and write the user's local Working Notes notebooks (separate ones for work and for personal projects) — their org chart (people, reporting lines, teams, departments), projects and who owns them, goals with targets and check-ins, a wiki of pages (policies, products, software, decisions), relations between any of these, notes, docs (with charts), todos and tags. Use whenever the user talks about the people or teams they work with, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, or wants a PDF imported into their notes.
 ---
 
 # Working Notes
@@ -77,7 +77,7 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "That's done" | `todo.update --id <todo> --status COMPLETE` |
 | "Start a project for the Q4 migration" | `project.create --name "Q4 migration" --status active` (optional `--parentId`, `--startDate`, `--daysLikely`) |
 | "Tag Dana as high-potential" | `tag.list`, then `tag.create --name high-potential` if it's missing, then `tag.attach --tagId <tag> --entityType PERSON --entityId <dana>` |
-| "What do I know about Dana?" | `person.get`, then `note.list`, `todo.forEntity`, `doc.list`, `report.forEntity` and `relation.forEntity` for `PERSON <dana>`, and `goal.list --ownerType PERSON --ownerId <dana>` |
+| "What do I know about Dana?" | `person.get`, then `note.list`, `todo.forEntity`, `doc.list` and `relation.forEntity` for `PERSON <dana>`, and `goal.list --ownerType PERSON --ownerId <dana>` |
 | "Platform owns the Q4 migration" | `project.update --id <project> --ownerType TEAM --ownerId <platform>` (set both together; `--ownerType null --ownerId null` clears the owner) |
 | "Engineering's H2 goal is 99.9% uptime, and Platform has a sub-goal for it" | `goal.list`, then `goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> --period 2026-H2 --unit % --baseline 99.5 --target 99.9`, then `goal.create --title "..." --ownerType TEAM --ownerId <platform> --parentId <eng goal>` |
 | "Uptime is at 99.7%, and it's at risk" | `goal.checkIn --goalId <goal> --value 99.7 --status AT_RISK --comment "..."` (optional `--date`; the status also becomes the goal's status) |
@@ -86,23 +86,22 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "We pay Datadog $40k a year; it renews in March" | `page.create --title Datadog --kind SOFTWARE --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'` |
 | "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --kind USES --note "Alerting"` |
 
-Entity types for notes, docs, todos, reports, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`. They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
+Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`. They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
 
 ## Linking things
 
 - **Owners:** a project or goal's owner is its `ownerType` + `ownerId` (a person, team or department). Set that instead of adding an `OWNS` relation.
 - **Relations:** `relation.add --fromType --fromId --toType --toId --kind --note` links any two of `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT`. Kinds are `RELATED` (the default), `OWNS`, `USES`, `APPLIES_TO`, `DEPENDS_ON` and `SUPERSEDES`. Write it in the direction it reads: "Platform uses Datadog" is from Platform to Datadog. `relation.forEntity` shows both directions, grouped by label ("Uses", "Used by"). Change a note or kind with `relation.update`.
-- **Linking in content:** in a page, doc, note or report, write `[Title](<path>)` using the `path` from a get or create result. Saving the content turns the link into a backlink: the target shows "Mentioned in". Other paths are `/app/people/<id>`, `/app/teams/<id>`, `/app/departments/<id>`, `/app/projects/<id>`, `/app/goals/<id>`, `/app/wiki/<id>` and `/app/reports/<id>`. Links inside code blocks don't count. Don't add `MENTIONS` with `relation.add`; to remove a backlink, remove the link from the content.
+- **Linking in content:** in a page, doc, note or report, write `[Title](<path>)` using the `path` from a get or create result. Saving the content turns the link into a backlink: the target shows "Mentioned in". Other paths are `/app/people/<id>`, `/app/teams/<id>`, `/app/departments/<id>`, `/app/projects/<id>`, `/app/goals/<id>`, and `/app/wiki/<id>`. Links inside code blocks don't count. Don't add `MENTIONS` with `relation.add`; to remove a backlink, remove the link from the content.
 
-## Reports
+## Write-ups
 
-Reports are markdown, attached to a person, team, department, project, goal or page, with optional charts, and printed with the user's branding.
+Reports are switched off for now. When the user asks for a report or write-up, write it as a doc on the person, team, department, project, goal or page.
 
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md).
-3. `wnotes report.create --entityType TEAM --entityId <id> --title "Q3 review" --content-file /tmp/q3.md`, or `report_create` with the markdown as `content`.
-4. If a chart is invalid, the error names the line (`chart block at line 12: series.0.values has 2 values but there are 3 labels`). Fix it, then `wnotes report.update --id <report> --content-file /tmp/q3.md`.
-5. Tell the user where to view it. Call `app_open` (with the report's `notebook`) so the app is running, then give them `http://127.0.0.1:5173/app/reports/<id>?notebook=<notebook id>`; the `notebook` parameter opens the app in the right notebook. The print/PDF view is `/app/reports/<id>/print?notebook=<notebook id>`.
+3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in its sidebar.
 
 ## Importing a PDF
 

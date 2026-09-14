@@ -21,6 +21,7 @@
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { submit } from '$lib/ui/submit';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
+  import { features } from '$shared/settings/base/features';
 
   interface DocItem {
     readonly id: string;
@@ -288,9 +289,11 @@
         onEditTodo={openEditTodo}
       />
     </div>
-    <div class="section">
-      <ReportsWidget {entityType} {entityId} {reports} />
-    </div>
+    {#if features.reports}
+      <div class="section">
+        <ReportsWidget {entityType} {entityId} {reports} />
+      </div>
+    {/if}
     <div class="section">
       <RelationsWidget groups={relations} />
     </div>

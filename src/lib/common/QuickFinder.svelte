@@ -8,6 +8,7 @@
   import { switchNotebook } from '$lib/notebook/switch';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
+  import { features } from '$shared/settings/base/features';
 
   interface FinderItem {
     readonly label: string;
@@ -40,7 +41,7 @@
     { label: 'Wiki', href: '/app/wiki', section: 'Pages' },
     { label: 'Org Map', href: '/app/orgmap', section: 'Pages' },
     { label: 'Todos', href: '/app/todos', section: 'Pages' },
-    { label: 'Reports', href: '/app/reports', section: 'Pages' },
+    ...(features.reports ? [{ label: 'Reports', href: '/app/reports', section: 'Pages' }] : []),
     { label: 'Branding', href: '/app/branding', section: 'Pages' },
     { label: 'Notebooks', href: '/app/notebooks', section: 'Pages' },
   ];
