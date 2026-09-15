@@ -1,0 +1,75 @@
+#!/bin/sh
+# Working Notes plugin shim, started by .mcp.json as `sh <plugin>/scripts/wnotes mcp`.
+# It runs, in order of preference:
+#   1. the clone named by $WORKING_NOTES_HOME
+#   2. the clone `bun run setup` recorded in <data dir>/app-path, so a development
+#      machine always runs its own code
+#   3. the standalone binary a release carries in <plugin>/server. It's installed into
+#      <data dir>/App/<version>, with App/current pointing at it (for the backup
+#      LaunchAgent and terminals), so no clone or Bun is needed.
+# It isn't in bin/: claude.ai-hosted plugins (Cowork) reject bin/ executables.
+set -e
+
+if [ "$(uname -s)" = Darwin ]; then
+  data="$HOME/Library/Application Support/Working Notes"
+else
+  data="${XDG_DATA_HOME:-$HOME/.local/share}/working-notes"
+fi
+setup='Install the Working Notes plugin from a release, which includes the app, or clone the Working Notes repo and run `bun install` and `bun run setup` in the clone.'
+
+app=${WORKING_NOTES_HOME:-}
+recorded=
+if [ -z "$app" ] && [ -r "$data/app-path" ]; then
+  recorded=$(cat "$data/app-path")
+  # A recorded clone that has moved or lost its dependencies gives way to a release binary.
+  if [ -x "$recorded/bin/wnotes" ] && [ -d "$recorded/node_modules" ]; then
+    app=$recorded
+  fi
+fi
+
+plugin=$(cd "$(dirname "$0")/.." && pwd)
+case $(uname -m) in
+  arm64 | aarch64) arch=arm64 ;;
+  x86_64 | amd64) arch=x64 ;;
+  *) arch=$(uname -m) ;;
+esac
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+bundled="$plugin/server/wnotes-$os-$arch"
+
+if [ -z "$app" ] && [ -f "$bundled" ]; then
+  version=$(cat "$plugin/server/VERSION")
+  dest="$data/App/$version"
+  if [ ! -e "$dest" ]; then
+    tmp="$data/App/.install-$version-$$"
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
+    # cat, not cp: the copy doesn't inherit a download's quarantine flag, and chmod
+    # restores the execute bit that an unzipped or cloned plugin may have lost.
+    cat "$bundled" > "$tmp/wnotes"
+    chmod 755 "$tmp/wnotes"
+    cp -R "$plugin/server/client" "$plugin/server/migrations" "$plugin/server/VERSION" "$tmp/"
+    # Another start may have installed this version meanwhile.
+    if [ -e "$dest" ]; then rm -rf "$tmp"; else mv "$tmp" "$dest"; fi
+  fi
+  ln -sfn "$version" "$data/App/current"
+  exec "$dest/wnotes" "$@"
+fi
+
+app=${app:-$recorded}
+if [ -z "$app" ]; then
+  if [ -d "$plugin/server" ]; then
+    echo "This Working Notes release has no build for $os-$arch. $setup" >&2
+  else
+    echo "Working Notes isn't set up on this computer. $setup" >&2
+  fi
+  exit 1
+fi
+if [ ! -x "$app/bin/wnotes" ]; then
+  echo "Working Notes isn't at $app any more (no bin/wnotes there). $setup" >&2
+  exit 1
+fi
+if [ ! -d "$app/node_modules" ]; then
+  echo "Working Notes at $app has no dependencies installed. Run \`bun install\` in $app." >&2
+  exit 1
+fi
+exec "$app/bin/wnotes" "$@"

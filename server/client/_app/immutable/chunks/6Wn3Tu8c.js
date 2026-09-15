@@ -1,0 +1,1 @@
+import{Q as y,Y as _,_ as u,a0 as o,U as t,a1 as g,a2 as i,a3 as l,a4 as d,V as p,a5 as m}from"./CIViyYnL.js";function C(n,r){let a=null,E=t;var s;if(t){a=p;for(var e=m(document.head);e!==null&&(e.nodeType!==g||e.data!==n);)e=i(e);if(e===null)l(!1);else{var f=i(e);e.remove(),d(f)}}t||(s=document.head.appendChild(y()));try{_(()=>r(s),u|o)}finally{E&&(l(!0),d(a))}}export{C as h};
