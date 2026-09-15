@@ -105,7 +105,7 @@ The shim runs, in order: the clone named by `$WORKING_NOTES_HOME`; the clone in 
 
   `bun run setup uninstall` undoes that. The logic is the pure `planInstall`/`planUninstall` in `scripts/setup/plan.ts`.
 - **Why a subdirectory:** the plugin's cache copy holds only the skill, the shim and `.mcp.json`. At the repo root, the whole app would be copied, including the `bin/` folder that claude.ai-hosted plugins reject.
-- **Bump the version with `bun run release:version <x.y.z>` whenever the plugin should update.** It sets `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` together. `claude plugin update` and Cowork skip a version they already have.
+- **Bump the version with `bun run release:version <x.y.z>` whenever the plugin should update.** It sets `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` together, and `package.json` to match. `claude plugin update` and Cowork skip a version they already have.
 - **No repo paths in the skill:** it uses only MCP tools and `wnotes`. `wnotes backup …` and `wnotes app` run the backup script and the dev server.
 
 ## Releases
