@@ -4,6 +4,7 @@
 #   wnotes <procedure> [--key value]   call the API in-process
 #   wnotes backup [args]               scripts/backup/main.ts (list, restore, --force, install, ...)
 #   wnotes app                         the UI at http://127.0.0.1:5173
+#   wnotes app restart                 stop the running UI and start it again (cli/app-restart.ts)
 #   wnotes mcp                         the MCP server on stdio (cli/mcp.ts)
 set -e
 src=$0
@@ -30,7 +31,9 @@ fi
 
 case ${1:-} in
   backup) shift; cd "$repo" && exec "$bun" scripts/backup/main.ts "$@" ;;
-  app) cd "$repo" && exec "$bun" run dev ;;
+  app)
+    if [ "${2:-}" = restart ]; then exec "$bun" "$repo/cli/app-restart.ts"; fi
+    cd "$repo" && exec "$bun" run dev ;;
   mcp) shift; exec "$bun" "$repo/cli/mcp.ts" "$@" ;;
 esac
 exec "$bun" "$repo/cli/main.ts" "$@"

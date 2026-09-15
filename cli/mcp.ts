@@ -33,13 +33,9 @@ console.log = console.info = console.debug = (...args: unknown[]): void => conso
 const { procedures, callProcedure, disconnect } = await import('./api');
 const { createSnapshot, listSnapshots } = await import('../scripts/backup/snapshot');
 const { resolveCurrentNotebook } = await import('../src/shared/notebooks/current.server');
-const { appLaunchCommand, appUrl, openApp, restartStaleApp } = await import('./app-launch');
+const { appUrl, currentAppOwner, openApp, restartApp, restartStaleApp } = await import('./app-launch');
 
-const appOwner = {
-  launch: appLaunchCommand({ standalone, execPath: process.execPath, repoDir: REPO }),
-  standalone,
-  version: pluginManifest.version
-};
+const appOwner = currentAppOwner(REPO);
 // An app an older release left running is replaced now, so updating the plugin updates the app too.
 void restartStaleApp(appOwner).catch((error: unknown) => console.error(error));
 
@@ -79,6 +75,12 @@ const extraTools: readonly McpTool[] = [
     description: "Starts the Working Notes app on this computer if it isn't running, and returns its address, opening the given notebook (or the default). Give the user the link. The app keeps running afterwards.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+  },
+  {
+    name: 'app_restart',
+    description: "Stops the Working Notes app on this computer, whatever version is running, and starts it again, then returns its address for the given notebook (or the default). Use it when the user asks to restart the app, or when it's stuck or showing an old version. Nothing is lost: data lives in the notebook, not the app.",
+    inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
   }
 ];
 
@@ -92,6 +94,14 @@ const callExtraTool = async (name: string, args: Readonly<Record<string, unknown
   if (name === 'app_open') {
     const launched = await openApp(appOwner);
     return textResult({ url: appUrl(id), notebook: id, started: launched.started, restarted: launched.restarted });
+  }
+  if (name === 'app_restart') {
+    try {
+      const { stopped } = await restartApp(appOwner);
+      return textResult({ url: appUrl(id), notebook: id, restarted: stopped, started: !stopped });
+    } catch (error) {
+      return textResult(error instanceof Error ? error.message : String(error), true);
+    }
   }
   if (name === 'backup_snapshot') {
     const reason = typeof args['reason'] === 'string' ? args['reason'].trim() : '';

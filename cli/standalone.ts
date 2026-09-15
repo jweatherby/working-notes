@@ -27,6 +27,10 @@ export const runStandalone = async (app: StandaloneApp): Promise<void> => {
       await import('../scripts/backup/main');
       return;
     case 'app': {
+      if (process.argv[3] === 'restart') {
+        await import('./app-restart');
+        return;
+      }
       const { serveApp } = await import('./app-server');
       // The shim installs VERSION beside the binary; release apps report it so a newer release can replace them.
       const version = (await Bun.file(join(resources, 'VERSION')).text().catch(() => 'unknown')).trim();

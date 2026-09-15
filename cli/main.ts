@@ -38,7 +38,7 @@ const printHelp = (name: string | undefined): number => {
       process.stdout.write(`  ${p.name} (${p.type})${props.length ? `  --${props.join(' --')}` : ''}\n`);
     }
     console.error('\nNotebooks: every call uses the default notebook unless you add --notebook <id> (or set WNOTES_NOTEBOOK). wnotes notebook.list shows them.');
-    console.error('Also: wnotes backup [list | restore <id|latest> | --force --reason <why> | install | uninstall] [--notebook <id>], wnotes app (the UI), and wnotes mcp (the MCP server).');
+    console.error('Also: wnotes backup [list | restore <id|latest> | --force --reason <why> | install | uninstall] [--notebook <id>], wnotes app (the UI), wnotes app restart, and wnotes mcp (the MCP server).');
     return 0;
   }
   const meta = procedures.find((p) => p.name === name);

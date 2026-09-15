@@ -11,7 +11,7 @@ Local notebooks on this computer, stored in SQLite in the user's app data folder
 
 The notebooks are reachable in two ways, and the app does **not** need to be running for either. Use whichever this session has; if it has both, use the MCP tools.
 
-**MCP tools** from the `working-notes` server, in Claude desktop Chat, Cowork and Claude Code. Each tool is one procedure, with `_` in place of `.`: `person_list`, `person_create`, `note_add`. Pass inputs as the tool's arguments, and long text inline (there are no `-file` inputs). Every tool except `notebook_*` also takes an optional `notebook`. `backup_snapshot` and `backup_list` handle snapshots, and `app_open` starts the app on this computer and returns its link.
+**MCP tools** from the `working-notes` server, in Claude desktop Chat, Cowork and Claude Code. Each tool is one procedure, with `_` in place of `.`: `person_list`, `person_create`, `note_add`. Pass inputs as the tool's arguments, and long text inline (there are no `-file` inputs). Every tool except `notebook_*` also takes an optional `notebook`. `backup_snapshot` and `backup_list` handle snapshots, `app_open` starts the app on this computer and returns its link, and `app_restart` stops and starts it again (when the user asks, or the app is stuck or out of date). From a terminal, `wnotes app restart` does the same.
 
 **In Cowork, or any other sandbox, use only the MCP tools.** The notebooks live on the user's Mac, in `~/Library/Application Support/Working Notes`, which a sandbox can't see, and `wnotes` isn't installed there.
 - Never read, list, copy or `cat` that folder, open its database, or run `wnotes` from a sandbox.

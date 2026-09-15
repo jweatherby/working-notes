@@ -3,8 +3,10 @@
 // The app keeps running after the MCP server exits, so a release also replaces an app
 // left running by an older version (see planAppLaunch).
 
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
+import pluginManifest from '../plugin/.claude-plugin/plugin.json';
 import { APP_CONTROL_PATH, APP_HOST, APP_PORT, APP_STOP_PATH } from './app-server';
 import { isPortListening } from '../scripts/backup/restore';
 
@@ -93,6 +95,51 @@ export interface AppOwner {
   readonly standalone: boolean;
   readonly version: string;
 }
+
+/** The app this process starts: a release's own binary, or a clone's dev server. */
+export const currentAppOwner = (repoDir: string): AppOwner => {
+  const standalone = process.env['WNOTES_STANDALONE'] === '1';
+  return { launch: appLaunchCommand({ standalone, execPath: process.execPath, repoDir }), standalone, version: pluginManifest.version };
+};
+
+/**
+ * Whether a process's command line is Working Notes: a release binary (`…/wnotes app`)
+ * or a clone's dev server (vite, run from the working-notes folder). A restart stops
+ * nothing else that happens to hold the port.
+ */
+export const isWorkingNotesCommand = (command: string): boolean =>
+  /(^|\/)wnotes(\s|$)/.test(command) || /working-notes/i.test(command);
+
+const run = promisify(execFile);
+
+/** Stops whatever Working Notes process listens on the app port, by pid (for apps without the stop endpoint). */
+const stopByPid = async (): Promise<void> => {
+  const pids = (await run('lsof', ['-tiTCP:' + APP_PORT, '-sTCP:LISTEN']).then((r) => r.stdout, () => ''))
+    .split('\n')
+    .map((line) => Number(line.trim()))
+    .filter((pid) => Number.isInteger(pid) && pid > 0);
+  for (const pid of pids) {
+    const command = (await run('ps', ['-o', 'command=', '-p', String(pid)]).then((r) => r.stdout, () => '')).trim();
+    if (!isWorkingNotesCommand(command)) {
+      throw new Error(`Something other than Working Notes is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
+    }
+    process.kill(pid, 'SIGTERM');
+  }
+  if (!(await waitForPort(false, 5_000))) {
+    throw new Error(`The Working Notes app on ${APP_HOST}:${APP_PORT} didn't stop. Quit it, then restart the app.`);
+  }
+};
+
+/** Stops the running app, whatever version it is, and starts this one. Starts it if nothing was running. */
+export const restartApp = async (owner: AppOwner, timeoutMs = 20_000): Promise<{ readonly stopped: boolean }> => {
+  const running = await probeApp();
+  if (running !== null) {
+    if (running === 'other') await stopByPid();
+    else await stopApp();
+  }
+  await startApp(owner.launch, timeoutMs);
+  return { stopped: running !== null };
+};
 
 export interface OpenAppResult {
   readonly started: boolean;

@@ -1,6 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { appControl, staticFilePath } from '../app-server';
-import { appLaunchCommand, appUrl, planAppLaunch } from '../app-launch';
+import { appLaunchCommand, appUrl, isWorkingNotesCommand, planAppLaunch } from '../app-launch';
+
+describe('isWorkingNotesCommand', () => {
+  it('recognises a release binary and a clone’s dev server', () => {
+    expect(isWorkingNotesCommand('/Users/me/Library/Application Support/Working Notes/App/0.6.7/wnotes app')).toBe(true);
+    expect(isWorkingNotesCommand('node /Users/me/code/working-notes/node_modules/.bin/vite dev')).toBe(true);
+  });
+
+  it('refuses anything else on the port', () => {
+    expect(isWorkingNotesCommand('node /Users/me/code/other-app/node_modules/.bin/vite dev')).toBe(false);
+    expect(isWorkingNotesCommand('')).toBe(false);
+  });
+});
 
 describe('appControl', () => {
   const stop = (host: string, headers: Record<string, string> = { 'x-working-notes': '1' }, method = 'POST') =>
