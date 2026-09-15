@@ -22,6 +22,7 @@ import { emojiRouter } from '$api/aux/emoji/routes';
 import { trpcMetaRouter } from '$api/trpc-meta/routes';
 import { homeRouter } from '$api/home/routes';
 import { notebookRouter } from '$api/notebook/routes';
+import { chatRouter } from '$api/assist/routes';
 
 export const appRouter = router({
   notebook: notebookRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   tag: tagRouter,
   comment: commentRouter,
   emoji: emojiRouter,
+  chat: chatRouter,
   trpcMeta: trpcMetaRouter
 });
 

@@ -68,7 +68,34 @@ export const listRelationsForEntity = async (
     })
   );
 
-  return ok(groupRelations(items.filter((item): item is RelationItem => item !== null)));
+  // A goal depends on the projects linked to it, so the link shows on both pages.
+  const links = entityType === 'GOAL' || entityType === 'PROJECT'
+    ? await reg.prisma.goalProject.findMany({
+      where: entityType === 'GOAL' ? { goalId: entityId } : { projectId: entityId },
+      orderBy: { createdAt: 'asc' }
+    })
+    : [];
+  const linkItems = await Promise.all(
+    links.map(async (link): Promise<RelationItem | null> => {
+      const outgoing = entityType === 'GOAL';
+      const otherType: RelatableType = outgoing ? 'PROJECT' : 'GOAL';
+      const otherId = outgoing ? link.projectId : link.goalId;
+      const label = await resolveEntityLabel(reg, otherType, otherId);
+      if (label === null) return null;
+      return {
+        id: link.id,
+        kind: 'DEPENDS_ON',
+        direction: outgoing ? 'outgoing' : 'incoming',
+        label: outgoing ? RELATION_LABELS.DEPENDS_ON.forward : RELATION_LABELS.DEPENDS_ON.inverse,
+        other: { entityType: otherType, entityId: otherId, label, path: entityPath(otherType, otherId) },
+        note: null,
+        createdAt: link.createdAt,
+        goalProject: true
+      };
+    })
+  );
+
+  return ok(groupRelations([...items, ...linkItems].filter((item): item is RelationItem => item !== null)));
 };
 
 // ----- Mutations -----

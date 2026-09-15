@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildClaudeArgs, findClaude, parseClaudeOutput } from '../claude-cli';
+import { CHAT_LIMITS, buildChatArgs, buildClaudeArgs, chatPrompt, findClaude, parseChatOutput, parseClaudeOutput } from '../claude-cli';
 
 const only = (...paths: string[]) => (path: string): boolean => paths.includes(path);
 
@@ -59,5 +59,60 @@ describe('parseClaudeOutput', () => {
   it('rejects output that is not JSON, or has no markdown', () => {
     expect(parseClaudeOutput('Error: boom').ok).toBe(false);
     expect(parseClaudeOutput(reply({ result: '   ' })).ok).toBe(false);
+  });
+});
+
+describe('chatPrompt', () => {
+  it('holds the page and the whole conversation', () => {
+    const prompt = chatPrompt({
+      entityType: 'PERSON',
+      entityName: 'Alice',
+      pageText: 'Staff Engineer',
+      messages: [
+        { role: 'user', content: 'Who is this?' },
+        { role: 'assistant', content: 'Alice.' },
+        { role: 'user', content: 'Role?' }
+      ]
+    });
+    expect(prompt).toContain('the person "Alice"');
+    expect(prompt).toContain('<page>\nStaff Engineer\n</page>');
+    expect(prompt).toContain('<user>\nWho is this?\n</user>\n<assistant>\nAlice.\n</assistant>\n<user>\nRole?\n</user>');
+  });
+
+  it('cuts off a very long page', () => {
+    const prompt = chatPrompt({ entityType: 'PAGE', entityName: 'Big', pageText: 'x'.repeat(CHAT_LIMITS.pageText + 10), messages: [] });
+    expect(prompt).toContain('[… the rest of the page was cut off]');
+    expect(prompt).not.toContain('x'.repeat(CHAT_LIMITS.pageText + 1));
+  });
+});
+
+describe('buildChatArgs', () => {
+  it('takes the prompt on stdin and allows no tools', () => {
+    expect(buildChatArgs()).toEqual([
+      '-p',
+      '--output-format', 'json',
+      '--tools', '',
+      '--permission-mode', 'dontAsk',
+      '--no-session-persistence',
+      '--strict-mcp-config',
+      '--setting-sources', ''
+    ]);
+  });
+});
+
+describe('parseChatOutput', () => {
+  const reply = (fields: Record<string, unknown>): string =>
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, ...fields });
+
+  it('returns the reply as written, code fences included', () => {
+    expect(parseChatOutput(reply({ result: '```ts\nx\n```' }))).toEqual({ ok: true, value: '```ts\nx\n```' });
+  });
+
+  it("passes on Claude's error and rejects an empty or non-JSON reply", () => {
+    const failed = parseChatOutput(reply({ is_error: true, result: 'OAuth session expired' }));
+    expect(failed.ok).toBe(false);
+    if (!failed.ok) expect(failed.error.message).toBe("Claude couldn't reply: OAuth session expired");
+    expect(parseChatOutput(reply({ result: ' ' })).ok).toBe(false);
+    expect(parseChatOutput('nope').ok).toBe(false);
   });
 });

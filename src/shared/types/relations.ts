@@ -25,6 +25,8 @@ export interface RelationItem {
   };
   readonly note: string | null;
   readonly createdAt: Date;
+  /** Set for a goal–project link shown as a relation; it's managed in the goal's Projects section, not with relation.remove. */
+  readonly goalProject?: true;
 }
 
 export interface RelationGroup {

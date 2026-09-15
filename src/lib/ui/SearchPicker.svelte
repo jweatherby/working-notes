@@ -17,10 +17,22 @@
     readonly scopes?: readonly SearchScope[];
     readonly loading?: boolean;
     readonly onPick: (id: string) => Promise<void> | void;
-    readonly onCancel: () => void;
+    readonly onCancel?: () => void;
+    /** Always on screen (a toolbar search): no autofocus, and the query clears after a pick or on Escape. */
+    readonly persistent?: boolean;
+    readonly placeholder?: string;
   }
 
-  const { label, options, scopes = [], loading = false, onPick, onCancel }: Props = $props();
+  const {
+    label,
+    options,
+    scopes = [],
+    loading = false,
+    onPick,
+    onCancel,
+    persistent = false,
+    placeholder = 'Search, or / for a type'
+  }: Props = $props();
 
   const listId = `search-picker-${nextId++}`;
 
@@ -31,7 +43,7 @@
   let inputEl = $state<HTMLInputElement | null>(null);
 
   $effect(() => {
-    inputEl?.focus();
+    if (!persistent) inputEl?.focus();
   });
 
   const parsed = $derived(parseSearchQuery(query, scopes));
@@ -60,6 +72,10 @@
     error = '';
     try {
       await onPick(option.id);
+      if (persistent) {
+        query = '';
+        active = 0;
+      }
     } catch (err: unknown) {
       error = err instanceof Error ? err.message : 'Could not save.';
     } finally {
@@ -70,7 +86,12 @@
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      onCancel();
+      if (persistent) {
+        query = '';
+        active = 0;
+        error = '';
+      }
+      onCancel?.();
     } else if (e.key === 'ArrowDown' && count > 0) {
       e.preventDefault();
       active = Math.min(active + 1, count - 1);
@@ -101,7 +122,7 @@
     aria-expanded={count > 0}
     aria-activedescendant={count > 0 ? `${listId}-${active}` : undefined}
     aria-busy={busy}
-    placeholder="Search, or / for a type"
+    {placeholder}
     value={query}
     oninput={(e) => handleInput(e.currentTarget.value)}
     onkeydown={handleKeydown}

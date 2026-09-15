@@ -7,7 +7,7 @@
   import ProgressBar from '$lib/ui/ProgressBar.svelte';
   import GoalForm from '$lib/goal/components/GoalForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
-  import { GOAL_STATUSES, type GoalStatus } from '$shared/types/enums';
+  import { GOAL_STATUSES, type GoalStatus, type OwnerType } from '$shared/types/enums';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { GOAL_STATUS_LABELS, formatGoalValue, goalStatusBadgeClass, progressTone } from '$lib/goal/utils';
   import type { GoalSummary } from '$shared/types/goals';
@@ -17,6 +17,19 @@
 
   let periodFilter = $state('ALL');
   let statusFilter = $state<GoalStatus | 'ALL'>('ALL');
+  let ownerTypeFilter = $state<OwnerType | 'ALL'>('ALL');
+  let ownerFilter = $state('ALL');
+
+  // Owners of the chosen type that have goals, so the list stays short.
+  const owners = $derived(
+    [...new Map(
+      goals.flatMap((g) => (g.owner?.type === ownerTypeFilter ? [[g.owner.id, g.owner.label ?? '—'] as const] : [])),
+    ).entries()].sort(([, a], [, b]) => a.localeCompare(b)),
+  );
+
+  const matchesOwner = (g: GoalSummary): boolean =>
+    ownerTypeFilter === 'ALL'
+    || (g.owner?.type === ownerTypeFilter && (ownerFilter === 'ALL' || g.owner.id === ownerFilter));
 
   const periods = $derived(
     [...new Set(goals.map((g) => g.period).filter((p): p is string => !!p))].sort().reverse(),
@@ -27,7 +40,7 @@
     flattenTree(
       buildTree(
         goals.filter((g) =>
-          (periodFilter === 'ALL' || g.period === periodFilter) && (statusFilter === 'ALL' || g.status === statusFilter),
+          (periodFilter === 'ALL' || g.period === periodFilter) && (statusFilter === 'ALL' || g.status === statusFilter) && matchesOwner(g),
         ),
         (g) => g.parentId,
       ),
@@ -59,6 +72,20 @@
           <option value={status}>{GOAL_STATUS_LABELS[status]}</option>
         {/each}
       </select>
+      <select class="sm" bind:value={ownerTypeFilter} onchange={() => (ownerFilter = 'ALL')} aria-label="Filter by owner type">
+        <option value="ALL">All owners</option>
+        <option value="PERSON">Individuals</option>
+        <option value="TEAM">Teams</option>
+        <option value="DEPARTMENT">Departments</option>
+      </select>
+      {#if ownerTypeFilter !== 'ALL'}
+        <select class="sm" bind:value={ownerFilter} aria-label="Filter by owner">
+          <option value="ALL">Any {ownerTypeFilter === 'PERSON' ? 'person' : ownerTypeFilter.toLowerCase()}</option>
+          {#each owners as [id, label] (id)}
+            <option value={id}>{label}</option>
+          {/each}
+        </select>
+      {/if}
     {/if}
   </div>
 

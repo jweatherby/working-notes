@@ -11,11 +11,11 @@ import { resolveCurrentNotebook } from '$shared/notebooks/current.server';
 import { closeRegistries } from '$shared/registry.server';
 import { features } from '$shared/settings/base/features';
 
-// doc.convertPdf and doc.pdfConversion run the Claude Code CLI for the web app;
-// from the CLI or MCP, Claude reads the PDF itself. report.* stays out while reports are switched off.
+// doc.convertPdf, doc.pdfConversion and chat.* run the Claude Code CLI for the web app;
+// from the CLI or MCP, Claude reads the PDF (or the page) itself. report.* stays out while reports are switched off.
 export const procedures: readonly ProcedureMeta[] = listProcedures(
   appRouter,
-  new Set(['trpcMeta.list', 'doc.convertPdf', 'doc.pdfConversion'])
+  new Set(['trpcMeta.list', 'doc.convertPdf', 'doc.pdfConversion', 'chat.send', 'chat.status'])
 ).filter((p) => features.reports || !p.name.startsWith('report.'));
 
 export interface InputIssue {

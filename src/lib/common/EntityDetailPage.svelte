@@ -16,7 +16,7 @@
   import RelationsWidget from '$lib/relation/components/RelationsWidget.svelte';
   import { createDocHandlers } from '$lib/common/use-doc-handlers';
   import { createNoteHandlers } from '$lib/common/use-note-handlers';
-  import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
+  import { rightPanelNotes, rightPanelPage, activeDrawer } from '$lib/stores/right-panel';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { errorMessage, submit } from '$lib/ui/submit';
@@ -198,7 +198,20 @@
       onEdit: (id) => openNote(id),
     });
   });
-  onDestroy(() => rightPanelNotes.set(null));
+  // The chat tab reads the page as the user sees it: the center pane, then the notes.
+  let centerEl: HTMLDivElement | undefined = $state();
+  const getPageText = (): string => {
+    const notesText = notes.map((n) => n.content).join('\n\n---\n\n');
+    return [centerEl?.innerText ?? '', notesText ? `Notes:\n\n${notesText}` : ''].filter(Boolean).join('\n\n');
+  };
+
+  $effect(() => {
+    rightPanelPage.set({ entityType, entityId, entityName, getPageText });
+  });
+  onDestroy(() => {
+    rightPanelNotes.set(null);
+    rightPanelPage.set(null);
+  });
 
   const handleSaveNote = async (content: string) => {
     if (center.type !== 'note') return;
@@ -333,7 +346,7 @@
     </div>
   {/snippet}
 
-  <div class="center-pane">
+  <div class="center-pane" bind:this={centerEl}>
     <div class="center-header">
       <nav aria-label="breadcrumb">
         <ul>

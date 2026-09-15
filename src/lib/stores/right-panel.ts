@@ -16,9 +16,19 @@ export interface RightPanelNotes {
   readonly onEdit?: (noteId: string) => void;
 }
 
-export type RightPanelTabId = 'notes';
+/** The entity page open in the center, for the chat tab. */
+export interface RightPanelPage {
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly entityName: string;
+  /** The page's text as the user sees it: the center pane and the notes. */
+  readonly getPageText: () => string;
+}
+
+export type RightPanelTabId = 'notes' | 'chat';
 
 export const rightPanelNotes = writable<RightPanelNotes | null>(null);
+export const rightPanelPage = writable<RightPanelPage | null>(null);
 export const rightPanelTab = writable<RightPanelTabId>('notes');
 
 export type ActiveDrawer = 'left' | 'right' | null;

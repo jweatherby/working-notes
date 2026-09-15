@@ -1,7 +1,8 @@
 <script lang="ts">
   // Sidebar list of everything linked to an entity, grouped by how the link
   // reads from this side. "+" in the header opens AddRelation (not while
-  // read-only). MENTIONS come from links in content, so they can't be removed here.
+  // read-only). MENTIONS come from links in content, and goal–project links from the
+  // goal's Projects section, so neither can be removed here.
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import type { RelationGroup } from '$shared/types/relations';
@@ -59,7 +60,7 @@
           <li class="list-row">
             <a class="grow truncate" href={item.other.path}>{item.other.label}</a>
             <span class="meta truncate" title={item.note ?? undefined}>{item.note ?? entityTypeLabel(item.other.entityType)}</span>
-            {#if item.kind !== 'MENTIONS'}
+            {#if item.kind !== 'MENTIONS' && !item.goalProject}
               <span class="row-actions">
                 <ConfirmButton label="Remove link to {item.other.label}" variant="icon" onConfirm={() => handleRemove(item.id)} />
               </span>

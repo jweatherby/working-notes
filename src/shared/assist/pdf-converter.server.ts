@@ -2,42 +2,20 @@
 // doc. The web app's tRPC context is the only thing that holds this (see
 // context.server.ts); jobs live in memory, since there is one local process.
 
-import { spawn } from 'node:child_process';
-import { accessSync, constants, statSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
-import { buildClaudeArgs, findClaude, parseClaudeOutput } from './claude-cli';
+import { buildClaudeArgs, parseClaudeOutput } from './claude-cli';
+import { lastStderrLine, locateClaude, runClaude } from './claude-process.server';
 import type { PdfConversionJob, PdfConversionStatus, PdfConverter } from '$shared/types/pdf-conversion';
 
 const TIMEOUT_MS = 10 * 60 * 1000;
 
-const isExecutable = (path: string): boolean => {
-  try {
-    accessSync(path, constants.X_OK);
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
-};
-
-const runClaude = (claudePath: string, pdfPath: string): Promise<{ readonly code: number | null; readonly stdout: string; readonly stderr: string }> =>
-  new Promise((resolve, reject) => {
-    const child = spawn(claudePath, [...buildClaudeArgs(basename(pdfPath))], {
-      cwd: dirname(pdfPath),
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => child.kill('SIGTERM'), TIMEOUT_MS);
-    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8'); });
-    child.on('error', (error) => { clearTimeout(timer); reject(error); });
-    child.on('close', (code) => { clearTimeout(timer); resolve({ code, stdout, stderr }); });
-  });
-
 const convert = async (job: PdfConversionJob): Promise<PdfConversionStatus> => {
-  const { code, stdout, stderr } = await runClaude(job.claudePath, job.pdfPath);
+  const { code, stdout, stderr } = await runClaude(job.claudePath, buildClaudeArgs(basename(job.pdfPath)), {
+    cwd: dirname(job.pdfPath),
+    timeoutMs: TIMEOUT_MS
+  });
   if (stdout.trim() === '') {
-    const detail = stderr.trim().split('\n').at(-1) ?? '';
+    const detail = lastStderrLine(stderr);
     return {
       state: 'failed',
       message: code === null
@@ -55,7 +33,7 @@ export const createPdfConverter = (): PdfConverter => {
   const jobs = new Map<string, PdfConversionStatus>();
 
   return {
-    locate: () => findClaude({ PATH: process.env.PATH, HOME: process.env.HOME }, isExecutable),
+    locate: locateClaude,
 
     start: (job) => {
       if (jobs.get(job.key)?.state === 'running') return;

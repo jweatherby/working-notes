@@ -15,7 +15,6 @@
   // Bumping this remounts the chart: back to its default (top lead open), or opened along `focusPath`.
   let resetVersion = $state(0);
   let focusPath = $state<readonly string[]>([]);
-  let jumping = $state(false);
   let chartEl = $state<HTMLDivElement | null>(null);
 
   const people = $derived.by(() => {
@@ -37,7 +36,6 @@
 
   const jumpTo = async (id: string) => {
     focusPath = pathToPerson(roots, id);
-    jumping = false;
     resetVersion++;
     await tick();
     chartEl
@@ -47,14 +45,10 @@
 </script>
 
 <div class="tools">
-  {#if jumping}
-    <div class="jump">
-      <SearchPicker label="Jump to person" options={people} onPick={jumpTo} onCancel={() => { jumping = false; }} />
-    </div>
-  {:else}
-    <button type="button" class="btn link text-sm" onclick={() => { jumping = true; }}>Jump to person</button>
-  {/if}
   <button type="button" class="btn link text-sm" onclick={collapseAll}>Collapse all</button>
+  <div class="jump">
+    <SearchPicker label="Jump to person" placeholder="Jump to person…" options={people} onPick={jumpTo} persistent />
+  </div>
 </div>
 <div class="scroller">
   <div class="org-chart" bind:this={chartEl}>
@@ -67,13 +61,14 @@
 <style lang="scss">
   .tools {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--sp-3);
     margin-bottom: var(--sp-2);
+    justify-content: space-between;
   }
   .jump {
     width: 100%;
-    max-width: 320px;
+    max-width: 200px;
   }
 
   .scroller {

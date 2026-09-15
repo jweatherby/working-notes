@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { rightPanelNotes, activeDrawer } from '$lib/stores/right-panel';
+  import { rightPanelNotes, rightPanelPage, rightPanelTab, activeDrawer } from '$lib/stores/right-panel';
   import NotesList from '$lib/common/NotesList.svelte';
+  import PageChat from '$lib/common/PageChat.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
 
   let drawerOpen = $state(false);
@@ -21,18 +22,25 @@
   <div class="drawer-backdrop notes-backdrop" onclick={closeDrawer}></div>
 {/if}
 <aside class="right-panel" class:drawer-open={drawerOpen}>
-  <button type="button" class="drawer-handle" data-side="right" class:active={drawerOpen} onclick={toggleDrawer} title="Notes">
-    Notes
+  <button type="button" class="drawer-handle" data-side="right" class:active={drawerOpen} onclick={toggleDrawer} title="Notes and chat">
+    {$rightPanelTab === 'chat' ? 'Chat' : 'Notes'}
   </button>
 
   <div class="panel-header">
-    <span class="eyebrow">Notes{#if $rightPanelNotes} <span class="count">{$rightPanelNotes.notes.length}</span>{/if}</span>
-    {#if $rightPanelNotes?.onStartAdd}
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab" class:active={$rightPanelTab === 'notes'} aria-selected={$rightPanelTab === 'notes'} onclick={() => rightPanelTab.set('notes')}>
+        Notes{#if $rightPanelNotes} <span class="count">{$rightPanelNotes.notes.length}</span>{/if}
+      </button>
+      <button type="button" role="tab" class="tab" class:active={$rightPanelTab === 'chat'} aria-selected={$rightPanelTab === 'chat'} onclick={() => rightPanelTab.set('chat')}>
+        Chat
+      </button>
+    </div>
+    {#if $rightPanelTab === 'notes' && $rightPanelNotes?.onStartAdd}
       <button type="button" class="btn ghost sm" onclick={() => $rightPanelNotes?.onStartAdd?.()}>+ Note</button>
     {/if}
   </div>
 
-  <div class="panel-body">
+  <div class="panel-body" hidden={$rightPanelTab !== 'notes'}>
     {#if $rightPanelNotes}
       <NotesList
         notes={$rightPanelNotes.notes}
@@ -41,6 +49,17 @@
       />
     {:else}
       <div class="panel-empty"><EmptyState message="Open a person, team, department or project to see its notes." /></div>
+    {/if}
+  </div>
+
+  <!-- Hidden, not unmounted, so switching tabs keeps the conversation. A new page starts a new one. -->
+  <div class="panel-chat" hidden={$rightPanelTab !== 'chat'}>
+    {#if $rightPanelPage}
+      {#key $rightPanelPage.entityId}
+        <PageChat page={$rightPanelPage} />
+      {/key}
+    {:else}
+      <div class="panel-empty"><EmptyState message="Open a person, team, project, goal or page to chat about it." /></div>
     {/if}
   </div>
 </aside>
@@ -69,12 +88,17 @@
     height: var(--nav-h);
     padding: 0 var(--sp-3) 0 var(--sp-4);
     border-bottom: 1px solid var(--border);
+    .tabs { align-self: stretch; align-items: flex-end; border-bottom: none; }
     .count { font-weight: 400; margin-left: 2px; }
   }
   .panel-body {
     flex: 1;
     overflow-y: auto;
     padding: var(--sp-3) var(--sp-4);
+  }
+  .panel-chat {
+    flex: 1;
+    min-height: 0;
   }
   .panel-empty { padding-top: var(--sp-4); text-align: center; }
 

@@ -128,6 +128,7 @@ There is no `notebook.delete`, on purpose: Claude should never be one tool call 
 - **Converting a PDF in the web app** (`aux/doc/convert.ts`):
   - `doc.convertPdf` starts by looking for `claude` (`findClaude` in `$shared/assist/claude-cli`: PATH, then where installers put it). Without it, the result is `{ started: false, warning }`.
   - Otherwise it starts a background job (`$shared/assist/pdf-converter.server`) that runs `claude -p` in the PDF's folder with only the Read tool, and saves the markdown through `updateDoc`. The UI polls `doc.pdfConversion`.
+- **Page chat** (`api/assist/chat.ts`, `ctx.pageChat`, web app only like the converter): `chat.send` takes a client-made `chatId`, the entity, the page's visible text and the whole conversation, and starts a background `claude -p` job (`$shared/assist/page-chat.server`) with the prompt on stdin and no tools. The UI polls `chat.status`, which reports `done` with the reply (or `failed`) once. Nothing is stored; the conversation lives in `PageChat.svelte`. Both run `claude` through `$shared/assist/claude-process.server`.
   - Both procedures are excluded from the CLI and MCP in `cli/api.ts`.
   - `storage.pathFor(key)` gives the file's path on disk.
 - **Branding:** images upload as base64 through `branding.uploadImage`, which returns a storage key. `branding.update` saves the key and deletes any file it replaces.
