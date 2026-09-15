@@ -164,3 +164,16 @@
 .pre-line { white-space: pre-line; }
 .ml-auto { margin-left: auto; }
 .sr-only { @include visually-hidden; }
+
+// Entity metadata (`<dl class="meta-list">` of `<div><dt/><dd/></div>`): label–value pairs in one row that wraps.
+.meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-6);
+  margin: 0;
+  font-size: var(--fs-md);
+  > div { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+  dt { color: var(--text-3); white-space: nowrap; }
+  dd { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; min-height: 22px; }
+}

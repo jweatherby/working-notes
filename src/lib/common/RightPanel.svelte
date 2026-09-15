@@ -15,11 +15,12 @@
   const toggleDrawer = () => { drawerOpen = !drawerOpen; activeDrawer.set(drawerOpen ? 'right' : null); };
 </script>
 
+<!-- Outside the panel: its transform would make a fixed backdrop cover the panel itself. -->
+{#if drawerOpen}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="drawer-backdrop notes-backdrop" onclick={closeDrawer}></div>
+{/if}
 <aside class="right-panel" class:drawer-open={drawerOpen}>
-  {#if drawerOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="drawer-backdrop" onclick={closeDrawer}></div>
-  {/if}
   <button type="button" class="drawer-handle" data-side="right" class:active={drawerOpen} onclick={toggleDrawer} title="Notes">
     Notes
   </button>
@@ -81,7 +82,10 @@
     .drawer-handle { display: flex; }
     .drawer-backdrop { display: block; }
     .right-panel {
-      width: min(320px, 85vw);
+      // Below the top bar, which would otherwise cover the panel header.
+      top: var(--nav-h);
+      height: calc(100dvh - var(--nav-h));
+      width: min(520px, 92vw);
       z-index: var(--z-drawer);
       box-shadow: var(--shadow-3);
       transform: translateX(100%);

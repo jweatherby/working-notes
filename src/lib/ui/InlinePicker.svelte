@@ -1,8 +1,10 @@
 <script lang="ts">
   // A single-pick relationship editor: a link-style trigger that reveals a
-  // compact select. Replaces the <details><summary><select onchange> pattern.
-  // Options with a `group` are shown under that heading.
+  // compact select, or a SearchPicker once the list is too long to scroll.
+  // Options with a `group` are shown under that heading (a "/" scope when searching).
   import GroupedOptions from './GroupedOptions.svelte';
+  import SearchPicker from './SearchPicker.svelte';
+  import type { SearchScope } from './search-picker';
 
   interface Option {
     readonly id: string;
@@ -19,10 +21,23 @@
 
   const { label, options, placeholder = 'Choose…', onPick }: Props = $props();
 
+  /** More options than this and the picker searches instead of showing a select. */
+  const SEARCH_THRESHOLD = 8;
+
   let open = $state(false);
   let busy = $state(false);
   let error = $state('');
   let selectEl = $state<HTMLSelectElement | null>(null);
+
+  const searchable = $derived(options.length > SEARCH_THRESHOLD);
+  const searchOptions = $derived(options.map((o) => ({ id: o.id, name: o.name, scope: o.group })));
+  const scopes = $derived<readonly SearchScope[]>(
+    [...new Set(options.flatMap((o) => (o.group ? [o.group] : [])))].map((group) => ({
+      id: group,
+      label: group,
+      slash: group.toLowerCase().replace(/s$/, ''),
+    })),
+  );
 
   $effect(() => {
     if (open) selectEl?.focus();
@@ -31,6 +46,11 @@
   const close = () => {
     open = false;
     error = '';
+  };
+
+  const handleSearchPick = async (id: string) => {
+    await onPick(id);
+    open = false;
   };
 
   const handleChange = async (e: Event) => {
@@ -50,7 +70,11 @@
 </script>
 
 {#if options.length > 0}
-  {#if open}
+  {#if open && searchable}
+    <div class="search">
+      <SearchPicker {label} options={searchOptions} {scopes} onPick={handleSearchPick} onCancel={close} />
+    </div>
+  {:else if open}
     <div class="picker">
       <select
         class="sm"
@@ -79,5 +103,9 @@
     gap: var(--sp-2);
     max-width: 320px;
     select { flex: 1; }
+  }
+  .search {
+    width: 100%;
+    max-width: 360px;
   }
 </style>

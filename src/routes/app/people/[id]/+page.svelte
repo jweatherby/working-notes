@@ -160,15 +160,5 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .meta-list {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--sp-2) var(--sp-4);
-    margin: 0;
-    font-size: var(--fs-md);
-    > div { display: contents; }
-    dt { color: var(--text-3); }
-    dd { display: flex; align-items: center; gap: var(--sp-3); margin: 0; min-height: 22px; }
-  }
   .section-footer { margin-top: var(--sp-2); }
 </style>

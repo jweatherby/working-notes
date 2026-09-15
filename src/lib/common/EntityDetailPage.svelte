@@ -157,8 +157,9 @@
   });
 
   const openDoc = (id: string) => { center = { type: 'doc', id }; };
-  const openNote = (id: string) => { center = { type: 'note', id }; };
-  const openNewNote = () => { center = { type: 'newNote' }; };
+  // Close the notes drawer (mobile) so the editor in the center pane is reachable.
+  const openNote = (id: string) => { center = { type: 'note', id }; activeDrawer.set(null); };
+  const openNewNote = () => { center = { type: 'newNote' }; activeDrawer.set(null); };
   const openNewDoc = () => {
     newDocTitleDraft = 'Untitled';
     center = { type: 'newDoc' };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOrgTree, countDescendants, type OrgPerson, type OrgTreeNode } from './org-tree';
+import { buildOrgTree, countDescendants, pathToPerson, type OrgPerson, type OrgTreeNode } from './org-tree';
 
 const p = (id: string, leadId: string | null = null, name = id): OrgPerson => ({ id, name, title: null, leadId });
 
@@ -32,5 +32,21 @@ describe('buildOrgTree', () => {
 
   it('treats a self-lead as a root', () => {
     expect(shape(buildOrgTree([p('a', 'a'), p('b', 'a')]))).toEqual([{ a: ['b'] }]);
+  });
+});
+
+describe('pathToPerson', () => {
+  const roots = buildOrgTree([
+    { id: 'a', name: 'Ada', title: null, leadId: null },
+    { id: 'b', name: 'Bo', title: null, leadId: 'a' },
+    { id: 'c', name: 'Cy', title: null, leadId: 'b' }
+  ]);
+
+  it('lists the leads down to the person', () => {
+    expect(pathToPerson(roots, 'c')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('is empty for someone not in the tree', () => {
+    expect(pathToPerson(roots, 'zz')).toEqual([]);
   });
 });

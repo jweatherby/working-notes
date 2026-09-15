@@ -58,12 +58,13 @@
     .drawer-backdrop { display: block; }
     .col-left {
       position: fixed;
-      top: 0;
+      // Below the top bar, which would otherwise cover the top of the drawer.
+      top: var(--nav-h);
       left: 0;
       z-index: var(--z-drawer);
-      width: 88vw;
-      max-width: 360px;
-      height: 100vh;
+      width: 92vw;
+      max-width: 520px;
+      height: calc(100dvh - var(--nav-h));
       padding: var(--sp-5);
       overflow: visible;
       background: var(--surface);

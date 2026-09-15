@@ -85,8 +85,9 @@
   --control-h: 32px;
   --control-h-sm: 26px;
   --nav-h: 44px;
-  --sidebar-w: 200px;
-  --panel-w: 280px;
+  // Grow with the viewport so wide screens give the todo sidebar and notes panel room.
+  --sidebar-w: clamp(200px, 18vw, 320px);
+  --panel-w: clamp(280px, 26vw, 460px);
   --content-max: 1080px;
 
   // --- Layers ---

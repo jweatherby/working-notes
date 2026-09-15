@@ -3,6 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
+  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import GoalRows from '$lib/goal/components/GoalRows.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
@@ -137,7 +138,7 @@
   {#snippet renderOverview()}
     <section class="section">
       {#if project.description}
-        <p class="description pre-line">{project.description}</p>
+        <div class="description"><MarkdownRenderer content={project.description} /></div>
       {/if}
       <dl class="meta-list">
         {#if project.status}
@@ -240,16 +241,6 @@
 
 <style lang="scss">
   .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
-  .meta-list {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--sp-2) var(--sp-4);
-    margin: 0;
-    font-size: var(--fs-md);
-    > div { display: contents; }
-    dt { color: var(--text-3); }
-    dd { display: flex; align-items: center; gap: var(--sp-2); margin: 0; min-height: 22px; }
-  }
   .child-form {
     margin-top: var(--sp-2);
     max-width: 360px;

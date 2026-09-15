@@ -1,6 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Note {
@@ -69,9 +70,14 @@
           {:else}
             <span class="text-xs muted">{formatDate(note.createdAt)}</span>
           {/if}
-          {#if onRemove}
+          {#if onEdit || onRemove}
             <span class="note-actions">
-              <ConfirmButton label="Delete note" variant="icon" onConfirm={() => onRemove(note.id)} />
+              {#if onEdit}
+                <button type="button" class="btn icon sm" aria-label="Edit note" title="Edit" onclick={() => onEdit(note)}><PencilIcon /></button>
+              {/if}
+              {#if onRemove}
+                <ConfirmButton label="Delete note" variant="icon" onConfirm={() => onRemove(note.id)} />
+              {/if}
             </span>
           {/if}
         </header>
@@ -113,7 +119,15 @@
     min-height: 20px;
     margin-bottom: var(--sp-1);
   }
-  .note-actions { opacity: 0; transition: opacity var(--ease); &:has(:global(.inline-error)) { opacity: 1; } }
+  .note-actions {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--ease);
+    &:has(:global(.inline-error)) { opacity: 1; }
+    // Touch screens have no hover, so the actions stay visible.
+    @media (hover: none) { opacity: 1; }
+  }
   .note-body {
     font-size: var(--fs-md);
     line-height: 1.5;

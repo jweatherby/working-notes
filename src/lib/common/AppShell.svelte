@@ -261,10 +261,12 @@
   @media (min-width: 768px) and (max-width: 1149px) {
     .app-layout.has-panel.collapse-medium {
       grid-template-columns: minmax(0, 1fr);
-      :global(.right-panel .drawer-backdrop) { display: block; }
+      :global(.notes-backdrop) { display: block; }
       :global(.right-panel .drawer-handle) { display: flex; }
       :global(.right-panel) {
-        width: min(320px, 85vw);
+        top: var(--nav-h);
+        height: calc(100dvh - var(--nav-h));
+        width: min(520px, 92vw);
         z-index: var(--z-drawer);
         box-shadow: var(--shadow-3);
         transform: translateX(100%);

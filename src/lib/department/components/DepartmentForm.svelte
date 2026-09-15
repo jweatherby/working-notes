@@ -1,6 +1,7 @@
 <script lang="ts">
   import { trpc } from '$shared/trpc/client';
   import Field from '$lib/ui/Field.svelte';
+  import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
 
@@ -65,7 +66,7 @@
   </Field>
   <Field label="Description">
     {#snippet children({ id })}
-      <textarea {id} bind:value={description} rows={3} placeholder="What does this department do?"></textarea>
+      <MarkdownEditor value={description} onChange={(md: string) => { description = md; }} />
     {/snippet}
   </Field>
 

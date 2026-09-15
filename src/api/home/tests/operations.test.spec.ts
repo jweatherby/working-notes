@@ -33,6 +33,19 @@ describe('buildGraph', () => {
     expect(graph).toEqual({ nodes: [], edges: [] });
   });
 
+  it('drops nodes with no links', () => {
+    const graph = buildGraph({
+      projects: [
+        { id: 'pr1', name: 'Alone', parentId: null },
+        { id: 'pr2', name: 'Linked', parentId: null }
+      ],
+      docs: [{ id: 'd1', title: 'Spec', entityId: 'pr2' }],
+      reports: [],
+      todos: []
+    });
+    expect(graph.nodes.map((n) => n.id)).toEqual(['pr2', 'd1']);
+  });
+
   it('centres on projects and drops assets of missing projects', () => {
     const graph = buildGraph({
       projects: [

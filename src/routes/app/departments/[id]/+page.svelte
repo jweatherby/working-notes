@@ -3,6 +3,7 @@
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
+  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
@@ -53,7 +54,7 @@
   {#snippet renderOverview()}
     {#if department.description}
       <section class="section">
-        <p class="description pre-line">{department.description}</p>
+        <div class="description"><MarkdownRenderer content={department.description} /></div>
       </section>
     {/if}
 

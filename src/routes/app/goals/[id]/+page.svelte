@@ -3,6 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
+  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import GoalForm from '$lib/goal/components/GoalForm.svelte';
   import GoalRows from '$lib/goal/components/GoalRows.svelte';
   import ProgressLineChart from '$lib/goal/components/ProgressLineChart.svelte';
@@ -161,7 +162,7 @@
   {#snippet renderOverview({ openEdit })}
     <section class="section">
       {#if goal.description}
-        <p class="description pre-line">{goal.description}</p>
+        <div class="description"><MarkdownRenderer content={goal.description} /></div>
       {/if}
       <dl class="meta-list">
         <div>
@@ -313,16 +314,6 @@
 
 <style lang="scss">
   .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
-  .meta-list {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--sp-2) var(--sp-4);
-    margin: 0;
-    font-size: var(--fs-md);
-    > div { display: contents; }
-    dt { color: var(--text-3); }
-    dd { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; min-height: 22px; }
-  }
   .check-in-form {
     margin-top: var(--sp-2);
     input, select { width: auto; }

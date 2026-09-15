@@ -8,6 +8,7 @@
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { PAGE_KINDS, type PageKind } from '$shared/types/enums';
   import { PAGE_KIND_FIELDS, type PageSummary } from '$shared/types/pages';
+  import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { PAGE_KIND_LABELS, formatPropertyValue } from '$lib/page/utils';
 
@@ -15,10 +16,22 @@
   const pages = $derived(data.pages as readonly PageSummary[]);
 
   let kindFilter = $state<PageKind | 'ALL'>('ALL');
+  // Pages start expanded; this holds the ones collapsed.
+  let collapsed = $state<ReadonlySet<string>>(new Set());
+
+  const toggleRow = (id: string) => {
+    const next = new Set(collapsed);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    collapsed = next;
+  };
 
   // Sub-pages whose parent is filtered out show at the top level.
   const rows = $derived(
-    flattenTree(buildTree(pages.filter((p) => kindFilter === 'ALL' || p.kind === kindFilter), (p) => p.parentId)),
+    flattenTree(
+      buildTree(pages.filter((p) => kindFilter === 'ALL' || p.kind === kindFilter), (p) => p.parentId),
+      (node) => collapsed.has(node.item.id),
+    ),
   );
 
   const details = (page: PageSummary): string =>
@@ -67,11 +80,16 @@
             </tr>
           </thead>
           <tbody>
-            {#each rows as { item: page, depth } (page.id)}
+            {#each rows as { item: page, depth, children } (page.id)}
               <tr>
                 <td>
                   <span class="page-name" style="--depth: {depth}">
                     {#if depth > 0}<span class="tree-indent">└</span>{/if}
+                    {#if children.length > 0}
+                      <DisclosureButton expanded={!collapsed.has(page.id)} label={page.title} onToggle={() => toggleRow(page.id)} />
+                    {:else}
+                      <span class="disclosure-spacer"></span>
+                    {/if}
                     <a href={page.path}>{page.title}</a>{#if page.archivedAt} <span class="badge muted">Archived</span>{/if}
                   </span>
                 </td>
@@ -103,6 +121,10 @@
     align-items: center;
     gap: var(--sp-1);
     padding-left: calc(var(--depth) * var(--sp-5));
+  }
+  .disclosure-spacer {
+    flex-shrink: 0;
+    width: var(--control-h-sm);
   }
   .tree-indent {
     color: var(--border-strong);

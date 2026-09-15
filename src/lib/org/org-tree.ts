@@ -46,5 +46,15 @@ export const buildOrgTree = <P extends OrgPerson>(persons: readonly P[]): readon
   return roots;
 };
 
-export const countDescendants = (node: OrgTreeNode): number =>
+/** Ids from a root down to `id` (inclusive), or an empty list when `id` isn't in the forest. */
+export const pathToPerson = (roots: readonly OrgTreeNode[], id: string): readonly string[] => {
+  for (const node of roots) {
+    if (node.person.id === id) return [id];
+    const below = pathToPerson(node.children, id);
+    if (below.length > 0) return [node.person.id, ...below];
+  }
+  return [];
+};
+
+export const countDescendants =(node: OrgTreeNode): number =>
   node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);

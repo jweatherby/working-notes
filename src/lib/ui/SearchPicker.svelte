@@ -106,6 +106,9 @@
     oninput={(e) => handleInput(e.currentTarget.value)}
     onkeydown={handleKeydown}
   />
+  {#if count > 0 || loading || query.trim()}
+  <!-- Floats below the input so opening it never moves the surrounding form. -->
+  <div class="results">
   {#if count > 0}
     <ul class="list" role="listbox" id={listId} aria-label={label}>
       {#if parsed.scopes}
@@ -144,14 +147,31 @@
   {:else if query.trim()}
     <EmptyState message="No matches." small />
   {/if}
+  </div>
+  {/if}
   {#if error}<span class="inline-error" role="alert">{error}</span>{/if}
 </div>
 
 <style lang="scss">
   .search-picker {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--sp-1);
+  }
+  .results {
+    position: absolute;
+    top: calc(100% + var(--sp-1));
+    left: 0;
+    right: 0;
+    // Above the sticky detail header and cards, below drawers.
+    z-index: var(--z-drawer-backdrop);
+    max-height: 280px;
+    overflow-y: auto;
+    padding: var(--sp-1);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-2);
   }
   [role='option'] { cursor: pointer; }
   p { margin: 0; }

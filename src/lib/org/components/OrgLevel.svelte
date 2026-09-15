@@ -11,9 +11,12 @@
     readonly onEdit: (id: string) => void;
     readonly parentGroups?: readonly string[];
     readonly isRoot?: boolean;
+    /** Ids from a root down to a person to open the chart to and highlight (the last id). */
+    readonly focusPath?: readonly string[];
   }
 
-  const { nodes, groupsByPerson, onEdit, parentGroups = [], isRoot = false }: Props = $props();
+  const { nodes, groupsByPerson, onEdit, parentGroups = [], isRoot = false, focusPath = [] }: Props = $props();
+  const focusedId = $derived(focusPath.at(-1) ?? null);
 
   // Big teams wrap into a boxed grid so the chart doesn't grow endlessly sideways.
   // The grid is as wide as the team allows, up to MAX_COLS across.
@@ -23,9 +26,14 @@
   const cols = $derived(Math.min(MAX_COLS, Math.ceil(nodes.length / Math.ceil(nodes.length / MAX_COLS))));
 
   // At most one peer is open per row; its reports render as the next row, below all peers.
-  // The top row starts with its first lead open.
+  // A jump opens the lead on `focusPath`; otherwise the top row starts with its first lead open.
   let openId = $state<string | null>(
-    untrack(() => (isRoot ? (nodes.find((n) => n.children.length > 0)?.person.id ?? null) : null))
+    untrack(() => {
+      const onPath = nodes.find((n) => focusPath.includes(n.person.id) && n.children.length > 0);
+      if (onPath) return onPath.person.id;
+      if (focusPath.length > 0) return null;
+      return isRoot ? (nodes.find((n) => n.children.length > 0)?.person.id ?? null) : null;
+    })
   );
   const openNode = $derived(nodes.find((n) => n.person.id === openId && n.children.length > 0) ?? null);
 
@@ -43,7 +51,7 @@
     {#each nodes as node (node.person.id)}
       {@const open = openNode?.person.id === node.person.id}
       <li>
-        <div class="node" class:open>
+        <div class="node" class:open class:focused={node.person.id === focusedId} data-person-id={node.person.id}>
           <a class="name" href="/app/people/{node.person.id}">{node.person.name}</a>
           {#if node.person.title}<span class="title">{node.person.title}</span>{/if}
           {#if visibleGroups(node.person.id).length > 0}
@@ -67,7 +75,7 @@
     <div class="next">
       <span class="next-label">{openNode.person.name}'s reports</span>
       {#key openNode.person.id}
-        <Self nodes={openNode.children} {groupsByPerson} {onEdit} parentGroups={groupsByPerson.get(openNode.person.id) ?? []} />
+        <Self nodes={openNode.children} {groupsByPerson} {onEdit} {focusPath} parentGroups={groupsByPerson.get(openNode.person.id) ?? []} />
       {/key}
     </div>
   {/if}
@@ -181,6 +189,8 @@
 
     &:hover { border-color: var(--border-strong); }
     &.open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    // The person a jump landed on.
+    &.focused { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
 
     &:hover .edit,
     &:focus-within .edit { opacity: 1; }

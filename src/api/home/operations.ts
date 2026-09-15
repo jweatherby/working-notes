@@ -115,7 +115,9 @@ export const buildGraph = (src: GraphSource): RelationGraph => {
     ...todos.map((t) => ({ source: t.id, target: t.entityId, kind: 'TODO' as const }))
   ];
 
-  return { nodes, edges };
+  // A node with no edges is a graph of one: leave it out.
+  const linked = new Set(edges.flatMap((e) => [e.source, e.target]));
+  return { nodes: nodes.filter((n) => linked.has(n.id)), edges };
 };
 
 // ----- Operations -----

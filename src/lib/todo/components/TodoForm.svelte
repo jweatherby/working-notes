@@ -2,6 +2,7 @@
   import { trpc } from '$shared/trpc/client';
   import type { EntityType, TodoStatus } from '../utils';
   import Field from '$lib/ui/Field.svelte';
+  import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
 
@@ -126,7 +127,7 @@
 
     <Field label="Description">
       {#snippet children({ id })}
-        <textarea {id} bind:value={description} rows={3} placeholder="Optional details…"></textarea>
+        <MarkdownEditor value={description} onChange={(md: string) => { description = md; }} />
       {/snippet}
     </Field>
 
