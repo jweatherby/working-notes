@@ -71,6 +71,13 @@ const asset = html.match(/\/_app\/immutable\/[^"]+\.js/)?.[0];
 check('app serves static assets', !!asset && (await fetch(`${base}${asset}`)).status === 200);
 check('API answers with the local header', (await fetch(`${base}/api/trpc/notebook.list`, { headers: { 'x-working-notes': '1' } })).status === 200);
 check('API refuses without it', (await fetch(`${base}/api/trpc/notebook.list`)).status === 403);
+const expectedVersion = (await Bun.file(join(plugin, 'server', 'VERSION')).text()).trim();
+const reported = await fetch(`${base}/__wnotes/app`).then((r) => r.json() as Promise<{ version?: string }>).catch(() => null);
+check('app reports its version', reported?.version === expectedVersion, `${reported?.version ?? 'none'} (expected ${expectedVersion})`);
+check('app refuses to stop without the local header', (await fetch(`${base}/__wnotes/app/stop`, { method: 'POST' })).status === 403);
+const stopped = await fetch(`${base}/__wnotes/app/stop`, { method: 'POST', headers: { 'x-working-notes': '1' } });
+await Bun.sleep(500);
+check('app stops for a newer version', stopped.status === 202 && (await fetch(`${base}/app`).catch(() => null)) === null);
 app.kill();
 
 function platformDataDir(homeDir: string): string {

@@ -1,6 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { staticFilePath } from '../app-server';
-import { appLaunchCommand, appUrl } from '../app-launch';
+import { appControl, staticFilePath } from '../app-server';
+import { appLaunchCommand, appUrl, planAppLaunch } from '../app-launch';
+
+describe('appControl', () => {
+  const stop = (host: string, headers: Record<string, string> = { 'x-working-notes': '1' }, method = 'POST') =>
+    appControl(new Request(`http://${host}/__wnotes/app/stop`, { method, headers }), '1.2.3');
+
+  it('reports the version', () => {
+    expect(appControl(new Request('http://127.0.0.1:5173/__wnotes/app'), '1.2.3')).toEqual({ kind: 'version', body: { version: '1.2.3' } });
+  });
+
+  it('stops only for a loopback POST with the local header', () => {
+    expect(stop('127.0.0.1:5173')).toEqual({ kind: 'stop' });
+    expect(stop('localhost:5173')).toEqual({ kind: 'stop' });
+    expect(stop('evil.example:5173')).toEqual({ kind: 'forbidden' });
+    expect(stop('127.0.0.1:5173', {})).toEqual({ kind: 'forbidden' });
+    expect(stop('127.0.0.1:5173', { 'x-working-notes': '1' }, 'GET')).toEqual({ kind: 'forbidden' });
+  });
+
+  it('leaves every other request to the app', () => {
+    expect(appControl(new Request('http://127.0.0.1:5173/app'), '1.2.3')).toBeNull();
+  });
+});
+
+describe('planAppLaunch', () => {
+  const release = { standalone: true, version: '0.7.0' };
+
+  it('starts when nothing is running', () => {
+    expect(planAppLaunch(null, release)).toBe('start');
+  });
+
+  it('reuses the same version and restarts a different one', () => {
+    expect(planAppLaunch({ version: '0.7.0' }, release)).toBe('reuse');
+    expect(planAppLaunch({ version: '0.6.5' }, release)).toBe('restart');
+  });
+
+  it('leaves alone what it cannot identify, and a clone never restarts', () => {
+    expect(planAppLaunch('other', release)).toBe('reuse');
+    expect(planAppLaunch({ version: '0.6.5' }, { standalone: false, version: '0.7.0' })).toBe('reuse');
+  });
+});
 
 describe('staticFilePath', () => {
   it('maps a request path to a file inside the client folder', () => {

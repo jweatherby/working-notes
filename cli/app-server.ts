@@ -30,14 +30,41 @@ export const staticFilePath = (clientDir: string, pathname: string): string | nu
   return full.startsWith(root) && full.length > root.length ? full : null;
 };
 
+/** GET: the running app's version, so a newer release can tell it's stale (cli/app-launch.ts). */
+export const APP_CONTROL_PATH = '/__wnotes/app';
+/** POST: stops the app, so a newer release can replace it. */
+export const APP_STOP_PATH = '/__wnotes/app/stop';
+
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+export type AppControl =
+  | { readonly kind: 'version'; readonly body: { readonly version: string } }
+  | { readonly kind: 'stop' }
+  | { readonly kind: 'forbidden' };
+
+/**
+ * The app's own control requests, which bypass SvelteKit and so its guard in
+ * hooks.server.ts. Stopping keeps both of that guard's rules: a loopback hostname
+ * (blocks DNS rebinding) and the x-working-notes header (blocks cross-site requests).
+ * Null for any other request.
+ */
+export const appControl = (request: Request, version: string): AppControl | null => {
+  const url = new URL(request.url);
+  if (url.pathname === APP_CONTROL_PATH && request.method === 'GET') return { kind: 'version', body: { version } };
+  if (url.pathname !== APP_STOP_PATH) return null;
+  const allowed = request.method === 'POST' && LOOPBACK_HOSTS.has(url.hostname) && request.headers.get('x-working-notes') === '1';
+  return allowed ? { kind: 'stop' } : { kind: 'forbidden' };
+};
+
 export interface ServeAppOptions {
   readonly server: SvelteKitServer;
   readonly clientDir: string;
+  readonly version: string;
   readonly port?: number;
 }
 
 export const serveApp = async (options: ServeAppOptions): Promise<void> => {
-  const { server, clientDir } = options;
+  const { server, clientDir, version } = options;
   const port = options.port ?? Number(process.env['PORT'] || APP_PORT);
   await server.init({ env: process.env as Record<string, string>, read: (file) => Bun.file(join(clientDir, file)).stream() });
 
@@ -46,6 +73,16 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
       hostname: APP_HOST,
       port,
       async fetch(request, bunServer) {
+        const control = appControl(request, version);
+        if (control?.kind === 'version') return Response.json(control.body);
+        if (control?.kind === 'forbidden') return new Response('Forbidden', { status: 403 });
+        if (control?.kind === 'stop') {
+          console.error('Working Notes is stopping for a newer version.');
+          // Answer first, then exit.
+          setTimeout(() => process.exit(0), 100);
+          return new Response(null, { status: 202 });
+        }
+
         const url = new URL(request.url);
         if (request.method === 'GET' || request.method === 'HEAD') {
           const path = staticFilePath(clientDir, url.pathname);

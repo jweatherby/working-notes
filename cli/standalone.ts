@@ -28,7 +28,9 @@ export const runStandalone = async (app: StandaloneApp): Promise<void> => {
       return;
     case 'app': {
       const { serveApp } = await import('./app-server');
-      await serveApp({ server: await app.loadServer(), clientDir: join(resources, 'client') });
+      // The shim installs VERSION beside the binary; release apps report it so a newer release can replace them.
+      const version = (await Bun.file(join(resources, 'VERSION')).text().catch(() => 'unknown')).trim();
+      await serveApp({ server: await app.loadServer(), clientDir: join(resources, 'client'), version });
       return;
     }
     default:

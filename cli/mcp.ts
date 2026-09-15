@@ -33,7 +33,15 @@ console.log = console.info = console.debug = (...args: unknown[]): void => conso
 const { procedures, callProcedure, disconnect } = await import('./api');
 const { createSnapshot, listSnapshots } = await import('../scripts/backup/snapshot');
 const { resolveCurrentNotebook } = await import('../src/shared/notebooks/current.server');
-const { appLaunchCommand, appUrl, openApp } = await import('./app-launch');
+const { appLaunchCommand, appUrl, openApp, restartStaleApp } = await import('./app-launch');
+
+const appOwner = {
+  launch: appLaunchCommand({ standalone, execPath: process.execPath, repoDir: REPO }),
+  standalone,
+  version: pluginManifest.version
+};
+// An app an older release left running is replaced now, so updating the plugin updates the app too.
+void restartStaleApp(appOwner).catch((error: unknown) => console.error(error));
 
 const INSTRUCTIONS = [
   "Working Notes holds the user's local notebooks. Each notebook (for example work, or a personal project) has its own org chart (people, teams, departments), projects, goals with check-ins, wiki pages, relations between entities, notes, docs, todos and tags.",
@@ -82,8 +90,8 @@ const callExtraTool = async (name: string, args: Readonly<Record<string, unknown
   const id = notebook.value.id;
 
   if (name === 'app_open') {
-    const launched = await openApp(appLaunchCommand({ standalone, execPath: process.execPath, repoDir: REPO }));
-    return textResult({ url: appUrl(id), notebook: id, started: launched.started });
+    const launched = await openApp(appOwner);
+    return textResult({ url: appUrl(id), notebook: id, started: launched.started, restarted: launched.restarted });
   }
   if (name === 'backup_snapshot') {
     const reason = typeof args['reason'] === 'string' ? args['reason'].trim() : '';
