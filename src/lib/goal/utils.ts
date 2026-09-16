@@ -48,3 +48,38 @@ export const formatGoalValue = (value: number | null, unit: string | null): stri
   if (!unit) return n;
   return unit === '%' ? `${n}%` : `${n} ${unit}`;
 };
+
+/** The y-axis bounds for a goal's check-in chart, or `null` to start the axis at zero. */
+export interface ProgressAxis {
+  readonly min: number;
+  readonly max: number;
+}
+
+/**
+ * A zero-based axis is right for most goals, but it flattens a metric that lives
+ * far from zero in a narrow band: 99.5% to 99.9% uptime is a straight line across
+ * the top of a 0–100 axis. When a zero-based axis would squash the data into less
+ * than a quarter of its height, scale to the data instead, with a little padding.
+ *
+ * Returns `null` when zero is the better floor, which is also the case for any
+ * series that reaches zero or goes negative.
+ */
+export const progressAxis = (values: readonly number[]): ProgressAxis | null => {
+  const finite = values.filter((v) => Number.isFinite(v));
+  if (finite.length === 0) return null;
+
+  const lo = Math.min(...finite);
+  const hi = Math.max(...finite);
+  if (lo <= 0) return null;
+
+  const span = hi - lo;
+  // Every value is the same: open a small window around it so the line isn't on an edge.
+  if (span === 0) {
+    const pad = Math.abs(hi) * 0.01 || 1;
+    return { min: hi - pad, max: hi + pad };
+  }
+  if (span / hi >= 0.25) return null;
+
+  const pad = span * 0.15;
+  return { min: lo - pad, max: hi + pad };
+};

@@ -1,6 +1,7 @@
 <script lang="ts">
   // Check-in values over time, with the target as a flat second line.
   import { renderChart } from '$lib/report/chart-render';
+  import { progressAxis } from '$lib/goal/utils';
   import type { ChartSeries, ChartSpec } from '$shared/types/charts';
   import type { GoalCheckInItem } from '$shared/types/goals';
 
@@ -23,8 +24,19 @@
 
     const series: ChartSeries[] = [{ label: unit ? `Value (${unit})` : 'Value', values: points.map((c) => c.value) }];
     if (target !== null) series.push({ label: 'Target', values: points.map(() => target) });
-    const lowest = Math.min(...series.flatMap((s) => s.values), baseline ?? 0);
-    return { type: 'line', labels: points.map((c) => day(c.date)), series, ...(lowest < 0 && { min: lowest }) };
+
+    // The axis covers the check-ins, the target and the baseline, so the line
+    // stays readable for a metric that sits far from zero (99.5% to 99.9% uptime).
+    const spread = [...points.map((c) => c.value), ...(target !== null ? [target] : []), ...(baseline !== null ? [baseline] : [])];
+    const axis = progressAxis(spread);
+    const lowest = Math.min(...spread, 0);
+
+    return {
+      type: 'line',
+      labels: points.map((c) => day(c.date)),
+      series,
+      ...(axis ? { min: axis.min, max: axis.max } : lowest < 0 && { min: lowest })
+    };
   });
 
   // Each spec gets its own container (see the {#key} below), so a redrawn chart

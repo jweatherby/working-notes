@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GOAL_STATUSES } from '$shared/types/enums';
-import { formatGoalValue, goalStatusBadgeClass, progressTone } from '../utils';
+import { formatGoalValue, goalStatusBadgeClass, progressAxis, progressTone } from '../utils';
 
 describe('goal status styling', () => {
   it('gives every status a badge and a tone', () => {
@@ -22,5 +22,43 @@ describe('formatGoalValue', () => {
     expect(formatGoalValue(12, 'deals')).toBe('12 deals');
     expect(formatGoalValue(7, null)).toBe('7');
     expect(formatGoalValue(null, '%')).toBe('—');
+  });
+});
+
+describe('progressAxis', () => {
+  it('scales to the data when a zero-based axis would flatten it', () => {
+    // 99.5–99.9% uptime is a straight line across the top of a 0–100 axis.
+    const axis = progressAxis([99.5, 99.55, 99.72, 99.68, 99.9]);
+    expect(axis).not.toBeNull();
+    expect(axis!.min).toBeGreaterThan(99);
+    expect(axis!.min).toBeLessThan(99.5);
+    expect(axis!.max).toBeGreaterThan(99.9);
+  });
+
+  it('keeps a zero floor when the data already fills the axis', () => {
+    // p95 latency from 480ms down to a 200ms target reads fine from zero.
+    expect(progressAxis([480, 390, 310, 200])).toBeNull();
+  });
+
+  it('keeps a zero floor for values that reach or pass zero', () => {
+    expect(progressAxis([0, 40, 90])).toBeNull();
+    expect(progressAxis([-5, 10])).toBeNull();
+  });
+
+  it('opens a window around a series that never moves', () => {
+    const axis = progressAxis([99.9, 99.9]);
+    expect(axis).not.toBeNull();
+    expect(axis!.min).toBeLessThan(99.9);
+    expect(axis!.max).toBeGreaterThan(99.9);
+  });
+
+  it('pads the range it returns on both sides', () => {
+    const axis = progressAxis([200, 210]);
+    expect(axis!.min).toBeLessThan(200);
+    expect(axis!.max).toBeGreaterThan(210);
+  });
+
+  it('has nothing to say about an empty series', () => {
+    expect(progressAxis([])).toBeNull();
   });
 });
