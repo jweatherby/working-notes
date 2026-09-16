@@ -67,6 +67,25 @@ Ask Claude to "open Working Notes" and it will start the app and hand you the li
 Then go to http://127.0.0.1:5173/app. The server binds to 127.0.0.1 and refuses any request that
 didn't come from this machine.
 
+## Install it as a Mac app
+
+The web app can be installed as a desktop app, so it gets its own Dock icon and its own window with
+no browser chrome. It still runs entirely on your machine, against the same local server.
+
+Start the app first, then:
+
+- **Chrome or Edge:** open http://127.0.0.1:5173/app, then choose **Install Working Notes** — from
+  the install icon at the right of the address bar, or from the ⋮ menu under **Cast, save and
+  share**.
+- **Safari 17 or later:** open the same address, then **File → Add to Dock**.
+
+The installed app opens at `/app` and shares the browser's cookies, so it remembers which notebook
+you were in. To remove it, open `chrome://apps`, right-click Working Notes and choose **Remove**;
+in Safari, delete it from the Applications folder.
+
+The window shows an error page whenever the server is not running. Start it again the usual way —
+ask Claude to open Working Notes, or run `wnotes app` — and reload.
+
 ## Hourly backups
 
 ```bash

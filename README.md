@@ -145,7 +145,9 @@ chart is simply not drawn.
 
 ## The app
 
-The web app is mainly for reading, usually in a browser pane beside Claude.
+The web app is mainly for reading, usually in a browser pane beside Claude. You can also install it
+as a Mac app, so it gets a Dock icon and its own window — see
+[docs/INSTALL.md](docs/INSTALL.md#install-it-as-a-mac-app).
 
 The home dashboard shows your open todos, a feed of recent changes and a graph of the links between
 things. The org map shows reporting lines. Every person, team, project, goal and wiki page gets its
