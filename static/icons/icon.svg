@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="114" fill="#2563eb"/>
+  <!-- three prongs, all the same length from the hub -->
+  <g stroke="#ffffff" stroke-width="24" stroke-linecap="round" fill="none">
+    <path d="M300 256 L381 173"/>
+    <path d="M300 256 H416"/>
+    <path d="M300 256 L381 339"/>
+  </g>
+  <g fill="#ffffff">
+    <rect x="76" y="178" width="104" height="28" rx="14"/>
+    <rect x="76" y="242" width="104" height="28" rx="14"/>
+    <rect x="76" y="306" width="66" height="28" rx="14"/>
+    <rect x="216" y="166" width="16" height="180" rx="8"/>
+    <circle cx="300" cy="256" r="34"/>
+    <circle cx="381" cy="173" r="30"/>
+    <circle cx="416" cy="256" r="30"/>
+    <circle cx="381" cy="339" r="30"/>
+  </g>
+</svg>
