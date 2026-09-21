@@ -80,7 +80,7 @@
     readonly archivedAt?: Date | string | null;
     readonly renderOverview: Snippet<[OverviewCtx]>;
     /** The entity's label–value metadata. It sits above the docs, under the header. */
-    readonly renderMeta?: Snippet;
+    readonly renderMeta?: Snippet<[OverviewCtx]>;
     readonly renderAssetHeader: Snippet;
     readonly renderEditForm: Snippet<[EditFormCtx]>;
   }
@@ -369,7 +369,7 @@
     </div>
 
     {#if renderMeta && !docOpen}
-      <div class="meta-panel">{@render renderMeta()}</div>
+      <div class="meta-panel">{@render renderMeta({ openEdit })}</div>
     {/if}
 
     {#if acceptsDocs(entityType)}

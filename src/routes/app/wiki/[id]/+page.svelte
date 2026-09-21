@@ -85,6 +85,40 @@
   };
 </script>
 
+{#snippet pageMeta({ openEdit }: { openEdit: () => void })}
+  <dl class="meta-list">
+    {#each fields as field (field.key)}
+      {@const value = wikiPage.properties[field.key]}
+      <div>
+        <dt>{field.label}</dt>
+        <dd>
+          {#if value === undefined}
+            <span class="muted">—</span>
+          {:else if field.input === 'url'}
+            <a href={String(value)} target="_blank" rel="noreferrer">{value}</a>
+          {:else}
+            {formatPropertyValue(field, value)}
+          {/if}
+        </dd>
+      </div>
+    {/each}
+    <div>
+      <dt>Parent</dt>
+      <dd>
+        {#if wikiPage.parent}
+          <a href="/app/wiki/{wikiPage.parent.id}">{wikiPage.parent.title}</a>
+          <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
+        {:else}
+          <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent page…" onPick={handleSetParent} />
+        {/if}
+      </dd>
+    </div>
+  </dl>
+  {#if fields.length > 0 && Object.keys(wikiPage.properties).length === 0}
+    <button type="button" class="btn link text-sm" onclick={openEdit}>+ Fill in the {PAGE_KIND_LABELS[wikiPage.kind].toLowerCase()} details</button>
+  {/if}
+{/snippet}
+
 <EntityDetailPage
   entityType="PAGE"
   entityId={wikiPage.id}
@@ -98,8 +132,9 @@
   {todos}
   {reports}
   {relations}
+  renderMeta={editing ? undefined : pageMeta}
 >
-  {#snippet renderOverview({ openEdit })}
+  {#snippet renderOverview()}
     {#if editing}
       <DocEditor
         title={wikiPage.title}
@@ -109,40 +144,6 @@
         onClose={handleCloseEditor}
       />
     {:else}
-      <section class="section">
-        <dl class="meta-list">
-          {#each fields as field (field.key)}
-            {@const value = wikiPage.properties[field.key]}
-            <div>
-              <dt>{field.label}</dt>
-              <dd>
-                {#if value === undefined}
-                  <span class="muted">—</span>
-                {:else if field.input === 'url'}
-                  <a href={String(value)} target="_blank" rel="noreferrer">{value}</a>
-                {:else}
-                  {formatPropertyValue(field, value)}
-                {/if}
-              </dd>
-            </div>
-          {/each}
-          <div>
-            <dt>Parent</dt>
-            <dd>
-              {#if wikiPage.parent}
-                <a href="/app/wiki/{wikiPage.parent.id}">{wikiPage.parent.title}</a>
-                <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
-              {:else}
-                <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent page…" onPick={handleSetParent} />
-              {/if}
-            </dd>
-          </div>
-        </dl>
-        {#if fields.length > 0 && Object.keys(wikiPage.properties).length === 0}
-          <button type="button" class="btn link text-sm" onclick={openEdit}>+ Fill in the {PAGE_KIND_LABELS[wikiPage.kind].toLowerCase()} details</button>
-        {/if}
-      </section>
-
       <section class="section">
         <div class="section-header">
           <h4>Content</h4>
@@ -196,7 +197,7 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  // Only the "Fill in the details" link can follow the list inside its section.
+  // Only the "Fill in the details" link can follow the list in the meta panel.
   .meta-list:not(:last-child) { margin-bottom: var(--sp-3); }
   .child-form {
     margin-top: var(--sp-2);
