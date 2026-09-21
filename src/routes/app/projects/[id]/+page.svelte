@@ -135,57 +135,60 @@
   {reports}
   {relations}
 >
-  {#snippet renderOverview()}
-    <section class="section">
-      {#if project.description}
-        <div class="description"><MarkdownRenderer content={project.description} /></div>
+  {#snippet renderMeta()}
+    <dl class="meta-list">
+      {#if project.status}
+        <div>
+          <dt>Status</dt>
+          <dd>
+            <span class={statusBadgeClass(project.status)}>{project.status}</span>
+            {#if canRevert}
+              <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(prevStatus!)}>← {prevStatus}</button>
+            {/if}
+            {#if canAdvance}
+              <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(nextStatus!)}>{nextStatus} →</button>
+            {/if}
+            {#if statusError}<span class="inline-error" role="alert">{statusError}</span>{/if}
+          </dd>
+        </div>
       {/if}
-      <dl class="meta-list">
-        {#if project.status}
-          <div>
-            <dt>Status</dt>
-            <dd>
-              <span class={statusBadgeClass(project.status)}>{project.status}</span>
-              {#if canRevert}
-                <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(prevStatus!)}>← {prevStatus}</button>
-              {/if}
-              {#if canAdvance}
-                <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(nextStatus!)}>{nextStatus} →</button>
-              {/if}
-              {#if statusError}<span class="inline-error" role="alert">{statusError}</span>{/if}
-            </dd>
-          </div>
-        {/if}
+      <div>
+        <dt>Owner</dt>
+        <dd>
+          {#if project.owner}
+            <a href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
+            <ConfirmButton label="Unassign" confirmLabel="Unassign owner" onConfirm={() => handleSetOwner(null)} />
+          {:else}
+            <InlinePicker label="Assign owner" options={data.ownerOptions} placeholder="Select an owner…" onPick={handleSetOwner} />
+          {/if}
+        </dd>
+      </div>
+      <div>
+        <dt>Parent</dt>
+        <dd>
+          {#if project.parentName}
+            <a href="/app/projects/{project.parentId}">{project.parentName}</a>
+            <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
+          {:else}
+            <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent…" onPick={handleSetParent} />
+          {/if}
+        </dd>
+      </div>
+      {#if project.startDate || project.endDate}
         <div>
-          <dt>Owner</dt>
-          <dd>
-            {#if project.owner}
-              <a href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
-              <ConfirmButton label="Unassign" confirmLabel="Unassign owner" onConfirm={() => handleSetOwner(null)} />
-            {:else}
-              <InlinePicker label="Assign owner" options={data.ownerOptions} placeholder="Select an owner…" onPick={handleSetOwner} />
-            {/if}
-          </dd>
+          <dt>Dates</dt>
+          <dd>{project.startDate ? formatDate(project.startDate) : '?'} → {project.endDate ? formatDate(project.endDate) : 'ongoing'}</dd>
         </div>
-        <div>
-          <dt>Parent</dt>
-          <dd>
-            {#if project.parentName}
-              <a href="/app/projects/{project.parentId}">{project.parentName}</a>
-              <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
-            {:else}
-              <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent…" onPick={handleSetParent} />
-            {/if}
-          </dd>
-        </div>
-        {#if project.startDate || project.endDate}
-          <div>
-            <dt>Dates</dt>
-            <dd>{project.startDate ? formatDate(project.startDate) : '?'} → {project.endDate ? formatDate(project.endDate) : 'ongoing'}</dd>
-          </div>
-        {/if}
-      </dl>
-    </section>
+      {/if}
+    </dl>
+  {/snippet}
+
+  {#snippet renderOverview()}
+    {#if project.description}
+      <section class="section">
+        <div class="description"><MarkdownRenderer content={project.description} /></div>
+      </section>
+    {/if}
 
     <section class="section">
       <div class="section-header">

@@ -79,6 +79,8 @@
     /** Set for archivable entities. An archived entity shows a banner and no edit button. */
     readonly archivedAt?: Date | string | null;
     readonly renderOverview: Snippet<[OverviewCtx]>;
+    /** The entity's label–value metadata. It sits above the docs, under the header. */
+    readonly renderMeta?: Snippet;
     readonly renderAssetHeader: Snippet;
     readonly renderEditForm: Snippet<[EditFormCtx]>;
   }
@@ -97,6 +99,7 @@
     relations = [],
     archivedAt = undefined,
     renderOverview,
+    renderMeta = undefined,
     renderAssetHeader,
     renderEditForm,
   }: Props = $props();
@@ -155,6 +158,9 @@
     const c = center;
     return c.type === 'doc' ? c.id : null;
   });
+
+  // A doc fills the centre pane, so the metadata above it gives way.
+  const docOpen = $derived(center.type === 'doc' || center.type === 'newDoc');
 
   const openDoc = (id: string) => { center = { type: 'doc', id }; };
   // Close the notes drawer (mobile) so the editor in the center pane is reachable.
@@ -362,6 +368,10 @@
       {/if}
     </div>
 
+    {#if renderMeta && !docOpen}
+      <div class="meta-panel">{@render renderMeta()}</div>
+    {/if}
+
     {#if acceptsDocs(entityType)}
       <div class="docs-panel">
         <DocsManager
@@ -483,8 +493,10 @@
     font-size: var(--fs-sm);
     color: var(--text-2);
   }
-  // The docs list sits in the centre pane, above whatever is open. The extra
-  // margin puts it on the same rhythm as the `.section`s in the overview below.
+  // The metadata and the docs list sit at the top of the centre pane, above
+  // whatever is open. The extra margin puts them on the same rhythm as the
+  // `.section`s in the overview below.
+  .meta-panel,
   .docs-panel {
     max-width: 720px;
     margin-bottom: var(--sp-2);

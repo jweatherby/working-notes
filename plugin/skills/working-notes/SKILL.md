@@ -102,7 +102,7 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md).
 3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the list at the top of the page's middle column.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column, which they open by clicking the header.
 
 ## Importing a PDF
 

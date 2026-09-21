@@ -58,7 +58,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
 | `ParamSelect` | `param`, `options: {id,name,group?}[]`, `defaultValue`, `ariaLabel` | a list page's toolbar select whose value lives in one query parameter (picking `defaultValue` removes it). The projects page's team filter (`?team=`) and grouping (`?group=`) use it |
 | `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`, built on `ParamSelect`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
-| `DisclosureButton` | `expanded`, `label`, `onToggle` | the chevron that shows or hides a tree row's children (collapsible sub-projects). Use `flattenTree(forest, isCollapsed)` from `$shared/utils/hierarchy` for the rows |
+| `DisclosureButton` | `expanded`, `label`, `onToggle`, children? | the chevron that shows or hides a tree row's children (collapsible sub-projects). Use `flattenTree(forest, isCollapsed)` from `$shared/utils/hierarchy` for the rows. Pass children to put the label inside the button, so the whole thing toggles; wrap the component in the heading (`<h4><DisclosureButton>Docs</DisclosureButton></h4>`), as the Docs header does |
 | `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
 | `popup-url.ts` | `openPopup(id, extra?)`, `closePopup({ invalidate?, clear? })` | opening and closing `Popup` (`?popup=<id>`) |
 | `submit.ts` | `submit(fn)`, `submitOrThrow(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |
@@ -71,7 +71,7 @@ Use a standard component or class before writing markup or styles yourself. If n
 
 **Pages**
 - A list page is `<div class="page">`, then `PageHeader` (its primary action is `.btn primary`), then the content, then `EmptyState boxed` with the same action when the list is empty. `src/routes/app/people/+page.svelte` is the reference.
-- An entity detail page is `EntityDetailPage`. It supplies only `renderOverview`, `renderAssetHeader` and `renderEditForm`. Never rebuild the sidebar, notes panel, breadcrumb or edit popup.
+- An entity detail page is `EntityDetailPage`. It supplies only `renderMeta` (its `.meta-list`, if it has one), `renderOverview`, `renderAssetHeader` and `renderEditForm`. Never rebuild the sidebar, notes panel, breadcrumb or edit popup.
 - Inside an overview, group content in `.section`, with a `.section-header` holding an `h4` and `.count`. Render collections as `.list` + `.list-row`, with per-row actions in `.row-actions`. Put a wide table in `.table-wrap`.
 
 **Forms and mutations**
@@ -110,8 +110,8 @@ Use a standard component or class before writing markup or styles yourself. If n
 
 | Component | Props | Owns |
 |---|---|---|
-| `common/EntityDetailPage` | `entityType`, `entityId`, `entityName`, `breadcrumbLabel`, `breadcrumbHref`, `editPopupTitle`, `docs`, `notes`, `todos`, `reports?`, `relations?`, snippets `renderOverview({ openEdit })`, `renderAssetHeader`, `renderEditForm({ onSuccess, onCancel })` | Detail shell: sidebar (todos, reports, related), right-panel notes, center pane (the docs list unless `acceptsDocs` says no, as on wiki pages, then overview/doc/note/todo), edit popup. `loadEntityAssets` (`$shared/trpc/load-entity-assets`) loads docs, notes, todos, reports and relations |
-| `common/DocsManager` | `docs`, `activeDocId`, `onSelect`, `onStartAdd`, `onRemove`, `onReorder` | Doc list with reorder. It sits at the top of the centre pane, above whatever that pane has open, so a doc is one click away from any view |
+| `common/EntityDetailPage` | `entityType`, `entityId`, `entityName`, `breadcrumbLabel`, `breadcrumbHref`, `editPopupTitle`, `docs`, `notes`, `todos`, `reports?`, `relations?`, snippets `renderOverview({ openEdit })`, `renderMeta?`, `renderAssetHeader`, `renderEditForm({ onSuccess, onCancel })` | Detail shell: sidebar (todos, reports, related), right-panel notes, center pane (`renderMeta`, then the docs list unless `acceptsDocs` says no, as on wiki pages, then overview/doc/note/todo), edit popup. `renderMeta` is the entity's `.meta-list`; it sits above the docs and gives way while a doc is open. `loadEntityAssets` (`$shared/trpc/load-entity-assets`) loads docs, notes, todos, reports and relations |
+| `common/DocsManager` | `docs`, `activeDocId`, `onSelect`, `onStartAdd`, `onRemove`, `onReorder` | Doc list with reorder. It sits at the top of the centre pane, above whatever that pane has open, so a doc is one click away from any view. The header is a `DisclosureButton`, closed until clicked (adding a doc opens it) |
 | `common/DocEditor` | `title`, `content`, `hasSourcePdf?`, `converting?`, `pdfNotice?` (`{ tone: warning \| error, message }`), `onSave`, `onSaveTitle?`, `onUploadPdf?`, `onOpenSourcePdf?`, `onConvertPdf?`, `onClose?` | Editor/Markdown/Preview tabs, "Attach PDF" (only while no PDF is attached), "Convert with Claude" (only while the doc has a PDF and no content). `EntityDetailPage` owns the conversion state and converts a PDF attached to an empty doc straight away |
 | `common/RightPanel` / `common/PageChat` | `PageChat`: `page` (`RightPanelPage`) | Right panel tabs: Notes (`rightPanelNotes`) and Chat (`rightPanelPage`, set by `EntityDetailPage`). Chat asks the local Claude about the open page through `askAboutPage` (`common/use-page-chat.ts`); the conversation is kept while switching tabs and reset on a new page or Clear |
 | `common/MarkdownRenderer` | `content`, `placeholder?` | Markdown + charts + mermaid |

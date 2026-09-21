@@ -1,5 +1,6 @@
 <script lang="ts">
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
+  import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
 
   interface Doc {
@@ -26,6 +27,17 @@
     onReorder,
   }: Props = $props();
 
+  // Closed until asked for: the list is a way in to the docs, not the page's content.
+  let expanded = $state(false);
+
+  const toggle = () => { expanded = !expanded; };
+
+  // Adding a doc opens the editor in the centre pane, so show where the new one landed.
+  const startAdd = () => {
+    expanded = true;
+    onStartAdd();
+  };
+
   const moveUp = async (index: number) => {
     if (index <= 0) return;
     const ids = docs.map((d) => d.id);
@@ -43,26 +55,32 @@
 
 <div class="docs-manager">
   <div class="section-header">
-    <h4>Docs <span class="count">{docs.length}</span></h4>
-    <button type="button" class="btn icon sm" onclick={onStartAdd} title="Add doc" aria-label="Add doc">+</button>
+    <h4>
+      <DisclosureButton {expanded} label="Docs" onToggle={toggle}>
+        Docs <span class="count">{docs.length}</span>
+      </DisclosureButton>
+    </h4>
+    <button type="button" class="btn icon sm" onclick={startAdd} title="Add doc" aria-label="Add doc">+</button>
   </div>
-  {#if docs.length > 0}
-    <ul class="list">
-      {#each docs as doc, i (doc.id)}
-        <li class="list-row" class:active={activeDocId === doc.id}>
-          <button type="button" class="grow truncate doc-title" onclick={() => onSelect(doc.id)}>
-            {doc.title}
-          </button>
-          <span class="row-actions">
-            <button type="button" class="btn icon sm" onclick={() => moveUp(i)} disabled={i === 0} title="Move up" aria-label="Move up">↑</button>
-            <button type="button" class="btn icon sm" onclick={() => moveDown(i)} disabled={i === docs.length - 1} title="Move down" aria-label="Move down">↓</button>
-            <ConfirmButton label="Delete doc" variant="icon" onConfirm={() => onRemove(doc.id)} />
-          </span>
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <EmptyState message="No docs yet." small />
+  {#if expanded}
+    {#if docs.length > 0}
+      <ul class="list">
+        {#each docs as doc, i (doc.id)}
+          <li class="list-row" class:active={activeDocId === doc.id}>
+            <button type="button" class="grow truncate doc-title" onclick={() => onSelect(doc.id)}>
+              {doc.title}
+            </button>
+            <span class="row-actions">
+              <button type="button" class="btn icon sm" onclick={() => moveUp(i)} disabled={i === 0} title="Move up" aria-label="Move up">↑</button>
+              <button type="button" class="btn icon sm" onclick={() => moveDown(i)} disabled={i === docs.length - 1} title="Move down" aria-label="Move down">↓</button>
+              <ConfirmButton label="Delete doc" variant="icon" onConfirm={() => onRemove(doc.id)} />
+            </span>
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <EmptyState message="No docs yet." small />
+    {/if}
   {/if}
 </div>
 

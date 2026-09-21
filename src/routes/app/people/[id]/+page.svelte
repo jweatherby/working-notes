@@ -73,38 +73,38 @@
   {reports}
   {relations}
 >
-  {#snippet renderOverview()}
-    <section class="section">
-      <dl class="meta-list">
-        <div>
-          <dt>Email</dt>
-          <dd>{#if person.email}<a href="mailto:{person.email}">{person.email}</a>{:else}<span class="muted">—</span>{/if}</dd>
-        </div>
-        <div>
-          <dt>Lead</dt>
-          <dd>
-            {#if person.leadName}
-              <a href="/app/people/{person.leadId}">{person.leadName}</a>
-              <ConfirmButton label="Unassign" confirmLabel="Unassign lead" onConfirm={() => handleSetLead(null)} />
-            {:else}
-              <InlinePicker label="Assign lead" options={leadOptions} placeholder="Select a lead…" onPick={handleSetLead} />
-            {/if}
-          </dd>
-        </div>
-        <div>
-          <dt>Department</dt>
-          <dd>
-            {#if person.department}
-              <a href="/app/departments/{person.department.id}">{person.department.name}</a>
-              <ConfirmButton label="Remove" confirmLabel="Remove from department" onConfirm={() => handleRemoveDept(person.department!.id)} />
-            {:else}
-              <InlinePicker label="Assign department" options={availableDepartments} placeholder="Select a department…" onPick={handleAddDept} />
-            {/if}
-          </dd>
-        </div>
-      </dl>
-    </section>
+  {#snippet renderMeta()}
+    <dl class="meta-list">
+      <div>
+        <dt>Email</dt>
+        <dd>{#if person.email}<a href="mailto:{person.email}">{person.email}</a>{:else}<span class="muted">—</span>{/if}</dd>
+      </div>
+      <div>
+        <dt>Lead</dt>
+        <dd>
+          {#if person.leadName}
+            <a href="/app/people/{person.leadId}">{person.leadName}</a>
+            <ConfirmButton label="Unassign" confirmLabel="Unassign lead" onConfirm={() => handleSetLead(null)} />
+          {:else}
+            <InlinePicker label="Assign lead" options={leadOptions} placeholder="Select a lead…" onPick={handleSetLead} />
+          {/if}
+        </dd>
+      </div>
+      <div>
+        <dt>Department</dt>
+        <dd>
+          {#if person.department}
+            <a href="/app/departments/{person.department.id}">{person.department.name}</a>
+            <ConfirmButton label="Remove" confirmLabel="Remove from department" onConfirm={() => handleRemoveDept(person.department!.id)} />
+          {:else}
+            <InlinePicker label="Assign department" options={availableDepartments} placeholder="Select a department…" onPick={handleAddDept} />
+          {/if}
+        </dd>
+      </div>
+    </dl>
+  {/snippet}
 
+  {#snippet renderOverview()}
     <section class="section">
       <div class="section-header">
         <h4>Direct reports <span class="count">{person.reports.length}</span></h4>

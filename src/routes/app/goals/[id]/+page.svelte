@@ -159,50 +159,53 @@
   {reports}
   {relations}
 >
-  {#snippet renderOverview({ openEdit })}
-    <section class="section">
-      {#if goal.description}
-        <div class="description"><MarkdownRenderer content={goal.description} /></div>
+  {#snippet renderMeta()}
+    <dl class="meta-list">
+      <div>
+        <dt>Owner</dt>
+        <dd>
+          {#if goal.owner}
+            <a href={goal.owner.path}>{goal.owner.label ?? 'Missing owner'}</a>
+            <ConfirmButton label="Unassign" confirmLabel="Unassign owner" onConfirm={() => handleSetOwner(null)} />
+          {:else}
+            <span class="muted">Whole organisation</span>
+            <InlinePicker label="Assign owner" options={data.ownerOptions} placeholder="Select an owner…" onPick={handleSetOwner} />
+          {/if}
+        </dd>
+      </div>
+      <div>
+        <dt>Status</dt>
+        <dd>
+          <span class={goalStatusBadgeClass(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</span>
+          <InlinePicker label="Change" options={statusOptions} placeholder="Select a status…" onPick={handleSetStatus} />
+        </dd>
+      </div>
+      {#if goal.period}
+        <div>
+          <dt>Period</dt>
+          <dd>{goal.period}</dd>
+        </div>
       {/if}
-      <dl class="meta-list">
-        <div>
-          <dt>Owner</dt>
-          <dd>
-            {#if goal.owner}
-              <a href={goal.owner.path}>{goal.owner.label ?? 'Missing owner'}</a>
-              <ConfirmButton label="Unassign" confirmLabel="Unassign owner" onConfirm={() => handleSetOwner(null)} />
-            {:else}
-              <span class="muted">Whole organisation</span>
-              <InlinePicker label="Assign owner" options={data.ownerOptions} placeholder="Select an owner…" onPick={handleSetOwner} />
-            {/if}
-          </dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>
-            <span class={goalStatusBadgeClass(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</span>
-            <InlinePicker label="Change" options={statusOptions} placeholder="Select a status…" onPick={handleSetStatus} />
-          </dd>
-        </div>
-        {#if goal.period}
-          <div>
-            <dt>Period</dt>
-            <dd>{goal.period}</dd>
-          </div>
-        {/if}
-        <div>
-          <dt>Parent</dt>
-          <dd>
-            {#if goal.parent}
-              <a href="/app/goals/{goal.parent.id}">{goal.parent.title}</a>
-              <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
-            {:else}
-              <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent goal…" onPick={handleSetParent} />
-            {/if}
-          </dd>
-        </div>
-      </dl>
-    </section>
+      <div>
+        <dt>Parent</dt>
+        <dd>
+          {#if goal.parent}
+            <a href="/app/goals/{goal.parent.id}">{goal.parent.title}</a>
+            <ConfirmButton label="Unlink" confirmLabel="Unlink parent" onConfirm={() => handleSetParent(null)} />
+          {:else}
+            <InlinePicker label="Assign parent" options={parentOptions} placeholder="Select a parent goal…" onPick={handleSetParent} />
+          {/if}
+        </dd>
+      </div>
+    </dl>
+  {/snippet}
+
+  {#snippet renderOverview({ openEdit })}
+    {#if goal.description}
+      <section class="section">
+        <div class="description"><MarkdownRenderer content={goal.description} /></div>
+      </section>
+    {/if}
 
     <section class="section">
       <div class="section-header">
