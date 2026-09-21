@@ -97,8 +97,8 @@ Mac so that it gets a Dock icon and a window of its own — see
 [docs/INSTALL.md](docs/INSTALL.md#install-it-as-a-mac-app).
 
 The home screen shows your open todos, what changed lately, and a graph of how things connect. The
-org map shows reporting lines. Everything else gets a page of its own, with its docs, todos and
-links in the sidebar and its notes on the right.
+org map shows reporting lines. Everything else gets a page of its own, with its docs down the
+middle, its todos and links in the sidebar and its notes on the right.
 
 Press ⌘K to search. Start with `/` to look in one place only, as in `/person dana`.
 

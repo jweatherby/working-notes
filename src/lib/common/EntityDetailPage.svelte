@@ -315,18 +315,6 @@
 
 <DetailLayout {leftOpen} onToggleLeft={toggleLeft}>
   {#snippet sidebar()}
-    {#if acceptsDocs(entityType)}
-      <div class="section">
-        <DocsManager
-          {docs}
-          {activeDocId}
-          onSelect={openDoc}
-          onStartAdd={openNewDoc}
-          onRemove={docHandlers.handleRemoveDoc}
-          onReorder={docHandlers.handleReorderDocs}
-        />
-      </div>
-    {/if}
     <div class="section">
       <TodoWidget
         {entityType}
@@ -373,6 +361,19 @@
         </p>
       {/if}
     </div>
+
+    {#if acceptsDocs(entityType)}
+      <div class="docs-panel">
+        <DocsManager
+          {docs}
+          {activeDocId}
+          onSelect={openDoc}
+          onStartAdd={openNewDoc}
+          onRemove={docHandlers.handleRemoveDoc}
+          onReorder={docHandlers.handleReorderDocs}
+        />
+      </div>
+    {/if}
 
     {#if activeDoc}
       <DocEditor
@@ -481,6 +482,12 @@
     margin: var(--sp-2) 0 0;
     font-size: var(--fs-sm);
     color: var(--text-2);
+  }
+  // The docs list sits in the centre pane, above whatever is open. The extra
+  // margin puts it on the same rhythm as the `.section`s in the overview below.
+  .docs-panel {
+    max-width: 720px;
+    margin-bottom: var(--sp-2);
   }
   .pane-card { max-width: 640px; }
   .pane-header {
