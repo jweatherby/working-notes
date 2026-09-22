@@ -27,14 +27,19 @@
     onReorder,
   }: Props = $props();
 
-  // Closed until asked for: the list is a way in to the docs, not the page's content.
-  let expanded = $state(false);
+  // Open on arrival, so the page shows what it holds. It closes itself only
+  // when a doc takes the centre pane, and reopens on a click.
+  let expanded = $state(true);
 
   const toggle = () => { expanded = !expanded; };
 
-  // Adding a doc opens the editor in the centre pane, so show where the new one landed.
+  const select = (id: string) => {
+    expanded = false;
+    onSelect(id);
+  };
+
   const startAdd = () => {
-    expanded = true;
+    expanded = false;
     onStartAdd();
   };
 
@@ -67,7 +72,7 @@
       <ul class="list">
         {#each docs as doc, i (doc.id)}
           <li class="list-row" class:active={activeDocId === doc.id}>
-            <button type="button" class="grow truncate doc-title" onclick={() => onSelect(doc.id)}>
+            <button type="button" class="grow truncate doc-title" onclick={() => select(doc.id)}>
               {doc.title}
             </button>
             <span class="row-actions">
