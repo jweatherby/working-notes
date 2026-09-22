@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
 import type { RelationItem } from '$shared/types/relations';
-import { addRelation, groupRelations, removeRelation } from '../operations';
+import { addRelation, groupRelations, listRelationsForEntity, removeRelation } from '../operations';
 
 const item = (overrides: Partial<RelationItem>): RelationItem => ({
   id: 'rel',
@@ -116,5 +116,30 @@ describe('removeRelation', () => {
     const result = await removeRelation(reg, 'rel_1');
     expect(!result.ok && result.error.message).toContain('remove the link from the content');
     expect(del).not.toHaveBeenCalled();
+  });
+});
+
+describe('listRelationsForEntity', () => {
+  it('links a todo to its popup on the page it belongs to', async () => {
+    const reg = createTestRegistry({
+      prisma: {
+        relation: {
+          findMany: vi.fn().mockResolvedValue([
+            { id: 'rel_1', fromType: 'TODO', fromId: 'td1', toType: 'TEAM', toId: 't1', kind: 'RELATED', note: null, createdAt: new Date(0) }
+          ])
+        },
+        todo: {
+          findUnique: vi.fn().mockImplementation(({ select }: { select: Record<string, boolean> }) =>
+            Promise.resolve(select.title ? { title: 'Book 1:1' } : { entityType: 'PROJECT', entityId: 'p1' }))
+        }
+      } as unknown as Registry['prisma']
+    });
+    const result = await listRelationsForEntity(reg, 'TEAM', 't1');
+    expect(result.ok && result.value[0]?.items[0]?.other).toEqual({
+      entityType: 'TODO',
+      entityId: 'td1',
+      label: 'Book 1:1',
+      path: '/app/projects/p1?popup=todo&todo=td1'
+    });
   });
 });

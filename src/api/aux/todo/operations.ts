@@ -5,6 +5,7 @@ import type { ArchiveFilter, EntityType, TodoStatus } from '$shared/types/enums'
 import { entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
 import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
+import { relationCleanupOp } from '$api/_entity-cleanup';
 
 // ----- Types -----
 
@@ -167,6 +168,7 @@ export const deleteTodo = async (
   const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
   if (!writable.ok) return err(writable.error);
 
+  await relationCleanupOp(reg, 'TODO', id);
   await reg.prisma.todo.delete({ where: { id } });
   return ok({ deleted: true });
 };

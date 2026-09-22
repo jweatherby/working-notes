@@ -38,7 +38,8 @@ describe('toRelationInput', () => {
 describe('relationEnd', () => {
   it('accepts relatable types only', () => {
     expect(relationEnd('TEAM', 't1')).toEqual(team);
-    expect(relationEnd('TODO', 'x1')).toBeNull();
+    expect(relationEnd('TODO', 'x1')).toEqual({ entityType: 'TODO', entityId: 'x1' });
+    expect(relationEnd('LINK', 'l1')).toBeNull();
     expect(relationEnd('TEAM', '')).toBeNull();
   });
 });

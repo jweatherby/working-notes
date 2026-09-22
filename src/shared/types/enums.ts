@@ -55,6 +55,6 @@ export const ARCHIVE_FILTERS = ['exclude', 'only', 'include'] as const;
 export type ArchiveFilter = (typeof ARCHIVE_FILTERS)[number];
 
 /** Entity types a relation can start or end at. */
-export const RELATABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE', 'DOC', 'NOTE', 'REPORT'] as const;
+export const RELATABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE', 'DOC', 'NOTE', 'REPORT', 'TODO'] as const;
 
 export type RelatableType = (typeof RELATABLE_TYPES)[number];

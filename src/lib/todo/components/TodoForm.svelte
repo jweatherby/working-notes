@@ -5,6 +5,8 @@
   import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
+  import { toRelationInput, type PickedLink } from '$shared/utils/relations';
+  import TodoLinks from './TodoLinks.svelte';
 
   interface Props {
     /** Omit both entity props to let the form ask which entity the todo belongs to. */
@@ -17,7 +19,10 @@
 
   const { entityType, entityId, editId = null, onSuccess, onCancel }: Props = $props();
 
-  const isEdit = $derived(!!editId);
+  // Set when a new todo saved but some of its links didn't, so the form carries on as its edit form.
+  let savedId = $state<string | null>(null);
+  const todoId = $derived(editId ?? savedId);
+  const isEdit = $derived(!!todoId);
   const needsEntity = $derived(!isEdit && !(entityType && entityId));
 
   let title = $state('');
@@ -30,6 +35,7 @@
   let submitting = $state(false);
   let error = $state('');
   let loaded = $state(!editId);
+  let pendingLinks = $state<readonly PickedLink[]>([]);
 
   $effect(() => {
     if (editId && !loaded) loadTodo(editId);
@@ -81,9 +87,10 @@
     }
     submitting = true;
     error = '';
-    const outcome = isEdit && editId
+    const id = todoId;
+    const outcome = id
       ? await submit(() => trpc().todo.update.mutate({
-          id: editId,
+          id,
           title: title.trim(),
           description: description.trim() || null,
           priority,
@@ -98,17 +105,40 @@
           entityId: targetId,
           targetDate: targetDate ? new Date(targetDate) : undefined,
         }));
-    submitting = false;
     if (!outcome.ok) {
+      submitting = false;
       error = outcome.error;
       return;
     }
+    if (!id) {
+      const failed = await addLinks(outcome.value.id);
+      if (failed.length > 0) {
+        submitting = false;
+        savedId = outcome.value.id;
+        pendingLinks = [];
+        error = `The todo was created, but linking it failed: ${failed.join('; ')}`;
+        return;
+      }
+    }
+    submitting = false;
     await onSuccess();
   };
 
+  /** Adds the links picked while creating; returns what failed. */
+  const addLinks = async (id: string): Promise<readonly string[]> => {
+    const failed: string[] = [];
+    for (const link of pendingLinks) {
+      const input = toRelationInput(link.choice, { entityType: 'TODO', entityId: id }, link.target);
+      const outcome = input ? await submit(() => trpc().relation.add.mutate(input)) : { ok: false as const, error: 'unknown link kind' };
+      if (!outcome.ok) failed.push(`${link.name} (${outcome.error})`);
+    }
+    return failed;
+  };
+
   const handleDelete = async () => {
-    if (!editId) return;
-    const outcome = await submit(() => trpc().todo.delete.mutate({ id: editId }));
+    const id = todoId;
+    if (!id) return;
+    const outcome = await submit(() => trpc().todo.delete.mutate({ id }));
     if (!outcome.ok) {
       error = outcome.error;
       return;
@@ -182,6 +212,8 @@
         </Field>
       </div>
     {/if}
+
+    <TodoLinks {todoId} bind:pending={pendingLinks} />
 
     {#if error}<p class="form-error">{error}</p>{/if}
 

@@ -56,7 +56,7 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 ## Relations
 
-A relation links two entities, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE` or `REPORT`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
+A relation links two entities, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE`, `REPORT` or `TODO`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
 
 | Kind | From the `from` side | From the `to` side |
 |---|---|---|
@@ -73,7 +73,7 @@ A relation links two entities, with a `kind` and an optional `note` (up to 1000 
 
 These use `entityType` + `entityId`, where `entityType` is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL` or `PAGE` (also `DOC`, `NOTE`, `REPORT`, `TODO`, `LINK`, `TAG`, `COMMENT`, `EMOJI`).
 
-Deleting a person, team, department, project, goal, page or report also deletes everything attached to it and its relations, and clears any goal or project owner that pointed at it. Removing a doc or note deletes its relations.
+Deleting a person, team, department, project, goal, page or report also deletes everything attached to it and its relations, and clears any goal or project owner that pointed at it. Removing a doc, note or todo deletes its relations.
 
 | Entity | Fields | Procedures |
 |---|---|---|

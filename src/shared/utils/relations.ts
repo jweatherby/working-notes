@@ -16,6 +16,14 @@ export interface RelationChoice {
   readonly name: string;
 }
 
+/** A link picked in a form before the entity it starts from is saved: added once it is. */
+export interface PickedLink {
+  readonly choice: string;
+  readonly choiceName: string;
+  readonly target: RelationEnd;
+  readonly name: string;
+}
+
 export interface RelationAddInput {
   readonly fromType: RelatableType;
   readonly fromId: string;

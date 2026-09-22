@@ -27,8 +27,13 @@ export const groupRelations = (items: readonly RelationItem[]): readonly Relatio
 
 // ----- Queries -----
 
-// Docs and notes have no page of their own; link to the entity they're attached to.
+// Docs, notes and todos have no page of their own; link to the entity they're
+// attached to (a todo opens in its popup there).
 const pathOf = async (reg: Pick<Registry, 'prisma'>, entityType: RelatableType, entityId: string): Promise<string> => {
+  if (entityType === 'TODO') {
+    const owner = await reg.prisma.todo.findUnique({ where: { id: entityId }, select: { entityType: true, entityId: true } });
+    if (owner) return `${entityPath(owner.entityType as EntityType, owner.entityId)}?popup=todo&todo=${entityId}`;
+  }
   if (entityType === 'DOC' || entityType === 'NOTE') {
     const where = { where: { id: entityId }, select: { entityType: true, entityId: true } };
     const owner = entityType === 'DOC' ? await reg.prisma.doc.findUnique(where) : await reg.prisma.note.findUnique(where);

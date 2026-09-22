@@ -18,9 +18,11 @@
     readonly entityId: string;
     readonly groups: readonly RelationGroup[];
     readonly readOnly?: boolean;
+    /** Runs after a link is added or removed, for a caller that loads `groups` itself (the todo popup). */
+    readonly onChange?: () => Promise<void> | void;
   }
 
-  const { entityType, entityId, groups, readOnly = false }: Props = $props();
+  const { entityType, entityId, groups, readOnly = false, onChange }: Props = $props();
 
   const self = $derived(readOnly ? null : relationEnd(entityType, entityId));
   const count = $derived(groups.reduce((n, group) => n + group.items.length, 0));
@@ -29,6 +31,7 @@
 
   const handleRemove = async (id: string) => {
     await submitOrThrow(() => trpc().relation.remove.mutate({ id }));
+    await onChange?.();
     await invalidateAll();
   };
 </script>
@@ -48,7 +51,7 @@
     {/if}
   </div>
   {#if self && adding}
-    <AddRelation {self} onDone={() => (adding = false)} />
+    <AddRelation {self} {onChange} onDone={() => (adding = false)} />
   {/if}
   {#if count === 0}
     {#if !adding}<EmptyState message="Nothing linked yet." small />{/if}

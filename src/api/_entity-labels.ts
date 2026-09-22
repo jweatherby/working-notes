@@ -36,6 +36,8 @@ export const resolveEntityLabel = async (
       return (await reg.prisma.doc.findUnique({ ...where, select: { title: true } }))?.title ?? null;
     case 'REPORT':
       return (await reg.prisma.report.findUnique({ ...where, select: { title: true } }))?.title ?? null;
+    case 'TODO':
+      return (await reg.prisma.todo.findUnique({ ...where, select: { title: true } }))?.title ?? null;
     case 'NOTE': {
       const note = await reg.prisma.note.findUnique({ ...where, select: { content: true } });
       return note ? firstLine(note.content) : null;
