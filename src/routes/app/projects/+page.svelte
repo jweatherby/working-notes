@@ -8,6 +8,7 @@
   import ParamSelect from '$lib/ui/ParamSelect.svelte';
   import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
+  import DependencyMap from '$lib/project/components/DependencyMap.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { statusBadgeClass } from '$lib/project/utils';
   import {
@@ -21,6 +22,10 @@
   } from '$lib/project/project-list';
   import { flattenTree } from '$shared/utils/hierarchy';
 
+  const VIEW_OPTIONS = [
+    { id: 'table', name: 'Table' },
+    { id: 'map', name: 'Dependency map' }
+  ];
   const GROUPING_OPTIONS = [
     { id: 'none', name: 'No grouping' },
     { id: 'team', name: 'Group by team' }
@@ -64,6 +69,13 @@
   const hasNesting = $derived(groups.some((group) => group.nodes.some((node) => node.children.length > 0)));
   const grouped = $derived(params.groupBy === 'team');
 
+  const isMap = $derived(page.url.searchParams.get('view') === 'map');
+  const tableHref = $derived.by(() => {
+    const url = new URL(page.url);
+    url.searchParams.delete('view');
+    return `${url.pathname}${url.search}`;
+  });
+
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
@@ -75,13 +87,16 @@
   </PageHeader>
 
   <div class="toolbar filters">
+    <ParamSelect param="view" options={VIEW_OPTIONS} defaultValue="table" ariaLabel="View" />
     <ArchiveFilter />
     {#if teams.length > 0}
       <ParamSelect param="team" options={teamFilterOptions} defaultValue="" ariaLabel="Filter by team" />
-      <ParamSelect param="group" options={GROUPING_OPTIONS} defaultValue="none" ariaLabel="Group projects" />
+      {#if !isMap}
+        <ParamSelect param="group" options={GROUPING_OPTIONS} defaultValue="none" ariaLabel="Group projects" />
+      {/if}
     {/if}
     <span class="spacer"></span>
-    {#if hasNesting}
+    {#if hasNesting && !isMap}
       <button type="button" class="btn sm ghost" onclick={() => setAll('expanded')}>Expand all</button>
       <button type="button" class="btn sm ghost" onclick={() => setAll('collapsed')}>Collapse all</button>
     {/if}
@@ -133,6 +148,12 @@
     <EmptyState message="No projects yet." boxed>
       <button type="button" class="btn sm" onclick={() => openPopup('new-project')}>Add project</button>
     </EmptyState>
+  {:else if isMap}
+    {#if data.dependencies}
+      <DependencyMap projects={allProjects} dependencies={data.dependencies} team={params.team} {tableHref} />
+    {:else}
+      <EmptyState message="The dependency map couldn't be loaded. Reload the page to try again." boxed />
+    {/if}
   {:else if tables.length === 0}
     <EmptyState message="No projects match these filters." boxed />
   {:else if grouped}

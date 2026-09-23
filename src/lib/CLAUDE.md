@@ -128,6 +128,7 @@ Use a standard component or class before writing markup or styles yourself. If n
 | `page/components/PageForm` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` | Page create/edit: title, kind, and property fields from `PAGE_KIND_FIELDS`. Content is edited on the page itself |
 | `goal/components/ProgressLineChart` | `checkIns`, `baseline?`, `target?`, `unit?` | Check-in values over time with the target line, drawn with `renderChart` |
 | `goal/components/GoalRows` | `goals`, `showOwner?`, `removeLabel?`, `onRemove?` | Goals as `.list-row`s with period, status badge and progress; used for sub-goals and a project's goals |
+| `project/components/DependencyMap` | `projects` (`ProjectListItem[]`), `dependencies` (`project.dependencies`), `team`, `tableHref` | The projects page's Map view: `DEPENDS_ON` links between projects and goal–project links, left to right, with hover lighting a node's whole upstream and downstream chain |
 | `goal/components/OwnedWork` | `goals`, `projects` | The "Goals" and "Projects owned" sections on person, team and department overviews |
 | `todo/components/TodoForm` | `entityType?`, `entityId?`, `editId?`, `onSuccess`, `onCancel?` | Todo create/edit; asks for the entity when none is given. Its `TodoLinks` section links the todo to other entities: live on an edit, and on a create the picks are added once the todo saves |
 | `todo/components/CreateTodoPopup` | – | Global `?popup=todo[&todo=<id>]`, a `Popup` around `TodoForm`; infers the entity from the current detail route |

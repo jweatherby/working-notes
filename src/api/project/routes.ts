@@ -3,6 +3,7 @@ import { ARCHIVE_FILTERS, OWNER_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
 import { setArchived } from '$api/_archive';
 import { listProjects, getProject, createProject, updateProject, deleteProject } from './operations';
+import { listProjectDependencies } from './dependencies';
 
 export const projectRouter = router({
   list: procedure
@@ -12,6 +13,10 @@ export const projectRouter = router({
       archived: z.enum(ARCHIVE_FILTERS).default('exclude')
     }).default({}))
     .query(({ ctx, input }) => listProjects(ctx.reg, input)),
+
+  dependencies: procedure
+    .input(z.object({ archived: z.enum(ARCHIVE_FILTERS).default('exclude') }).default({}))
+    .query(({ ctx, input }) => listProjectDependencies(ctx.reg, input.archived)),
 
   get: procedure
     .input(z.object({ id: z.string() }))

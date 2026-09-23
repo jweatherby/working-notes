@@ -14,6 +14,7 @@
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { errorMessage } from '$lib/ui/submit';
+  import { truncateMiddle } from '$shared/utils/text';
   import { focusHeight, layoutFocus } from '../focus-layout';
 
   interface Props {
@@ -26,12 +27,7 @@
   const MAX_CHARS = 24;
   const PILL_H = 26;
 
-  /** Long names lose their middle, not their end: sibling projects often differ only at the end. */
-  const truncate = (s: string): string => {
-    if (s.length <= MAX_CHARS) return s;
-    const tail = Math.floor((MAX_CHARS - 1) * 0.4);
-    return `${s.slice(0, MAX_CHARS - 1 - tail).trimEnd()}…${s.slice(-tail).trimStart()}`;
-  };
+  const truncate = (s: string): string => truncateMiddle(s, MAX_CHARS);
   /** Rough pill width for 11px text; the layout only needs it to centre the pill. */
   const pillWidth = (text: string, dot = true): number => Math.round(text.length * 6.3 + (dot ? 30 : 20));
 
