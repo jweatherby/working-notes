@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import { addDoc, attachSourcePdf, getDocReadUrl, removeDoc, updateDoc } from '../operations';
+import { addDoc, attachSourcePdf, getDocReadUrl, removeDoc, updateDoc, uploadDocImage } from '../operations';
 
 const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['storage'] => ({
   putObject: vi.fn().mockResolvedValue(undefined),
@@ -192,5 +192,40 @@ describe('updateDoc', () => {
     expect(relation.deleteMany).toHaveBeenCalledWith({
       where: { fromType: 'DOC', fromId: 'doc_1', kind: 'MENTIONS' }
     });
+  });
+});
+
+describe('uploadDocImage', () => {
+  it('stores the image under the doc and returns its key', async () => {
+    const putObject = vi.fn().mockResolvedValue(undefined);
+    const reg = createTestRegistry({
+      prisma: {
+        doc: { findUnique: vi.fn().mockResolvedValue({ id: 'doc_1', entityType: 'PROJECT', entityId: 'proj_1' }) },
+        project: { findUnique: vi.fn().mockResolvedValue({ archivedAt: null }) }
+      } as unknown as Registry['prisma'],
+      storage: storageMock({ putObject }),
+      uuid: () => 'uuid-abc'
+    });
+
+    const result = await uploadDocImage(reg, 'doc_1', 'image/jpeg', Buffer.from('jpg bytes').toString('base64'));
+
+    expect(result).toEqual({ ok: true, value: { key: 'docs/doc_1/image-uuid-abc.jpg' } });
+    const [key, body, contentType] = putObject.mock.calls[0]!;
+    expect(key).toBe('docs/doc_1/image-uuid-abc.jpg');
+    expect(contentType).toBe('image/jpeg');
+    expect(Buffer.from(body).toString('utf8')).toBe('jpg bytes');
+  });
+
+  it('refuses a missing doc without writing', async () => {
+    const putObject = vi.fn();
+    const reg = createTestRegistry({
+      prisma: { doc: { findUnique: vi.fn().mockResolvedValue(null) } } as unknown as Registry['prisma'],
+      storage: storageMock({ putObject })
+    });
+
+    const result = await uploadDocImage(reg, 'doc_x', 'image/png', '');
+
+    expect(result.ok).toBe(false);
+    expect(putObject).not.toHaveBeenCalled();
   });
 });

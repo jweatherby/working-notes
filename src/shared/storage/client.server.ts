@@ -22,7 +22,9 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg'
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp'
 };
 
 /** Absolute path for `key` inside `root`, or null if it would escape `root`. */

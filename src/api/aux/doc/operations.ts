@@ -150,6 +150,36 @@ export const attachSourcePdf = async (
   return ok({ sourceUrl: key });
 };
 
+export const DOC_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
+export type DocImageType = (typeof DOC_IMAGE_TYPES)[number];
+
+const IMAGE_EXTENSIONS: Readonly<Record<DocImageType, string>> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp'
+};
+
+/**
+ * Store an image pasted or dropped into a doc. Returns the storage key, which
+ * the editor writes into the content as `storage://<key>`.
+ */
+export const uploadDocImage = async (
+  reg: Pick<Registry, 'prisma' | 'storage' | 'uuid'>,
+  docId: string,
+  contentType: DocImageType,
+  dataBase64: string
+): Promise<Result<{ readonly key: string }>> => {
+  const existing = await reg.prisma.doc.findUnique({ where: { id: docId } });
+  if (!existing) return err(new Error('Doc not found'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
+
+  const key = `docs/${docId}/image-${reg.uuid()}.${IMAGE_EXTENSIONS[contentType]}`;
+  await reg.storage.putObject(key, Buffer.from(dataBase64, 'base64'), contentType);
+  return ok({ key });
+};
+
 export const getDocReadUrl = async (
   reg: Pick<Registry, 'prisma'>,
   id: string

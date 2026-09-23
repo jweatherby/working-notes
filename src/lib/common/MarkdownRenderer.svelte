@@ -3,6 +3,7 @@
   import { marked, Renderer } from 'marked';
   import type { Chart } from 'chart.js';
   import { mountCharts } from '$lib/report/chart-render';
+  import { fileUrl } from '$shared/utils/files';
 
   const renderer = new Renderer();
   renderer.image = ({ href, title, text }) => {
@@ -10,7 +11,9 @@
     const widthAttr = widthMatch ? ` width="${widthMatch[1]}"` : '';
     const cleanTitle = title?.replace(/\s*w=\d+/, '').trim();
     const titleAttr = cleanTitle ? ` title="${cleanTitle}"` : '';
-    return `<img src="${href}" alt="${text ?? ''}"${titleAttr}${widthAttr} style="max-width:100%;border-radius:4px;">`;
+    // Doc images are saved as storage://<key>; the files route serves them.
+    const src = href.startsWith('storage://') ? fileUrl(href.slice('storage://'.length)) : href;
+    return `<img src="${src}" alt="${text ?? ''}"${titleAttr}${widthAttr} style="max-width:100%;border-radius:4px;">`;
   };
 
   interface Props {

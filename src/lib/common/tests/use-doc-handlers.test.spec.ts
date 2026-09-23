@@ -198,3 +198,49 @@ describe('createDocHandlers.handleConvertPdf', () => {
     await expect(handlersWith(convertPdf, pdfConversion).handleConvertPdf('doc_1')).rejects.toThrow('OAuth session expired');
   });
 });
+
+describe('createDocHandlers images', () => {
+  const handlersWith = (uploadImage: ReturnType<typeof vi.fn>, docId: string | null) =>
+    createDocHandlers(
+      {
+        add: { mutate: vi.fn() },
+        update: { mutate: vi.fn() },
+        remove: { mutate: vi.fn() },
+        reorder: { mutate: vi.fn() },
+        uploadImage: { mutate: uploadImage },
+      },
+      'PROJECT',
+      'proj_1',
+      () => docId,
+      vi.fn(),
+    );
+
+  it('uploads the image as base64 and returns its storage key', async () => {
+    const uploadImage = vi.fn().mockResolvedValue({ ok: true, value: { key: 'docs/doc_1/image-a.png' } });
+    const bytes = new Uint8Array([137, 80, 78, 71]);
+
+    const key = await handlersWith(uploadImage, 'doc_1').handleUploadImage(new File([bytes], 'x.png', { type: 'image/png' }));
+
+    expect(key).toBe('docs/doc_1/image-a.png');
+    const arg = uploadImage.mock.calls[0]![0];
+    expect(arg.docId).toBe('doc_1');
+    expect(arg.contentType).toBe('image/png');
+    expect(Buffer.from(arg.dataBase64, 'base64')).toEqual(Buffer.from(bytes));
+  });
+
+  it('throws the API error for an unsupported image', async () => {
+    const uploadImage = vi.fn().mockResolvedValue({ ok: false, error: { message: 'Invalid input' } });
+    const file = new File([new Uint8Array([1])], 'x.bmp', { type: 'image/bmp' });
+
+    await expect(handlersWith(uploadImage, 'doc_1').handleUploadImage(file)).rejects.toThrow();
+  });
+
+  it('resolves storage keys to file URLs without a request', async () => {
+    const uploadImage = vi.fn();
+
+    const urls = await handlersWith(uploadImage, 'doc_1').handleResolveImages(['docs/doc_1/image a.png']);
+
+    expect(urls).toEqual({ 'docs/doc_1/image a.png': '/files/docs/doc_1/image%20a.png' });
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+});

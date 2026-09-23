@@ -1,5 +1,6 @@
 import { invalidateAll } from '$app/navigation';
 import { submitOrThrow } from '$lib/ui/submit';
+import { fileUrl } from '$shared/utils/files';
 
 // Handlers throw the API's error message; DocEditor, DocsManager's
 // ConfirmButton and EntityDetailPage's create flow catch and show it.
@@ -11,6 +12,7 @@ interface DocTrpc {
   remove: { mutate: (input: any) => Promise<any> };
   reorder: { mutate: (input: any) => Promise<any> };
   attachSource?: { mutate: (input: any) => Promise<any> };
+  uploadImage?: { mutate: (input: any) => Promise<any> };
   getReadUrl?: { query: (input: any) => Promise<any> };
   convertPdf?: { mutate: (input: any) => Promise<any> };
   pdfConversion?: { query: (input: any) => Promise<any> };
@@ -118,11 +120,16 @@ export const createDocHandlers = (
     }
   },
 
-  handleUploadImage: async (_file: File): Promise<string> => {
-    throw new Error('Image upload not yet supported');
+  handleUploadImage: async (file: File): Promise<string> => {
+    const docId = getActiveDocId();
+    const { uploadImage } = docTrpc;
+    if (!docId || !uploadImage) throw new Error('Save the doc before adding images.');
+    const dataBase64 = await fileToBase64(file);
+    const { key } = await submitOrThrow(() => uploadImage.mutate({ docId, contentType: file.type, dataBase64 }));
+    return key;
   },
 
-  handleResolveImages: async (_keys: string[]): Promise<Record<string, string>> => {
-    return {};
-  },
+  // Keys are served by the files route, so resolving them needs no request.
+  handleResolveImages: async (keys: string[]): Promise<Record<string, string>> =>
+    Object.fromEntries(keys.map((key) => [key, fileUrl(key)])),
 });

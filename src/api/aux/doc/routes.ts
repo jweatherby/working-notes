@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { ENTITY_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
-import { listDocs, addDoc, updateDoc, removeDoc, reorderDocs, attachSourcePdf, getDocReadUrl } from './operations';
+import { listDocs, addDoc, updateDoc, removeDoc, reorderDocs, attachSourcePdf, getDocReadUrl, uploadDocImage, DOC_IMAGE_TYPES } from './operations';
 import { convertDocPdf, getPdfConversion } from './convert';
 
 // Base64 inflates by a third; this stays under the 25M BODY_SIZE_LIMIT (~18 MB of PDF).
 const MAX_PDF_BASE64_CHARS = 24_000_000;
+const MAX_IMAGE_BASE64_CHARS = 14_000_000; // ~10 MB image
 
 export const docRouter = router({
   list: procedure
@@ -47,6 +48,14 @@ export const docRouter = router({
       dataBase64: z.string().max(MAX_PDF_BASE64_CHARS)
     }))
     .mutation(({ ctx, input }) => attachSourcePdf(ctx.reg, input.docId, input.contentType, input.dataBase64)),
+
+  uploadImage: procedure
+    .input(z.object({
+      docId: z.string(),
+      contentType: z.enum(DOC_IMAGE_TYPES),
+      dataBase64: z.string().max(MAX_IMAGE_BASE64_CHARS)
+    }))
+    .mutation(({ ctx, input }) => uploadDocImage(ctx.reg, input.docId, input.contentType, input.dataBase64)),
 
   getReadUrl: procedure
     .input(z.object({ id: z.string() }))
