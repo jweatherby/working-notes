@@ -14,6 +14,9 @@
   import { submitOrThrow } from '$lib/ui/submit';
   import OrgTree from '$lib/org/components/OrgTree.svelte';
   import { buildOrgTree } from '$lib/org/org-tree';
+  import ParamSelect from '$lib/ui/ParamSelect.svelte';
+  import WorkMap from '$lib/org/components/WorkMap.svelte';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   const { data } = $props<{ data: PageData }>();
@@ -22,6 +25,12 @@
   const persons = $derived(data.persons);
 
   const orgRoots = $derived(buildOrgTree(persons));
+
+  const VIEW_OPTIONS = [
+    { id: 'people', name: 'People' },
+    { id: 'work', name: 'Work by owner' }
+  ];
+  const isWork = $derived(page.url.searchParams.get('view') === 'work');
 
   // Department and team names per person, shown as chips on tree rows.
   const groupsByPerson = $derived.by(() => {
@@ -131,54 +140,66 @@
 <svelte:head><title>Org Map</title></svelte:head>
 
 <div class="page wide">
-  <PageHeader title="Org Map" description="Reporting lines, departments and teams.">
+  <PageHeader title="Org Map" description="Reporting lines, departments and teams, and the work each one owns.">
     <button type="button" class="btn sm" onclick={() => startEditDept(null)}>Add department</button>
     <button type="button" class="btn sm" onclick={() => startEditTeam(null)}>Add team</button>
     <button type="button" class="btn primary sm" onclick={() => startEditPerson(null)}>Add person</button>
   </PageHeader>
 
-  <section class="section">
-    <div class="section-header"><h2>Reporting lines</h2></div>
-    {#if persons.length === 0}
-      <EmptyState message="No people yet." />
-    {:else}
-      <OrgTree roots={orgRoots} {groupsByPerson} onEdit={startEditPerson} />
-    {/if}
-  </section>
+  <div class="toolbar filters">
+    <ParamSelect param="view" options={VIEW_OPTIONS} defaultValue="people" ariaLabel="View" />
+  </div>
 
-  <section class="section">
-    <div class="section-header"><h2>Departments <span class="count">{departments.length}</span></h2></div>
-    {#if departments.length === 0}
-      <EmptyState message="No departments yet." />
+  {#if isWork}
+    {#if data.work}
+      <WorkMap input={data.work} />
     {:else}
-      <ul class="group-list">
-        {#each departments as dept (dept.id)}
-          <li class="card compact hover group-card">
-            <a class="group-title truncate" href="/app/departments/{dept.id}">{dept.name}</a>
-            <button type="button" class="btn icon sm edit" onclick={() => startEditDept(dept.id)} aria-label="Edit {dept.name}" title="Edit"><PencilIcon /></button>
-            <span class="badge muted">{dept.members.length}</span>
-          </li>
-        {/each}
-      </ul>
+      <EmptyState boxed message="The work map couldn't be loaded. Reload the page to try again." />
     {/if}
-  </section>
+  {:else}
+    <section class="section">
+      <div class="section-header"><h2>Reporting lines</h2></div>
+      {#if persons.length === 0}
+        <EmptyState message="No people yet." />
+      {:else}
+        <OrgTree roots={orgRoots} {groupsByPerson} onEdit={startEditPerson} />
+      {/if}
+    </section>
 
-  <section class="section">
-    <div class="section-header"><h2>Teams <span class="count">{teams.length}</span></h2></div>
-    {#if teams.length === 0}
-      <EmptyState message="No teams yet." />
-    {:else}
-      <ul class="group-list">
-        {#each teams as team (team.id)}
-          <li class="card compact hover group-card">
-            <a class="group-title truncate" href="/app/teams/{team.id}">{team.name}</a>
-            <button type="button" class="btn icon sm edit" onclick={() => startEditTeam(team.id)} aria-label="Edit {team.name}" title="Edit"><PencilIcon /></button>
-            <span class="badge muted">{team.members.length}</span>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-  </section>
+    <section class="section">
+      <div class="section-header"><h2>Departments <span class="count">{departments.length}</span></h2></div>
+      {#if departments.length === 0}
+        <EmptyState message="No departments yet." />
+      {:else}
+        <ul class="group-list">
+          {#each departments as dept (dept.id)}
+            <li class="card compact hover group-card">
+              <a class="group-title truncate" href="/app/departments/{dept.id}">{dept.name}</a>
+              <button type="button" class="btn icon sm edit" onclick={() => startEditDept(dept.id)} aria-label="Edit {dept.name}" title="Edit"><PencilIcon /></button>
+              <span class="badge muted">{dept.members.length}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+
+    <section class="section">
+      <div class="section-header"><h2>Teams <span class="count">{teams.length}</span></h2></div>
+      {#if teams.length === 0}
+        <EmptyState message="No teams yet." />
+      {:else}
+        <ul class="group-list">
+          {#each teams as team (team.id)}
+            <li class="card compact hover group-card">
+              <a class="group-title truncate" href="/app/teams/{team.id}">{team.name}</a>
+              <button type="button" class="btn icon sm edit" onclick={() => startEditTeam(team.id)} aria-label="Edit {team.name}" title="Edit"><PencilIcon /></button>
+              <span class="badge muted">{team.members.length}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
 </div>
 
 <Popup id="edit-department" title={editDept ? 'Edit department' : 'Add department'}>

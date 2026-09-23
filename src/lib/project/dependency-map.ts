@@ -2,6 +2,7 @@
 // right of the projects it depends on, and each goal just right of the
 // projects that deliver it. Unrelated chains get their own horizontal band. Pure.
 
+import type { GoalStatus } from '$shared/types/enums';
 import type { ProjectDependencies } from '$shared/types/project-dependencies';
 import { entityPath } from '$shared/utils/entity';
 import { GOAL_STATUS_LABELS, progressTone } from '$lib/goal/utils';
@@ -44,8 +45,16 @@ export interface DependencyMap {
 const projectKey = (id: string): string => `P:${id}`;
 const goalKey = (id: string): string => `G:${id}`;
 
-const projectTone = (status: string | null): MapTone =>
+export const projectTone = (status: string | null): MapTone =>
   status === 'planning' ? 'accent' : status === 'active' ? 'success' : 'muted';
+
+/** A goal card's second line: its status, and progress when it's measured. */
+export const goalDetail = (goal: { readonly status: GoalStatus; readonly progress: number | null }): string =>
+  goal.progress === null
+    ? GOAL_STATUS_LABELS[goal.status]
+    : `${GOAL_STATUS_LABELS[goal.status]} · ${Math.round(goal.progress * 100)}%`;
+
+export const goalTone = (status: GoalStatus): MapTone => (status === 'DROPPED' ? 'muted' : progressTone(status));
 
 interface Draft {
   readonly key: string;
@@ -214,10 +223,8 @@ export const buildDependencyMap = (
         kind: 'GOAL' as const,
         id: g.id,
         label: g.title,
-        detail: g.progress === null
-          ? GOAL_STATUS_LABELS[g.status]
-          : `${GOAL_STATUS_LABELS[g.status]} · ${Math.round(g.progress * 100)}%`,
-        tone: g.status === 'DROPPED' ? ('muted' as const) : progressTone(g.status),
+        detail: goalDetail(g),
+        tone: goalTone(g.status),
         href: g.path,
         context: false
       }))
@@ -236,9 +243,14 @@ export const buildDependencyMap = (
   return { nodes, edges, unlinked };
 };
 
+interface Link {
+  readonly source: string;
+  readonly target: string;
+}
+
 /** Everything upstream of `key` and everything downstream of it, and `key` itself. */
-export const chainOf = (key: string, edges: readonly MapEdge[]): ReadonlySet<string> => {
-  const walk = (from: (e: MapEdge) => string, to: (e: MapEdge) => string): Set<string> => {
+export const chainOf = (key: string, edges: readonly Link[]): ReadonlySet<string> => {
+  const walk = (from: (e: Link) => string, to: (e: Link) => string): Set<string> => {
     const found = new Set<string>([key]);
     const queue = [key];
     while (queue.length > 0) {
