@@ -1,13 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- macOS icon grid: the tile is 412 of 512 (824 of 1024), leaving room for the
-       margin and shadow the Dock expects. The mark is drawn at 512 and scaled into it. -->
-  <defs>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
-      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.28"/>
-    </filter>
-  </defs>
-  <rect x="50" y="50" width="412" height="412" rx="92" fill="#2563eb" filter="url(#shadow)"/>
-  <g transform="translate(256 256) scale(0.9) translate(-261 -256)">
+  <!-- Maskable: full bleed, the platform cuts the shape. The mark fills the safe zone
+       (a circle of radius 205 around the centre); its farthest point is ~201 out. -->
+  <rect width="512" height="512" fill="#2563eb"/>
+  <g transform="translate(-5 0)">
     <!-- three prongs, all the same length from the hub -->
     <g stroke="#ffffff" stroke-width="24" stroke-linecap="round" fill="none">
       <path d="M300 256 L381 173"/>

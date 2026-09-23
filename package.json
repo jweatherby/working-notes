@@ -23,6 +23,7 @@
     "release:version": "bun scripts/release/version.ts",
     "release:build": "bun scripts/release/build.ts",
     "release:smoke": "bun scripts/release/smoke.ts",
+    "icons": "bun scripts/icons/render.ts",
     "wnotes": "bun cli/main.ts"
   },
   "dependencies": {
@@ -48,6 +49,7 @@
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@sveltejs/adapter-node": "^5.2.0",
     "@sveltejs/kit": "^2.5.0",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
