@@ -9,7 +9,7 @@ import { createTeam } from '../../src/api/org/team/operations';
 import { createProject, getProject, listProjects, updateProject } from '../../src/api/project/operations';
 import { addCheckIn, addGoalProject, createGoal, getGoal, listGoals, updateGoal } from '../../src/api/goal/operations';
 import { createPage, deletePage, getPage, updatePage } from '../../src/api/page/operations';
-import { addDoc, updateDoc } from '../../src/api/aux/doc/operations';
+import { addDoc, getDoc, updateDoc } from '../../src/api/aux/doc/operations';
 import { addNote, listNotes } from '../../src/api/aux/note/operations';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
 import { TEST_NOTEBOOK } from './test-notebooks';
@@ -116,5 +116,23 @@ describe('wiki pages and relations', () => {
       where: { OR: [{ fromType: 'PAGE', fromId: page.value.id }, { toType: 'PAGE', toId: page.value.id }] }
     });
     expect(left).toBe(0);
+  });
+});
+
+describe('docs', () => {
+  it('get returns the doc with the entity it belongs to (the print page)', async () => {
+    const reg = getRegistry(TEST_NOTEBOOK);
+    const doc = await addDoc(reg, 'PERSON', 'person_bob', { title: 'Export me' });
+    if (!doc.ok) throw new Error('doc create failed');
+    await updateDoc(reg, doc.value.id, { content: '# Hello' });
+
+    const detail = await getDoc(reg, doc.value.id);
+    expect(detail.ok && { title: detail.value.title, content: detail.value.content, entityName: detail.value.entityName, entityPath: detail.value.entityPath }).toEqual({
+      title: 'Export me',
+      content: '# Hello',
+      entityName: 'Bob Smith',
+      entityPath: '/app/people/person_bob'
+    });
+    expect((await getDoc(reg, 'doc_missing')).ok).toBe(false);
   });
 });

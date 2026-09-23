@@ -100,9 +100,9 @@ Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PRO
 Reports are switched off for now. When the user asks for a report or write-up, write it as a doc on the person, team, department, project or goal. A wiki page takes no docs; write into its content instead.
 
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
-2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md).
+2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
 3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding.
 
 ## Importing a PDF
 

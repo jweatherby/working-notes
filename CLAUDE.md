@@ -32,7 +32,7 @@ Scoped docs:
 - **Framework:** SvelteKit (Svelte 5, TypeScript, SCSS), `@sveltejs/adapter-node`
 - **API:** tRPC v11 + Zod over the Fetch adapter. This is the validated API behind both the UI and the CLI.
 - **Database:** SQLite through Prisma 7 and `@prisma/adapter-libsql`. The better-sqlite3 adapter does not run under Bun.
-- **Content:** marked and Milkdown for markdown, chart.js for charts, mermaid for diagrams
+- **Content:** marked and Milkdown for markdown, chart.js for charts, mermaid for diagrams, jsPDF and html2canvas-pro for doc PDFs (bundled, loaded only on export)
 - **Tests:** Vitest (unit and integration)
 
 ## Where code goes
@@ -78,6 +78,10 @@ wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --t
 ### Importing a PDF
 
 From the CLI or MCP, the app stores PDFs but doesn't read them. (The web app's "Convert with Claude" runs the local `claude` CLI instead; see § Ground rules.) Read the PDF yourself, write the markdown with `doc.add` and `doc.update --content-file`, and optionally attach the original with `doc.attachSource --dataBase64-file` (base64 of the PDF).
+
+### Exporting a doc to PDF
+
+A doc's "Export PDF" opens `/app/docs/<id>/print`. **Download PDF** builds the file in the browser (`src/lib/doc/export-pdf.ts`: html2canvas-pro draws the page, jsPDF cuts it into A4 pages at block edges), so its pages are images and the text isn't selectable; **Print…** is the browser's dialog, for a PDF with real text. A line of just `<!-- pagebreak -->` (outside code blocks) starts a new page in both (`markPageBreaks` in `src/lib/doc/pdf-pages.ts`); elsewhere it's an invisible comment. Its toolbar picks the branding (the default, another one, or none) and turns the branded header on or off; the choices live in the URL. It works while reports are switched off.
 
 ### Reports and charts
 

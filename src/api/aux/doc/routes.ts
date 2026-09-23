@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ENTITY_TYPES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
-import { listDocs, addDoc, updateDoc, removeDoc, reorderDocs, attachSourcePdf, getDocReadUrl, uploadDocImage, DOC_IMAGE_TYPES } from './operations';
+import { listDocs, getDoc, addDoc, updateDoc, removeDoc, reorderDocs, attachSourcePdf, getDocReadUrl, uploadDocImage, DOC_IMAGE_TYPES } from './operations';
 import { convertDocPdf, getPdfConversion } from './convert';
 
 // Base64 inflates by a third; this stays under the 25M BODY_SIZE_LIMIT (~18 MB of PDF).
@@ -12,6 +12,10 @@ export const docRouter = router({
   list: procedure
     .input(z.object({ entityType: z.enum(ENTITY_TYPES), entityId: z.string() }))
     .query(({ ctx, input }) => listDocs(ctx.reg, input.entityType, input.entityId)),
+
+  get: procedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) => getDoc(ctx.reg, input.id)),
 
   add: procedure
     .input(z.object({

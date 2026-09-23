@@ -27,6 +27,9 @@ export interface DefaultBranding {
   /** Colours the app chrome for this notebook (see `.branded` in styles/_tokens.scss). */
   readonly primaryColor: string;
   readonly primaryFontColor: string;
+  /** Chart colours in the doc preview, so it matches the exported PDF. */
+  readonly accentColor: string;
+  readonly accentFontColor: string;
 }
 
 export const getDefaultBranding = async (
@@ -34,14 +37,16 @@ export const getDefaultBranding = async (
 ): Promise<Result<DefaultBranding | null>> => {
   const row = await reg.prisma.branding.findFirst({
     where: { isDefault: true },
-    select: { id: true, iconUrl: true, primaryColor: true, primaryFontColor: true }
+    select: { id: true, iconUrl: true, primaryColor: true, primaryFontColor: true, accentColor: true, accentFontColor: true }
   });
   if (!row) return ok(null);
   return ok({
     id: row.id,
     iconUrl: row.iconUrl ? fileUrl(row.iconUrl) : null,
     primaryColor: row.primaryColor,
-    primaryFontColor: row.primaryFontColor
+    primaryFontColor: row.primaryFontColor,
+    accentColor: row.accentColor,
+    accentFontColor: row.accentFontColor
   });
 };
 

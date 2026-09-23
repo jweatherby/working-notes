@@ -78,7 +78,7 @@ Deleting a person, team, department, project, goal, page or report also deletes 
 | Entity | Fields | Procedures |
 |---|---|---|
 | **Note** | `content` (markdown), `parentId?` for a reply | `note.list`, `note.add`, `note.update`, `note.remove` |
-| **Doc** | `title`, `content` (markdown), `sortOrder`, `sourceUrl?` (attached PDF) | `doc.list`, `doc.add`, `doc.update`, `doc.reorder`, `doc.attachSource`, `doc.getReadUrl`, `doc.remove` |
+| **Doc** | `title`, `content` (markdown), `sortOrder`, `sourceUrl?` (attached PDF) | `doc.list`, `doc.get`, `doc.add`, `doc.update`, `doc.reorder`, `doc.attachSource`, `doc.getReadUrl`, `doc.remove` |
 | **Todo** | `title`, `description?`, `status`, `priority` 0–3 (3 is highest), `targetDate?`, `completedAt` (set automatically) | `todo.list` (filter `--status`, `--entityType`), `todo.forEntity`, `todo.create`, `todo.update`, `todo.delete` |
 | **Link** | `url`, `title?` | `link.list`, `link.add`, `link.remove` |
 | **Tag** | `name` (unique), `color` | `tag.list`, `tag.create`, `tag.delete`; `tag.forEntity`, `tag.attach`, `tag.detach` |

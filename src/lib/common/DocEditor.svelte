@@ -1,6 +1,7 @@
 <script lang="ts">
   import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
   import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
+  import type { ChartBranding } from '$shared/types/branding';
 
   interface PdfNotice {
     readonly tone: 'warning' | 'error';
@@ -22,10 +23,14 @@
     readonly onUploadImage?: (file: File) => Promise<string>;
     readonly onResolveImages?: (keys: string[]) => Promise<Record<string, string>>;
     readonly onClose?: () => void;
+    /** Link to the doc's print page (Export PDF). */
+    readonly exportHref?: string;
+    /** Colours charts in the preview like the exported PDF (the default branding). */
+    readonly chartBranding?: ChartBranding | null;
     readonly autoEditTitle?: boolean;
   }
 
-  const { title, content, hasSourcePdf, converting = false, pdfNotice = null, onSave, onSaveTitle, onUploadPdf, onOpenSourcePdf, onConvertPdf, onUploadImage, onResolveImages, onClose, autoEditTitle = false }: Props = $props();
+  const { title, content, hasSourcePdf, converting = false, pdfNotice = null, onSave, onSaveTitle, onUploadPdf, onOpenSourcePdf, onConvertPdf, onUploadImage, onResolveImages, onClose, exportHref, chartBranding = null, autoEditTitle = false }: Props = $props();
 
   let editingTitle = $state(autoEditTitle);
   let titleDraft = $state(title);
@@ -181,6 +186,9 @@
     {#if hasSourcePdf && onConvertPdf && !converting && !content.trim()}
       <button type="button" class="btn ghost sm" onclick={onConvertPdf}>Convert with Claude</button>
     {/if}
+    {#if exportHref && content.trim()}
+      <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF</a>
+    {/if}
     {#if onClose}
       <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>
     {/if}
@@ -230,7 +238,7 @@
         {/key}
       {:else}
         <div class="doc-preview">
-          <MarkdownRenderer content={draft} />
+          <MarkdownRenderer content={draft} branding={chartBranding} />
         </div>
       {/if}
     </div>

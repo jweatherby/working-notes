@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import { addDoc, attachSourcePdf, getDocReadUrl, removeDoc, updateDoc, uploadDocImage } from '../operations';
+import { addDoc, attachSourcePdf, getDoc, getDocReadUrl, removeDoc, updateDoc, uploadDocImage } from '../operations';
 
 const storageMock = (overrides: Partial<Registry['storage']> = {}): Registry['storage'] => ({
   putObject: vi.fn().mockResolvedValue(undefined),
@@ -26,6 +26,37 @@ describe('addDoc', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.message).toContain("Wiki pages don't take docs");
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('getDoc', () => {
+  it('adds the entity name and path', async () => {
+    const now = new Date();
+    const reg = createTestRegistry({
+      prisma: {
+        doc: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'doc_1', title: 'Plan', content: '# Plan', sourceUrl: null, sortOrder: 1,
+            createdAt: now, updatedAt: now, entityType: 'TEAM', entityId: 'team_1'
+          })
+        },
+        team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
+      } as unknown as Registry['prisma']
+    });
+
+    const result = await getDoc(reg, 'doc_1');
+
+    expect(result.ok && [result.value.entityName, result.value.entityPath]).toEqual(['Payments', '/app/teams/team_1']);
+  });
+
+  it('fails for an unknown doc', async () => {
+    const reg = createTestRegistry({
+      prisma: { doc: { findUnique: vi.fn().mockResolvedValue(null) } } as unknown as Registry['prisma']
+    });
+
+    const result = await getDoc(reg, 'doc_missing');
+
+    expect(!result.ok && result.error.message).toBe('Doc not found');
   });
 });
 

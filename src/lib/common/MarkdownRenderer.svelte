@@ -4,6 +4,7 @@
   import type { Chart } from 'chart.js';
   import { mountCharts } from '$lib/report/chart-render';
   import { fileUrl } from '$shared/utils/files';
+  import type { ChartBranding } from '$shared/types/branding';
 
   const renderer = new Renderer();
   renderer.image = ({ href, title, text }) => {
@@ -19,9 +20,11 @@
   interface Props {
     readonly content: string;
     readonly placeholder?: string;
+    /** Colours charts with a branding (the doc print page). Read once: wrap in {#key} to change it. */
+    readonly branding?: ChartBranding | null;
   }
 
-  const { content, placeholder = '*No content yet.*' }: Props = $props();
+  const { content, placeholder = '*No content yet.*', branding = null }: Props = $props();
 
   let container: HTMLDivElement;
   let charts: readonly Chart[] = [];
@@ -63,8 +66,10 @@
     if (container && content) {
       // Wait a tick for the HTML to render, then draw charts and mermaid diagrams
       requestAnimationFrame(() => {
+        // The renderer may be gone by the next frame (a {#key} remount).
+        if (!container) return;
         for (const c of charts) c.destroy();
-        charts = mountCharts(container, null);
+        charts = mountCharts(container, branding);
         renderMermaid(container);
       });
     }

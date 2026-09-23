@@ -7,7 +7,9 @@
   import type { RelationGroup } from '$shared/types/relations';
   import DetailLayout from '$lib/common/DetailLayout.svelte';
   import DocsManager from '$lib/common/DocsManager.svelte';
+  import { page } from '$app/state';
   import DocEditor from '$lib/common/DocEditor.svelte';
+  import { printUrl } from '$lib/doc/print-options';
   import NoteEditor from '$lib/common/NoteEditor.svelte';
   import Popup from '$lib/common/Popup.svelte';
   import TodoWidget from '$lib/todo/components/TodoWidget.svelte';
@@ -400,6 +402,8 @@
         onUploadImage={docHandlers.handleUploadImage}
         onResolveImages={docHandlers.handleResolveImages}
         onClose={closeCenter}
+        exportHref={printUrl(activeDoc.id)}
+        chartBranding={page.data.chartBranding ?? null}
       />
     {:else if activeNote}
       <NoteEditor

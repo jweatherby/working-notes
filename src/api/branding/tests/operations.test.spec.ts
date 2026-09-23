@@ -83,7 +83,9 @@ describe('getDefaultBranding', () => {
             id: 'brand_1',
             iconUrl: 'branding/brand_1/icon.png',
             primaryColor: '#16a34a',
-            primaryFontColor: '#ffffff'
+            primaryFontColor: '#ffffff',
+            accentColor: '#06b6d4',
+            accentFontColor: '#ffffff'
           })
         }
       } as unknown as Registry['prisma']
@@ -96,7 +98,9 @@ describe('getDefaultBranding', () => {
         id: 'brand_1',
         iconUrl: '/files/branding/brand_1/icon.png',
         primaryColor: '#16a34a',
-        primaryFontColor: '#ffffff'
+        primaryFontColor: '#ffffff',
+        accentColor: '#06b6d4',
+        accentFontColor: '#ffffff'
       });
     }
   });

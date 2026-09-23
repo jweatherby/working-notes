@@ -3,7 +3,8 @@ import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
 import type { EntityType } from '$shared/types/enums';
 import { fileUrl } from '$shared/utils/files';
-import { acceptsDocs } from '$shared/utils/entity';
+import { acceptsDocs, entityPath } from '$shared/utils/entity';
+import { resolveEntityLabel } from '$api/_entity-labels';
 import { relationCleanupOp } from '$api/_entity-cleanup';
 import { syncMentions } from '$api/relation/mentions';
 
@@ -19,7 +20,37 @@ export interface DocSummary {
   readonly updatedAt: Date;
 }
 
+export interface DocDetail extends DocSummary {
+  readonly entityType: EntityType;
+  readonly entityId: string;
+  /** Name or title of the entity the doc is attached to; null if it's gone. */
+  readonly entityName: string | null;
+  readonly entityPath: string;
+}
+
 // ----- Operations -----
+
+export const getDoc = async (
+  reg: Pick<Registry, 'prisma'>,
+  id: string
+): Promise<Result<DocDetail>> => {
+  const doc = await reg.prisma.doc.findUnique({ where: { id } });
+  if (!doc) return err(new Error('Doc not found'));
+  const entityType = doc.entityType as EntityType;
+  return ok({
+    id: doc.id,
+    title: doc.title,
+    content: doc.content,
+    sourceUrl: doc.sourceUrl,
+    sortOrder: doc.sortOrder,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+    entityType,
+    entityId: doc.entityId,
+    entityName: await resolveEntityLabel(reg, entityType, doc.entityId),
+    entityPath: entityPath(entityType, doc.entityId)
+  });
+};
 
 export const listDocs = async (
   reg: Pick<Registry, 'prisma'>,
