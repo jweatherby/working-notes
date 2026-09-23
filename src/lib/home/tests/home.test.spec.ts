@@ -1,28 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { layoutGraph } from '../graph-layout';
+import { focusHeight, layoutFocus } from '../focus-layout';
 import { timeAgo } from '../utils';
 
-describe('layoutGraph', () => {
-  const nodes = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id }));
-  const edges = [
-    { source: 'a', target: 'b' },
-    { source: 'b', target: 'c' },
-    { source: 'x', target: 'a' }
-  ];
+describe('layoutFocus', () => {
+  const groups = [{ size: 1 }, { size: 5 }, { size: 9 }];
 
-  it('keeps every node inside the padded bounds', () => {
-    const pos = layoutGraph(nodes, edges, 400, 300, 200, 20);
-    expect(pos.size).toBe(5);
-    for (const p of pos.values()) {
-      expect(p.x).toBeGreaterThanOrEqual(20);
-      expect(p.x).toBeLessThanOrEqual(380);
-      expect(p.y).toBeGreaterThanOrEqual(20);
-      expect(p.y).toBeLessThanOrEqual(280);
+  it('places every pill inside the canvas, and the focus in the middle', () => {
+    const layout = layoutFocus(groups, 1000, 560);
+    expect(layout.centre).toEqual({ x: 500, y: 280 });
+    expect(layout.nodes.map((g) => g.length)).toEqual([1, 5, 9]);
+    for (const p of [...layout.nodes.flat(), ...layout.labels]) {
+      expect(p.x).toBeGreaterThanOrEqual(90);
+      expect(p.x).toBeLessThanOrEqual(910);
+      expect(p.y).toBeGreaterThanOrEqual(36);
+      expect(p.y).toBeLessThanOrEqual(524);
     }
   });
 
+  it('starts at the top and gives each group its own slice', () => {
+    const layout = layoutFocus([{ size: 1 }, { size: 1 }], 1000, 560);
+    expect(layout.nodes[0]?.[0]?.x).toBeCloseTo(500);
+    expect(layout.nodes[0]?.[0]?.y).toBeLessThan(280);
+    expect(layout.nodes[1]?.[0]?.y).toBeGreaterThan(280);
+  });
+
   it('is deterministic', () => {
-    expect([...layoutGraph(nodes, edges, 400, 300)]).toEqual([...layoutGraph(nodes, edges, 400, 300)]);
+    expect(layoutFocus(groups, 1000, 560)).toEqual(layoutFocus(groups, 1000, 560));
+  });
+
+  it('handles no groups', () => {
+    expect(layoutFocus([], 1000, 560).nodes).toEqual([]);
+  });
+});
+
+describe('focusHeight', () => {
+  it('grows with the number of pills, up to a limit', () => {
+    expect(focusHeight(3)).toBe(390);
+    expect(focusHeight(10)).toBe(520);
+    expect(focusHeight(30)).toBeGreaterThan(520);
+    expect(focusHeight(500)).toBe(910);
   });
 });
 

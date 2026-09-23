@@ -1,7 +1,7 @@
 <script lang="ts">
   import HomeTodos from '$lib/home/components/HomeTodos.svelte';
   import RecentUpdates from '$lib/home/components/RecentUpdates.svelte';
-  import RelationGraph from '$lib/home/components/RelationGraph.svelte';
+  import FocusGraph from '$lib/home/components/FocusGraph.svelte';
   import type { PageData } from './$types';
 
   const { data } = $props<{ data: PageData }>();
@@ -14,8 +14,8 @@
     <HomeTodos todos={data.todos} />
     <RecentUpdates updates={data.updates} />
   </div>
-  {#if data.graph.nodes.length > 0}
-    <RelationGraph graph={data.graph} />
+  {#if data.graph.focus}
+    <FocusGraph graph={{ ...data.graph, focus: data.graph.focus }} />
   {/if}
 </div>
 

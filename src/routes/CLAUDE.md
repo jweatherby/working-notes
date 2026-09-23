@@ -4,7 +4,7 @@ Routes are thin entry points: load data in `+page.server.ts`, render components 
 
 ## Structure
 
-- `/` redirects to `/app`, the home dashboard: open todos (`home.todos`), latest updates (`home.updates`) and a clickable relation graph (`home.graph`, laid out by `$lib/home/graph-layout.ts`).
+- `/` redirects to `/app`, the home dashboard: open todos (`home.todos`), latest updates (`home.updates`) and a focus graph (`home.graph`, `$lib/home/components/FocusGraph.svelte`): one entity in the middle with everything one link away grouped around it. `?focus=<TYPE>:<id>` picks the middle (default: the most recently updated project, goal or team), and clicking a neighbour moves it there, so Back returns. Laid out by the pure `$lib/home/focus-layout.ts`.
 - `app/` is the app: `projects`, `goals`, `wiki` (pages), `orgmap`, `people`, `teams`, `departments`, `todos`, `reports`, `branding`, `notebooks`. Person, team and department pages show the goals and projects they own; project pages show the owner and linked goals. `app/+layout.server.ts` loads the open notebook and the notebook list (for the switcher), and the notebook's default branding: its icon for the nav and its primary colours, which `app/+layout.svelte` applies with `.branded`.
 - Entity detail pages read `?doc=<id>` (or `?doc=new`) to open a doc in the centre pane; see `EntityDetailPage` in `src/lib/CLAUDE.md`.
 - `app/notebooks` lists notebooks: open one, rename it, or make it Claude's default. Creating one is the global `?popup=new-notebook`.

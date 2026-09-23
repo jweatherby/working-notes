@@ -1,4 +1,6 @@
-// Home dashboard: recent updates and the entity relation graph.
+// Home dashboard: recent updates and the focus graph.
+
+import type { RelatableType } from './enums';
 
 export const UPDATE_KINDS = [
   'PERSON',
@@ -25,28 +27,31 @@ export interface RecentUpdate {
   readonly isNew: boolean;
 }
 
-// The graph is oriented around projects: projects are hubs, with their
-// sub-projects and the docs, reports and todos attached to them.
-export const GRAPH_NODE_TYPES = ['PROJECT', 'DOC', 'REPORT', 'TODO'] as const;
+// The focus graph: one entity in the middle and everything one link away,
+// grouped by how each link reads from the middle ("Reports to", "Owns").
 
-export type GraphNodeType = (typeof GRAPH_NODE_TYPES)[number];
+/** Types that can sit in the middle of the focus graph. */
+export const FOCUS_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE'] as const;
 
-export interface GraphNode {
+export type FocusType = (typeof FOCUS_TYPES)[number];
+
+export interface FocusNode {
   readonly id: string;
-  readonly type: GraphNodeType;
+  readonly type: RelatableType;
   readonly label: string;
   readonly href: string;
+  /** Whether it can be the middle; a doc, note, todo or report only opens. */
+  readonly focusable: boolean;
 }
 
-export type GraphEdgeKind = 'SUBPROJECT' | 'DOC' | 'REPORT' | 'TODO';
-
-export interface GraphEdge {
-  readonly source: string;
-  readonly target: string;
-  readonly kind: GraphEdgeKind;
+export interface FocusGroup {
+  readonly label: string;
+  readonly nodes: readonly FocusNode[];
+  /** Neighbours left out of this group by the cap. */
+  readonly more: number;
 }
 
-export interface RelationGraph {
-  readonly nodes: readonly GraphNode[];
-  readonly edges: readonly GraphEdge[];
+export interface FocusGraph {
+  readonly focus: FocusNode | null;
+  readonly groups: readonly FocusGroup[];
 }

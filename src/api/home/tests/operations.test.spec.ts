@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraph, mergeUpdates, summarizeContent } from '../operations';
+import { mergeUpdates, summarizeContent } from '../operations';
+import { buildFocusGraph, focusNode } from '../focus-graph';
 
 const d = (iso: string): Date => new Date(iso);
 
@@ -22,52 +23,46 @@ describe('summarizeContent', () => {
   });
 });
 
-describe('buildGraph', () => {
-  it('is empty without projects', () => {
-    const graph = buildGraph({
-      projects: [],
-      docs: [{ id: 'd1', title: 'Orphan', entityId: 'gone' }],
-      reports: [],
-      todos: []
-    });
-    expect(graph).toEqual({ nodes: [], edges: [] });
-  });
+describe('buildFocusGraph', () => {
+  const focus = focusNode('PERSON', 'p1', 'Alice');
+  const node = (type: 'PERSON' | 'TEAM' | 'PROJECT' | 'DOC', id: string, label: string) => focusNode(type, id, label);
 
-  it('drops nodes with no links', () => {
-    const graph = buildGraph({
-      projects: [
-        { id: 'pr1', name: 'Alone', parentId: null },
-        { id: 'pr2', name: 'Linked', parentId: null }
-      ],
-      docs: [{ id: 'd1', title: 'Spec', entityId: 'pr2' }],
-      reports: [],
-      todos: []
-    });
-    expect(graph.nodes.map((n) => n.id)).toEqual(['pr2', 'd1']);
-  });
-
-  it('centres on projects and drops assets of missing projects', () => {
-    const graph = buildGraph({
-      projects: [
-        { id: 'pr1', name: 'Root', parentId: null },
-        { id: 'pr2', name: 'Child', parentId: 'pr1' }
-      ],
-      docs: [
-        { id: 'd1', title: 'Spec', entityId: 'pr1' },
-        { id: 'd2', title: 'Orphan', entityId: 'gone' }
-      ],
-      reports: [{ id: 'r1', title: 'Q3', entityId: 'pr2' }],
-      todos: [{ id: 't1', title: 'Ship', entityId: 'pr2' }]
-    });
-
-    expect(graph.nodes.map((n) => n.id)).toEqual(['pr1', 'pr2', 'd1', 'r1', 't1']);
-    expect(graph.nodes.find((n) => n.id === 'd1')?.href).toBe('/app/projects/pr1?doc=d1');
-    expect(graph.nodes.find((n) => n.id === 't1')?.href).toBe('/app/projects/pr2?popup=todo&todo=t1');
-    expect(graph.edges).toEqual([
-      { source: 'pr2', target: 'pr1', kind: 'SUBPROJECT' },
-      { source: 'd1', target: 'pr1', kind: 'DOC' },
-      { source: 'r1', target: 'pr2', kind: 'REPORT' },
-      { source: 't1', target: 'pr2', kind: 'TODO' }
+  it('groups links in reading order, each sorted by name', () => {
+    const graph = buildFocusGraph(focus, [
+      { label: 'Related to', node: node('PROJECT', 'pr1', 'Zeta') },
+      { label: 'Owns', node: node('PROJECT', 'pr2', 'Beta') },
+      { label: 'Owns', node: node('PROJECT', 'pr3', 'Alpha') },
+      { label: 'Reports to', node: node('PERSON', 'p2', 'Bob') },
+      { label: 'Something new', node: node('TEAM', 't1', 'Core') }
     ]);
+    expect(graph.groups.map((g) => g.label)).toEqual(['Reports to', 'Owns', 'Related to', 'Something new']);
+    expect(graph.groups[1]?.nodes.map((n) => n.label)).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('shows an entity once per label and never the focus itself', () => {
+    const graph = buildFocusGraph(focus, [
+      { label: 'Related to', node: node('PROJECT', 'pr1', 'Zeta') },
+      { label: 'Related to', node: node('PROJECT', 'pr1', 'Zeta') },
+      { label: 'Depends on', node: node('PROJECT', 'pr1', 'Zeta') },
+      { label: 'Related to', node: focus }
+    ]);
+    expect(graph.groups.map((g) => [g.label, g.nodes.length])).toEqual([['Depends on', 1], ['Related to', 1]]);
+  });
+
+  it('caps each group and counts the rest', () => {
+    const many = Array.from({ length: 11 }, (_, i) => ({ label: 'Direct reports', node: node('PERSON', `r${i}`, `R${i}`) }));
+    const graph = buildFocusGraph(focus, many, 8);
+    expect(graph.groups[0]?.nodes).toHaveLength(8);
+    expect(graph.groups[0]?.more).toBe(3);
+  });
+
+  it('marks only top-level entities as focusable', () => {
+    expect(node('DOC', 'd1', 'Spec').focusable).toBe(false);
+    expect(node('TEAM', 't1', 'Core').focusable).toBe(true);
+    expect(node('TEAM', 't1', 'Core').href).toBe('/app/teams/t1');
+  });
+
+  it('is empty without links', () => {
+    expect(buildFocusGraph(focus, [])).toEqual({ focus, groups: [] });
   });
 });

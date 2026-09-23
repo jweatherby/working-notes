@@ -100,7 +100,7 @@ Pass ISO dates (`2026-10-01` or `2026-10-01T09:00:00Z`). Results come back as IS
 
 People, teams, departments, projects, goals and pages can be archived: `<type>.archive --id` and `<type>.unarchive --id` (for example `person.archive`, `project.unarchive`). Archiving sets `archivedAt`; archiving twice keeps the first date.
 
-- **Hidden:** `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list` leave archived entities out. Pass `--archived only` for just the archived ones, or `--archived include` for both. The org map, the home feed, the project graph and `todo.list` leave out archived entities and what's attached to them.
+- **Hidden:** `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list` leave archived entities out. Pass `--archived only` for just the archived ones, or `--archived include` for both. The org map, the home feed, the home focus graph and `todo.list` leave out archived entities and what's attached to them.
 - **Still readable:** `get` returns an archived entity with its `archivedAt`, and its docs, notes, todos, reports and relations stay as they were.
 - **Read-only:** updates, membership changes, check-ins, goal–project links, and adding, editing or removing docs, notes, todos, reports, links, tags, comments and emoji on an archived entity fail, and the error says to unarchive it first. A relation can point *to* an archived entity (a project that supersedes an archived one) but not start from one.
 - **Delete still works** on an archived entity, and removes everything attached to it, as for any delete.

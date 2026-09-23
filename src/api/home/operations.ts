@@ -1,13 +1,7 @@
 import type { Registry } from '$shared/registry';
 import { ok, type Result } from '$shared/utils';
 import type { EntityType, TodoStatus } from '$shared/types/enums';
-import type {
-  GraphEdge,
-  GraphNode,
-  RecentUpdate,
-  RelationGraph,
-  UpdateKind
-} from '$shared/types/home';
+import type { RecentUpdate, UpdateKind } from '$shared/types/home';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
@@ -63,63 +57,6 @@ const updateHref = (u: RawUpdate): string => {
     default:
       return u.parent ? entityPath(u.parent.entityType, u.parent.entityId) : '/app';
   }
-};
-
-interface ProjectAsset {
-  readonly id: string;
-  readonly title: string;
-  readonly entityId: string;
-}
-
-interface GraphSource {
-  readonly projects: readonly {
-    readonly id: string;
-    readonly name: string;
-    readonly parentId: string | null;
-  }[];
-  readonly docs: readonly ProjectAsset[];
-  readonly reports: readonly ProjectAsset[];
-  readonly todos: readonly ProjectAsset[];
-}
-
-/**
- * Project-centred graph: projects, sub-project links, and the docs, reports and
- * todos attached to each project. Empty when there are no projects. Assets whose
- * project is missing are dropped.
- */
-export const buildGraph = (src: GraphSource): RelationGraph => {
-  if (src.projects.length === 0) return { nodes: [], edges: [] };
-
-  const projectIds = new Set(src.projects.map((p) => p.id));
-  const attached = (assets: readonly ProjectAsset[]) => assets.filter((a) => projectIds.has(a.entityId));
-  const docs = attached(src.docs);
-  const reports = attached(src.reports);
-  const todos = attached(src.todos);
-
-  const nodes: GraphNode[] = [
-    ...src.projects.map((p) => ({ id: p.id, type: 'PROJECT' as const, label: p.name, href: entityPath('PROJECT', p.id) })),
-    ...docs.map((d) => ({ id: d.id, type: 'DOC' as const, label: d.title, href: docPath('PROJECT', d.entityId, d.id) })),
-    ...reports.map((r) => ({ id: r.id, type: 'REPORT' as const, label: r.title, href: entityPath('REPORT', r.id) })),
-    ...todos.map((t) => ({
-      id: t.id,
-      type: 'TODO' as const,
-      label: t.title,
-      href: `${entityPath('PROJECT', t.entityId)}?popup=todo&todo=${t.id}`
-    }))
-  ];
-
-  const edges: GraphEdge[] = [
-    ...src.projects.flatMap((p) =>
-      p.parentId && projectIds.has(p.parentId) ? [{ source: p.id, target: p.parentId, kind: 'SUBPROJECT' as const }] : []
-    ),
-    ...docs.map((d) => ({ source: d.id, target: d.entityId, kind: 'DOC' as const })),
-    ...reports.map((r) => ({ source: r.id, target: r.entityId, kind: 'REPORT' as const })),
-    ...todos.map((t) => ({ source: t.id, target: t.entityId, kind: 'TODO' as const }))
-  ];
-
-  // A node with no edges is a graph of one: leave it out.
-  const linked = new Set(edges.flatMap((e) => [e.source, e.target]));
-  return { nodes: nodes.filter((n) => linked.has(n.id)), edges };
 };
 
 // ----- Operations -----
@@ -222,20 +159,4 @@ export const listRecentUpdates = async (
       isNew: Math.abs(u.updatedAt.getTime() - u.createdAt.getTime()) < 1000
     }))
   );
-};
-
-export const getRelationGraph = async (
-  reg: Pick<Registry, 'prisma'>
-): Promise<Result<RelationGraph>> => {
-  const p = reg.prisma;
-  const projects = await p.project.findMany({ where: { archivedAt: null }, select: { id: true, name: true, parentId: true } });
-  if (projects.length === 0) return ok({ nodes: [], edges: [] });
-
-  const onProjects = { where: { entityType: 'PROJECT' }, select: { id: true, title: true, entityId: true } };
-  const [docs, reports, todos] = await Promise.all([
-    p.doc.findMany(onProjects),
-    p.report.findMany(onProjects),
-    p.todo.findMany({ ...onProjects, where: { entityType: 'PROJECT', status: { in: [...OPEN_STATUSES] } } })
-  ]);
-  return ok(buildGraph({ projects, docs, reports: features.reports ? reports : [], todos }));
 };
