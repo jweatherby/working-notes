@@ -86,6 +86,31 @@ in Safari, delete it from the Applications folder.
 The window shows an error page whenever the server is not running. Start it again the usual way —
 ask Claude to open Working Notes, or run `wnotes app` — and reload.
 
+## Writing docs
+
+Every person, team, project and goal can hold docs: markdown, shown in the middle of its page. Ask
+Claude to write one ("write up Platform's quarter as a doc, with charts"), or click **+** in the
+Docs list and write it yourself. The editor has three tabs: **Editor** to write, **Markdown** for
+the source, and **Preview** to see it as it will export.
+
+**Charts.** Give Claude the figures and ask for a chart — bar, line or radar. It writes a ` ```chart `
+block, which the doc draws in your branding's colours. To write one by hand, see
+[CLI.md](CLI.md#charts-in-docs-and-notes). Diagrams work the same way in ` ```mermaid ` blocks.
+
+**Images.** Paste or drag a PNG, JPEG, GIF or WebP (up to about 10 MB) into the editor. It uploads
+when you save and is stored with the notebook, on your Mac. Claude can add one too, from a file you
+point it at.
+
+**PDF.** **Export PDF** opens the doc as a printable page. Its toolbar picks a branding — your
+default, another one, or none — and turns the letterhead (logo and title) on or off. Then:
+
+- **Download PDF** saves an A4 file straight away. Its pages are pictures, so the text can't be
+  selected.
+- **Print…** opens the browser's print dialog; choose **Save as PDF** for a file with real text.
+
+A line containing only `<!-- pagebreak -->` starts a new page. Set up brandings — a logo, an icon
+and colours — under **Branding** in the app, and mark one as the default.
+
 ## Hourly backups
 
 ```bash

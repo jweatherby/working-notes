@@ -189,6 +189,23 @@ blocking the save. Check a chart by viewing the doc.
 
 Mermaid diagrams render too, in ```` ```mermaid ```` blocks.
 
+## Images in docs
+
+Upload the image, then put its key in the doc's markdown as a `storage://` link:
+
+```bash
+base64 -i chart.png > /tmp/img.b64
+wnotes doc.uploadImage --docId <doc> --contentType image/png --dataBase64-file /tmp/img.b64
+# → { "ok": true, "value": { "key": "docs/<doc>/image-<uuid>.png" } }
+```
+
+```markdown
+![Latency after the read replicas](storage://docs/<doc>/image-<uuid>.png)
+```
+
+PNG, JPEG, GIF and WebP, up to about 10 MB. In the app, pasting or dropping an image into the
+editor does the same.
+
 Reports — branded markdown with charts, printable to PDF — are built but turned off while they are
 unfinished. The flag is `features.reports`. Write finished write-ups as docs instead.
 

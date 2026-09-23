@@ -6,7 +6,7 @@ follow up on.
 
 You put things in by telling Claude. You read them in an app on your own Mac.
 
-![The home dashboard: open todos, a feed of recent changes, and a graph of how everything links up](docs/images/home.png)
+![The home dashboard: open todos, a feed of recent changes, and a graph of what links to what](docs/images/home.png)
 
 ## What you can use it for
 
@@ -17,8 +17,10 @@ You put things in by telling Claude. You read them in an app on your own Mac.
 - **Goals with real numbers.** A target, a figure each month, and a chart of how it actually went.
 - **Remembering decisions.** Why you bought that tool, what it costs, when it renews, which policy
   applies.
+- **Seeing how it fits together.** Which projects wait on which, which goals they deliver, and who
+  owns the work.
 - **Writing it up.** A quarter in review, a career plan, a summary for your boss — built from what
-  is already there.
+  is already there, with charts and images, and exported to PDF on your own letterhead.
 
 ## How it works
 
@@ -86,9 +88,12 @@ page and the project gains a "Mentioned in" entry by itself.
 
 > **You:** Write up Platform's quarter as a doc — delivery and reliability, with charts.
 
-Docs are markdown, and a doc can hold charts drawn from figures you give Claude.
+Docs are markdown. A doc can hold charts drawn from figures you give Claude, diagrams, and images
+you paste or drop in.
 
 ![A doc on the Platform team: prose and a bar chart of committed against delivered story points](docs/images/doc-charts.png)
+
+**Export PDF** turns a doc into an A4 PDF, with your logo and colours at the top if you want them.
 
 ## The app
 
@@ -96,9 +101,14 @@ The app is mostly for reading, usually in a browser pane beside Claude. You can 
 Mac so that it gets a Dock icon and a window of its own — see
 [docs/INSTALL.md](docs/INSTALL.md#install-it-as-a-mac-app).
 
-The home screen shows your open todos, what changed lately, and a graph of how things connect. The
-org map shows reporting lines. Everything else gets a page of its own, with its docs down the
-middle, its todos and links in the sidebar and its notes on the right.
+The home screen shows your open todos, what changed lately, and a graph of everything linked to
+one thing — a person, a team, a project — that you can click through. Everything else gets a page
+of its own, with its docs down the middle, its todos and links in the sidebar and its notes on the
+right.
+
+Two maps show the bigger picture. The org map shows reporting lines, or switch it to the work each
+team and person owns. The projects page has a dependency map: what each project waits on, and which
+goals it delivers.
 
 Press ⌘K to search. Start with `/` to look in one place only, as in `/person dana`.
 
@@ -123,7 +133,8 @@ covers them for you.
 ## Getting started
 
 - **[docs/INSTALL.md](docs/INSTALL.md)** — install it for Claude Code, Cowork or the Claude desktop
-  app. A release brings the app with it, so there is nothing else to install.
+  app. A release brings the app with it, so there is nothing else to install. It also covers
+  [writing docs](docs/INSTALL.md#writing-docs): charts, images and exporting to PDF.
 - **[docs/CLI.md](docs/CLI.md)** — the `wnotes` command and the tools Claude uses, for when you want
   to drive it yourself.
 - **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** — running from a clone, and how releases work.
