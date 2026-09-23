@@ -1,6 +1,6 @@
 {
   "name": "working-notes",
-  "version": "0.6.15",
+  "version": "0.6.16",
   "description": "Lets Claude read and write your local Working Notes notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
   "author": {
     "name": "jweatherby"
