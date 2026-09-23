@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { acceptsDocs, parseTypedIdValue, typedIdValue } from '../entity';
+import { acceptsDocs, docPath, parseTypedIdValue, typedIdValue } from '../entity';
 
 describe('acceptsDocs', () => {
   it('refuses docs on wiki pages only', () => {
@@ -19,5 +19,12 @@ describe('parseTypedIdValue', () => {
     expect(parseTypedIdValue(':abc', ['TEAM'])).toBeNull();
     expect(parseTypedIdValue('abc', ['TEAM'])).toBeNull();
     expect(parseTypedIdValue('PAGE:abc', ['TEAM'])).toBeNull();
+  });
+});
+
+describe('docPath', () => {
+  it('opens the doc on its entity page', () => {
+    expect(docPath('PROJECT', 'p1', 'd1')).toBe('/app/projects/p1?doc=d1');
+    expect(docPath('PERSON', 'a', 'd 1')).toBe('/app/people/a?doc=d%201');
   });
 });

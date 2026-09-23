@@ -3,7 +3,7 @@ import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
 import { RELATION_KINDS, type EntityType, type RelatableType, type RelationKind } from '$shared/types/enums';
 import { RELATION_LABELS, type RelationGroup, type RelationItem } from '$shared/types/relations';
-import { entityPath } from '$shared/utils/entity';
+import { docPath, entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
 
 // ----- Pure helpers -----
@@ -28,15 +28,18 @@ export const groupRelations = (items: readonly RelationItem[]): readonly Relatio
 // ----- Queries -----
 
 // Docs, notes and todos have no page of their own; link to the entity they're
-// attached to (a todo opens in its popup there).
+// attached to (a todo opens in its popup there, a doc in its centre pane).
 const pathOf = async (reg: Pick<Registry, 'prisma'>, entityType: RelatableType, entityId: string): Promise<string> => {
   if (entityType === 'TODO') {
     const owner = await reg.prisma.todo.findUnique({ where: { id: entityId }, select: { entityType: true, entityId: true } });
     if (owner) return `${entityPath(owner.entityType as EntityType, owner.entityId)}?popup=todo&todo=${entityId}`;
   }
-  if (entityType === 'DOC' || entityType === 'NOTE') {
-    const where = { where: { id: entityId }, select: { entityType: true, entityId: true } };
-    const owner = entityType === 'DOC' ? await reg.prisma.doc.findUnique(where) : await reg.prisma.note.findUnique(where);
+  if (entityType === 'DOC') {
+    const owner = await reg.prisma.doc.findUnique({ where: { id: entityId }, select: { entityType: true, entityId: true } });
+    if (owner) return docPath(owner.entityType as EntityType, owner.entityId, entityId);
+  }
+  if (entityType === 'NOTE') {
+    const owner = await reg.prisma.note.findUnique({ where: { id: entityId }, select: { entityType: true, entityId: true } });
     if (owner) return entityPath(owner.entityType as EntityType, owner.entityId);
   }
   return entityPath(entityType, entityId);

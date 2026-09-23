@@ -55,13 +55,13 @@ export const createDocHandlers = (
   entityType: string,
   entityId: string,
   getActiveDocId: () => string | null,
-  setActiveDocId: (id: string | null) => void,
+  setActiveDocId: (id: string | null) => void | Promise<void>,
   pollMs = 3000,
 ): DocHandlers => ({
   handleAddDoc: async (title: string) => {
     const doc = await submitOrThrow(() => docTrpc.add.mutate({ entityType, entityId, title }));
     await invalidateAll();
-    setActiveDocId(doc.id);
+    await setActiveDocId(doc.id);
   },
 
   handleSaveDoc: async (content: string) => {
@@ -80,7 +80,7 @@ export const createDocHandlers = (
 
   handleRemoveDoc: async (id: string) => {
     await submitOrThrow(() => docTrpc.remove.mutate({ id }));
-    if (getActiveDocId() === id) setActiveDocId(null);
+    if (getActiveDocId() === id) await setActiveDocId(null);
     await invalidateAll();
   },
 

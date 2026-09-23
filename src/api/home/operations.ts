@@ -8,7 +8,7 @@ import type {
   RelationGraph,
   UpdateKind
 } from '$shared/types/home';
-import { entityPath } from '$shared/utils/entity';
+import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
 import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
@@ -58,6 +58,8 @@ const updateHref = (u: RawUpdate): string => {
       return u.parent
         ? `${entityPath(u.parent.entityType, u.parent.entityId)}?popup=todo&todo=${u.id}`
         : `/app/todos?popup=todo&todo=${u.id}`;
+    case 'DOC':
+      return u.parent ? docPath(u.parent.entityType, u.parent.entityId, u.id) : '/app';
     default:
       return u.parent ? entityPath(u.parent.entityType, u.parent.entityId) : '/app';
   }
@@ -96,7 +98,7 @@ export const buildGraph = (src: GraphSource): RelationGraph => {
 
   const nodes: GraphNode[] = [
     ...src.projects.map((p) => ({ id: p.id, type: 'PROJECT' as const, label: p.name, href: entityPath('PROJECT', p.id) })),
-    ...docs.map((d) => ({ id: d.id, type: 'DOC' as const, label: d.title, href: entityPath('PROJECT', d.entityId) })),
+    ...docs.map((d) => ({ id: d.id, type: 'DOC' as const, label: d.title, href: docPath('PROJECT', d.entityId, d.id) })),
     ...reports.map((r) => ({ id: r.id, type: 'REPORT' as const, label: r.title, href: entityPath('REPORT', r.id) })),
     ...todos.map((t) => ({
       id: t.id,

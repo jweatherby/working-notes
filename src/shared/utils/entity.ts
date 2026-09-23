@@ -44,6 +44,10 @@ export const entityPath = (entityType: EntityType, entityId: string): string => 
   return segment ? `/app/${segment}/${entityId}` : `/app/${entityType.toLowerCase()}/${entityId}`;
 };
 
+/** App route for an entity page with one of its docs open (`?doc=<id>`). */
+export const docPath = (entityType: EntityType, entityId: string, docId: string): string =>
+  `${entityPath(entityType, entityId)}?doc=${encodeURIComponent(docId)}`;
+
 export const entityTypeLabel = (entityType: EntityType): string => TYPE_LABELS[entityType];
 
 /** Whether docs can attach to this entity type. A wiki page is its own content, so it takes none. */

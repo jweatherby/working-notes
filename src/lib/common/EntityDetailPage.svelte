@@ -10,6 +10,7 @@
   import { page } from '$app/state';
   import DocEditor from '$lib/common/DocEditor.svelte';
   import { printUrl } from '$lib/doc/print-options';
+  import { DOC_PARAM, NEW_DOC, openDocUrl, closeDocUrl } from '$lib/doc/doc-url';
   import NoteEditor from '$lib/common/NoteEditor.svelte';
   import Popup from '$lib/common/Popup.svelte';
   import TodoWidget from '$lib/todo/components/TodoWidget.svelte';
@@ -123,11 +124,11 @@
   });
 
   // ----- Center pane state -----
+  // The open doc lives in the URL (`?doc=<id>`, or `?doc=new` for a draft) and
+  // takes the pane over everything else. Notes and todos are local state.
   type CenterView =
     | { readonly type: 'overview' }
-    | { readonly type: 'doc'; readonly id: string }
     | { readonly type: 'note'; readonly id: string }
-    | { readonly type: 'newDoc' }
     | { readonly type: 'newNote' }
     | { readonly type: 'newTodo' }
     | { readonly type: 'editTodo'; readonly id: string };
@@ -135,20 +136,20 @@
   let center = $state<CenterView>({ type: 'overview' });
   let newDocTitleDraft = $state('Untitled');
 
-  // If the active doc/note vanishes, return to overview.
+  const docParam = $derived(page.url.searchParams.get(DOC_PARAM));
+  const newDocOpen = $derived(docParam === NEW_DOC);
+
+  const activeDoc = $derived(
+    docParam && docParam !== NEW_DOC ? docs.find((d) => d.id === docParam) ?? null : null,
+  );
+
+  // A doc that's gone (deleted, or a stale link) closes; so does a vanished note.
   $effect(() => {
+    if (docParam && docParam !== NEW_DOC && !activeDoc) void closeDocUrl({ replace: true });
     const c = center;
-    if (c.type === 'doc' && !docs.some((d) => d.id === c.id)) {
-      center = { type: 'overview' };
-    }
     if (c.type === 'note' && !notes.some((n) => n.id === c.id)) {
       center = { type: 'overview' };
     }
-  });
-
-  const activeDoc = $derived.by(() => {
-    const c = center;
-    return c.type === 'doc' ? docs.find((d) => d.id === c.id) ?? null : null;
   });
 
   const activeNote = $derived.by(() => {
@@ -156,25 +157,32 @@
     return c.type === 'note' ? notes.find((n) => n.id === c.id) ?? null : null;
   });
 
-  const activeDocId = $derived.by(() => {
-    const c = center;
-    return c.type === 'doc' ? c.id : null;
-  });
+  const activeDocId = $derived(activeDoc?.id ?? null);
 
   // A doc fills the centre pane, so the metadata above it gives way.
-  const docOpen = $derived(center.type === 'doc' || center.type === 'newDoc');
+  const docOpen = $derived(activeDoc !== null || newDocOpen);
 
-  const openDoc = (id: string) => { center = { type: 'doc', id }; };
+  // Anything else opened in the pane closes the doc first.
+  const showInCenter = (view: CenterView) => {
+    void closeDocUrl();
+    center = view;
+  };
+
+  const openDoc = (id: string) => {
+    center = { type: 'overview' };
+    void openDocUrl(id);
+  };
   // Close the notes drawer (mobile) so the editor in the center pane is reachable.
-  const openNote = (id: string) => { center = { type: 'note', id }; activeDrawer.set(null); };
-  const openNewNote = () => { center = { type: 'newNote' }; activeDrawer.set(null); };
+  const openNote = (id: string) => { showInCenter({ type: 'note', id }); activeDrawer.set(null); };
+  const openNewNote = () => { showInCenter({ type: 'newNote' }); activeDrawer.set(null); };
   const openNewDoc = () => {
     newDocTitleDraft = 'Untitled';
-    center = { type: 'newDoc' };
+    openDoc(NEW_DOC);
   };
-  const openNewTodo = () => { center = { type: 'newTodo' }; };
-  const openEditTodo = (id: string) => { center = { type: 'editTodo', id }; };
+  const openNewTodo = () => { showInCenter({ type: 'newTodo' }); };
+  const openEditTodo = (id: string) => { showInCenter({ type: 'editTodo', id }); };
   const closeCenter = () => { center = { type: 'overview' }; };
+  const closeDoc = () => { void closeDocUrl(); };
 
   const handleTodoSuccess = async () => {
     center = { type: 'overview' };
@@ -188,7 +196,8 @@
       entityType,
       entityId,
       () => activeDocId,
-      (id) => { center = id ? { type: 'doc', id } : { type: 'overview' }; },
+      // Replace, so a created doc takes the draft's place in history and Back skips a deleted one.
+      (id) => (id ? openDocUrl(id, { replace: true }) : closeDocUrl({ replace: true })),
     ),
   );
 
@@ -233,7 +242,7 @@
 
   const handleCreateDoc = async (content: string) => {
     await docHandlers.handleAddDoc(newDocTitleDraft);
-    // handleAddDoc has set center = { type: 'doc', id: newId }.
+    // handleAddDoc has put the new doc's id in the URL.
     if (content) await docHandlers.handleSaveDoc(content);
   };
 
@@ -401,9 +410,19 @@
         onConvertPdf={handleConvertActiveDoc}
         onUploadImage={docHandlers.handleUploadImage}
         onResolveImages={docHandlers.handleResolveImages}
-        onClose={closeCenter}
+        onClose={closeDoc}
         exportHref={printUrl(activeDoc.id)}
         chartBranding={page.data.chartBranding ?? null}
+      />
+    {:else if newDocOpen}
+      <DocEditor
+        title={newDocTitleDraft}
+        content=""
+        onSave={handleCreateDoc}
+        onSaveTitle={handleDraftDocTitle}
+        onUploadPdf={handleCreateDocFromPdf}
+        onClose={closeDoc}
+        autoEditTitle
       />
     {:else if activeNote}
       <NoteEditor
@@ -418,16 +437,6 @@
         content=""
         onSave={handleCreateNote}
         onClose={closeCenter}
-      />
-    {:else if center.type === 'newDoc'}
-      <DocEditor
-        title={newDocTitleDraft}
-        content=""
-        onSave={handleCreateDoc}
-        onSaveTitle={handleDraftDocTitle}
-        onUploadPdf={handleCreateDocFromPdf}
-        onClose={closeCenter}
-        autoEditTitle
       />
     {:else if center.type === 'newTodo'}
       <section class="card pane-card">

@@ -6,6 +6,7 @@ Routes are thin entry points: load data in `+page.server.ts`, render components 
 
 - `/` redirects to `/app`, the home dashboard: open todos (`home.todos`), latest updates (`home.updates`) and a clickable relation graph (`home.graph`, laid out by `$lib/home/graph-layout.ts`).
 - `app/` is the app: `projects`, `goals`, `wiki` (pages), `orgmap`, `people`, `teams`, `departments`, `todos`, `reports`, `branding`, `notebooks`. Person, team and department pages show the goals and projects they own; project pages show the owner and linked goals. `app/+layout.server.ts` loads the open notebook and the notebook list (for the switcher), and the notebook's default branding: its icon for the nav and its primary colours, which `app/+layout.svelte` applies with `.branded`.
+- Entity detail pages read `?doc=<id>` (or `?doc=new`) to open a doc in the centre pane; see `EntityDetailPage` in `src/lib/CLAUDE.md`.
 - `app/notebooks` lists notebooks: open one, rename it, or make it Claude's default. Creating one is the global `?popup=new-notebook`.
 - `app/reports/[id]/print/+page@.svelte` and `app/docs/[id]/print/+page@.svelte` reset to the root layout (no app chrome), so the page prints cleanly to PDF. Mark on-screen-only controls with `class="no-print"`.
 - The doc print page (a doc's "Export PDF") reads `?branding=<id>|none` (left out = the default branding) and `?header=0` through `lib/doc/print-options.ts`, and its toolbar rewrites them. "Download PDF" saves the `.sheet` with `lib/doc/export-pdf.ts`. It isn't gated by `features.reports`.

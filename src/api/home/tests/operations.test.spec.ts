@@ -61,6 +61,7 @@ describe('buildGraph', () => {
     });
 
     expect(graph.nodes.map((n) => n.id)).toEqual(['pr1', 'pr2', 'd1', 'r1', 't1']);
+    expect(graph.nodes.find((n) => n.id === 'd1')?.href).toBe('/app/projects/pr1?doc=d1');
     expect(graph.nodes.find((n) => n.id === 't1')?.href).toBe('/app/projects/pr2?popup=todo&todo=t1');
     expect(graph.edges).toEqual([
       { source: 'pr2', target: 'pr1', kind: 'SUBPROJECT' },

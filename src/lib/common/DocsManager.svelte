@@ -27,13 +27,17 @@
     onReorder,
   }: Props = $props();
 
-  // Open on arrival, so the page shows what it holds. It closes itself only
-  // when a doc takes the centre pane, and reopens on a click.
-  let expanded = $state(true);
+  // Open on arrival, so the page shows what it holds, unless the URL already
+  // has a doc open. It closes itself when a doc takes the centre pane, and
+  // reopens on a click.
+  let expanded = $state(activeDocId === null);
 
   const toggle = () => { expanded = !expanded; };
 
-  const select = (id: string) => {
+  // A plain click opens the doc in place; a modified click (new tab) is left to the browser.
+  const select = (e: MouseEvent, id: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
     expanded = false;
     onSelect(id);
   };
@@ -72,9 +76,9 @@
       <ul class="list">
         {#each docs as doc, i (doc.id)}
           <li class="list-row" class:active={activeDocId === doc.id}>
-            <button type="button" class="grow truncate doc-title" onclick={() => select(doc.id)}>
+            <a href="?doc={encodeURIComponent(doc.id)}" class="grow truncate doc-title" onclick={(e) => select(e, doc.id)}>
               {doc.title}
-            </button>
+            </a>
             <span class="row-actions">
               <button type="button" class="btn icon sm" onclick={() => moveUp(i)} disabled={i === 0} title="Move up" aria-label="Move up">↑</button>
               <button type="button" class="btn icon sm" onclick={() => moveDown(i)} disabled={i === docs.length - 1} title="Move down" aria-label="Move down">↓</button>
@@ -93,6 +97,8 @@
   .doc-title {
     text-align: left;
     padding: 4px 0;
+    color: inherit;
+    text-decoration: none;
     &:hover { color: var(--accent); }
   }
   .list-row.active .doc-title { color: var(--accent); font-weight: 500; }
