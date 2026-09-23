@@ -16,7 +16,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     defaultBrandingIconUrl: branding.ok ? branding.value?.iconUrl ?? null : null,
     // The notebook's default branding colours the app (see `.branded` in styles/_tokens.scss).
     brandTheme: branding.ok && branding.value
-      ? { primary: branding.value.primaryColor, primaryText: branding.value.primaryFontColor }
+      ? {
+          primary: branding.value.primaryColor,
+          primaryText: branding.value.primaryFontColor,
+          accent: branding.value.accentColor,
+          accentText: branding.value.accentFontColor
+        }
       : null,
     // Chart colours for doc previews, matching the default branding of an exported PDF.
     chartBranding: branding.ok && branding.value

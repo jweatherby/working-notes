@@ -1,4 +1,4 @@
-// Design tokens: `:root`, plus `.branded` below, which reassigns the accent rows.
+// Design tokens: `:root`, plus `.branded` below, which reassigns the accent and selected rows.
 //
 // Components reference ONLY these semantic names (no hex, no rgba, no raw
 // scales). A dark theme is a `[data-theme="dark"]` block here that
@@ -29,6 +29,11 @@
   --accent-hover: #1d4ed8;
   --accent-soft: #eff6ff;
   --accent-text: #ffffff;
+
+  // --- Selected (the current option in a toggle; the branding's accent colour when branded) ---
+  --selected: var(--accent);
+  --selected-hover: var(--accent-hover);
+  --selected-text: var(--accent-text);
 
   // --- Status ---
   --danger: #dc2626;
@@ -109,6 +114,9 @@
   --accent-hover: color-mix(in srgb, var(--brand-primary) 85%, black);
   --accent-soft: color-mix(in srgb, var(--brand-primary) 12%, var(--surface));
   --accent-text: var(--brand-primary-text);
+  --selected: var(--brand-accent);
+  --selected-hover: color-mix(in srgb, var(--brand-accent) 85%, black);
+  --selected-text: var(--brand-accent-text);
   // --focus is computed from --accent where it's declared, so redeclare it here.
   --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 }

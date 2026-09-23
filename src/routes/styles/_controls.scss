@@ -164,7 +164,7 @@
 
 // --- Segmented toggle (ParamToggle) ---
 
-// Buttons joined into one control; the current one is filled.
+// Buttons joined into one control; the current one is filled with --selected (the branding's accent).
 .segmented {
   display: inline-flex;
   .btn {
@@ -174,10 +174,10 @@
     & + .btn { margin-left: -1px; }
     &[aria-current='true'] {
       position: relative;
-      color: var(--accent-text);
-      background: var(--accent);
-      border-color: var(--accent);
-      &:hover { background: var(--accent-hover); color: var(--accent-text); }
+      color: var(--selected-text);
+      background: var(--selected);
+      border-color: var(--selected);
+      &:hover { background: var(--selected-hover); color: var(--selected-text); }
     }
   }
 }

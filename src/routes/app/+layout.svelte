@@ -10,11 +10,13 @@
   let { children, data } = $props<{ children: any; data: LayoutData }>();
 </script>
 
-<!-- The notebook's default branding recolours the accent tokens for everything below, popups included. -->
+<!-- The notebook's default branding recolours the accent and selected tokens for everything below, popups included. -->
 <div
   class:branded={!!data.brandTheme}
   style:--brand-primary={data.brandTheme?.primary}
   style:--brand-primary-text={data.brandTheme?.primaryText}
+  style:--brand-accent={data.brandTheme?.accent}
+  style:--brand-accent-text={data.brandTheme?.accentText}
 >
   <QuickFinder />
   <CreateTodoPopup />
