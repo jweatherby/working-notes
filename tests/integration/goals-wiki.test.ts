@@ -84,7 +84,7 @@ describe('wiki pages and relations', () => {
 
     const mentioned = await listRelationsForEntity(reg, 'PAGE', page.value.id);
     expect(mentioned.ok && mentioned.value.map((g) => [g.label, g.items.map((i) => [i.other.label, i.other.path])])).toEqual([
-      ['Mentioned in', [['Payments notes', '/app/people/person_bob']]]
+      ['Mentioned in', [['Payments notes', `/app/people/person_bob?doc=${doc.value.id}`]]]
     ]);
 
     await updatePage(reg, page.value.id, { title: 'Stripe Billing' });
