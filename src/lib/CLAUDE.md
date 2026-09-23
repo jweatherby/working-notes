@@ -59,6 +59,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `ParamSelect` | `param`, `options: {id,name,group?}[]`, `defaultValue`, `ariaLabel` | a list page's toolbar select whose value lives in one query parameter (picking `defaultValue` removes it). The projects page's team filter (`?team=`) and grouping (`?group=`) use it |
 | `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`, built on `ParamSelect`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
 | `DisclosureButton` | `expanded`, `label`, `onToggle`, children? | the chevron that shows or hides a tree row's children (collapsible sub-projects). Use `flattenTree(forest, isCollapsed)` from `$shared/utils/hierarchy` for the rows. Pass children to put the label inside the button, so the whole thing toggles; wrap the component in the heading (`<h4><DisclosureButton>Docs</DisclosureButton></h4>`), as the Docs header does |
+| `ChevronIcon` | `size?` (14) | every expand/collapse chevron (`DisclosureButton`, the Todos widget, the org map's reports badge). It points right; the parent rotates it. Don't use `▸`/`▾` glyphs, which render too small |
 | `PencilIcon` | – | the edit affordance, inside `<button class="btn icon sm" aria-label="Edit …">` |
 | `popup-url.ts` | `openPopup(id, extra?)`, `closePopup({ invalidate?, clear? })` | opening and closing `Popup` (`?popup=<id>`) |
 | `submit.ts` | `submit(fn)`, `submitOrThrow(fn)`, `errorMessage(e)` | all tRPC mutations from the UI |

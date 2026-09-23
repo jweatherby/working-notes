@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChevronIcon from '$lib/ui/ChevronIcon.svelte';
   import { untrack } from 'svelte';
   import Self from './OrgLevel.svelte';
   import { countDescendants, type OrgTreeNode } from '$lib/org/org-tree';
@@ -64,7 +65,7 @@
         {#if node.children.length > 0}
           <button type="button" class="count" class:open aria-expanded={open} onclick={() => toggle(node.person.id)}>
             {node.children.length}{countDescendants(node) > node.children.length ? ` · ${countDescendants(node)}` : ''}
-            {open ? '▴' : '▾'}
+            <span class="count-chevron" aria-hidden="true"><ChevronIcon size={12} /></span>
           </button>
         {/if}
       </li>
@@ -248,19 +249,29 @@
     position: relative;
     z-index: 1;
     align-self: center;
-    margin: -8px 0 0;
-    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    margin: -10px 0 0;
+    padding: 0 var(--sp-1) 0 var(--sp-2);
     border: 1px solid var(--border-strong);
     border-radius: var(--r-full);
     background: var(--surface);
     color: var(--text-2);
-    font-size: 10px;
-    line-height: 15px;
+    font-size: var(--fs-xs);
+    line-height: 20px;
     font-weight: 500;
     transition: color var(--ease), border-color var(--ease);
     &:hover,
     &.open { color: var(--accent); border-color: var(--accent); }
   }
+  // Points down while closed, up while open.
+  .count-chevron {
+    display: inline-flex;
+    transform: rotate(90deg);
+    transition: transform var(--ease);
+  }
+  .count.open .count-chevron { transform: rotate(-90deg); }
 
   .next {
     display: flex;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import ChevronIcon from '$lib/ui/ChevronIcon.svelte';
 
   // The chevron that shows or hides a row's children, or — with `children` — a
   // whole heading that toggles what sits under it.
@@ -24,13 +25,13 @@
   aria-label="{expanded ? 'Collapse' : 'Expand'} {label}"
   onclick={onToggle}
 >
-  <span class="chevron" aria-hidden="true">▸</span>
+  <span class="chevron" aria-hidden="true"><ChevronIcon /></span>
   {#if children}{@render children()}{/if}
 </button>
 
 <style lang="scss">
   .chevron {
-    display: inline-block;
+    display: inline-flex;
     transition: transform var(--ease);
   }
   .disclosure.open .chevron { transform: rotate(90deg); }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChevronIcon from '$lib/ui/ChevronIcon.svelte';
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import StatusDot from './StatusDot.svelte';
@@ -60,7 +61,7 @@
     <h4>Todos <span class="count">{activeTodos.length}</span></h4>
     <span class="header-actions">
       <button type="button" class="btn icon sm" onclick={openCreate} title="New todo" aria-label="New todo">+</button>
-      <button type="button" class="btn icon sm chevron" class:open={expanded} onclick={() => (expanded = !expanded)} aria-label={expanded ? 'Collapse' : 'Expand'} aria-expanded={expanded}>▸</button>
+      <button type="button" class="btn icon sm chevron" class:open={expanded} onclick={() => (expanded = !expanded)} aria-label={expanded ? 'Collapse' : 'Expand'} aria-expanded={expanded}><ChevronIcon /></button>
     </span>
   </div>
 
