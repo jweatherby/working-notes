@@ -14,7 +14,7 @@
   import { submitOrThrow } from '$lib/ui/submit';
   import OrgTree from '$lib/org/components/OrgTree.svelte';
   import { buildOrgTree } from '$lib/org/org-tree';
-  import ParamSelect from '$lib/ui/ParamSelect.svelte';
+  import ParamToggle from '$lib/ui/ParamToggle.svelte';
   import WorkMap from '$lib/org/components/WorkMap.svelte';
   import { page } from '$app/state';
   import type { PageData } from './$types';
@@ -27,8 +27,8 @@
   const orgRoots = $derived(buildOrgTree(persons));
 
   const VIEW_OPTIONS = [
-    { id: 'people', name: 'People' },
-    { id: 'work', name: 'Work by owner' }
+    { id: 'people', name: 'Org chart' },
+    { id: 'work', name: 'Owned work' }
   ];
   const isWork = $derived(page.url.searchParams.get('view') === 'work');
 
@@ -146,23 +146,28 @@
     <button type="button" class="btn primary sm" onclick={() => startEditPerson(null)}>Add person</button>
   </PageHeader>
 
-  <div class="toolbar filters">
-    <ParamSelect param="view" options={VIEW_OPTIONS} defaultValue="people" ariaLabel="View" />
-  </div>
+  {#snippet viewToggle()}
+    <ParamToggle param="view" options={VIEW_OPTIONS} defaultValue="people" ariaLabel="View" />
+  {/snippet}
 
   {#if isWork}
-    {#if data.work}
-      <WorkMap input={data.work} />
-    {:else}
-      <EmptyState boxed message="The work map couldn't be loaded. Reload the page to try again." />
-    {/if}
+    <section class="section">
+      <div class="section-header"><h2>Owned work</h2></div>
+      <div class="view-tools">{@render viewToggle()}</div>
+      {#if data.work}
+        <WorkMap input={data.work} />
+      {:else}
+        <EmptyState boxed message="The work map couldn't be loaded. Reload the page to try again." />
+      {/if}
+    </section>
   {:else}
     <section class="section">
       <div class="section-header"><h2>Reporting lines</h2></div>
       {#if persons.length === 0}
+        <div class="view-tools">{@render viewToggle()}</div>
         <EmptyState message="No people yet." />
       {:else}
-        <OrgTree roots={orgRoots} {groupsByPerson} onEdit={startEditPerson} />
+        <OrgTree roots={orgRoots} {groupsByPerson} onEdit={startEditPerson} tools={viewToggle} />
       {/if}
     </section>
 
@@ -289,6 +294,12 @@
 </Popup>
 
 <style lang="scss">
+  // Where the view toggle sits when there's no org chart tools row to hold it.
+  .view-tools {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--sp-2);
+  }
   .group-list {
     list-style: none;
     margin: 0;

@@ -162,6 +162,26 @@
   &.active { color: var(--text); border-bottom-color: var(--accent); }
 }
 
+// --- Segmented toggle (ParamToggle) ---
+
+// Buttons joined into one control; the current one is filled.
+.segmented {
+  display: inline-flex;
+  .btn {
+    border-radius: 0;
+    &:first-child { border-radius: var(--r-md) 0 0 var(--r-md); }
+    &:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; }
+    & + .btn { margin-left: -1px; }
+    &[aria-current='true'] {
+      position: relative;
+      color: var(--accent-text);
+      background: var(--accent);
+      border-color: var(--accent);
+      &:hover { background: var(--accent-hover); color: var(--accent-text); }
+    }
+  }
+}
+
 // --- Toolbar ---
 
 .toolbar {

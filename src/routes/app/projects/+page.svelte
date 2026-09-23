@@ -6,6 +6,7 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import ParamSelect from '$lib/ui/ParamSelect.svelte';
+  import ParamToggle from '$lib/ui/ParamToggle.svelte';
   import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import DependencyMap from '$lib/project/components/DependencyMap.svelte';
@@ -24,7 +25,7 @@
 
   const VIEW_OPTIONS = [
     { id: 'table', name: 'Table' },
-    { id: 'map', name: 'Dependency map' }
+    { id: 'map', name: 'Map' }
   ];
   const GROUPING_OPTIONS = [
     { id: 'none', name: 'No grouping' },
@@ -87,7 +88,6 @@
   </PageHeader>
 
   <div class="toolbar filters">
-    <ParamSelect param="view" options={VIEW_OPTIONS} defaultValue="table" ariaLabel="View" />
     <ArchiveFilter />
     {#if teams.length > 0}
       <ParamSelect param="team" options={teamFilterOptions} defaultValue="" ariaLabel="Filter by team" />
@@ -100,6 +100,7 @@
       <button type="button" class="btn sm ghost" onclick={() => setAll('expanded')}>Expand all</button>
       <button type="button" class="btn sm ghost" onclick={() => setAll('collapsed')}>Collapse all</button>
     {/if}
+    <ParamToggle param="view" options={VIEW_OPTIONS} defaultValue="table" ariaLabel="View" />
   </div>
 
   {#snippet projectTable(rows: (typeof tables)[number]['rows'])}

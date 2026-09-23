@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import OrgLevel from './OrgLevel.svelte';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import { pathToPerson, type OrgTreeNode } from '$lib/org/org-tree';
@@ -8,9 +8,11 @@
     readonly roots: readonly OrgTreeNode[];
     readonly groupsByPerson: ReadonlyMap<string, readonly string[]>;
     readonly onEdit: (id: string) => void;
+    /** Extra controls at the far right, after "Jump to person" (the Org Map's view toggle). */
+    readonly tools?: Snippet;
   }
 
-  const { roots, groupsByPerson, onEdit }: Props = $props();
+  const { roots, groupsByPerson, onEdit, tools }: Props = $props();
 
   // Bumping this remounts the chart: back to its default (top lead open), or opened along `focusPath`.
   let resetVersion = $state(0);
@@ -46,8 +48,11 @@
 
 <div class="tools">
   <button type="button" class="btn link text-sm" onclick={collapseAll}>Collapse all</button>
-  <div class="jump">
-    <SearchPicker label="Jump to person" placeholder="Jump to person…" options={people} onPick={jumpTo} persistent />
+  <div class="end">
+    <div class="jump">
+      <SearchPicker label="Jump to person" placeholder="Jump to person…" options={people} onPick={jumpTo} persistent />
+    </div>
+    {#if tools}{@render tools()}{/if}
   </div>
 </div>
 <div class="scroller">
@@ -65,6 +70,14 @@
     gap: var(--sp-3);
     margin-bottom: var(--sp-2);
     justify-content: space-between;
+  }
+  .end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-3);
+    flex: 1;
+    min-width: 0;
   }
   .jump {
     width: 100%;
