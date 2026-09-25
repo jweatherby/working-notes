@@ -1,14 +1,16 @@
 // Entry point of the standalone `wnotes` binary that scripts/release/build.ts compiles.
 // It runs the same commands as bin/wnotes with Bun built in, so a machine needs no
-// clone. Its resources, the UI's static files and the migrations, sit next to the
-// binary (the plugin shim installs them together under <data dir>/App/<version>).
+// clone. The UI's static files are embedded in it; the migrations and VERSION sit next
+// to it (the plugin shim installs them together under <data dir>/App/<version>).
 
 import { dirname, join } from 'node:path';
-import type { SvelteKitServer } from './app-server';
+import type { StaticFiles, SvelteKitServer } from './app-server';
 
 export interface StandaloneApp {
   /** Loads the built SvelteKit server. A lazy import, so only `wnotes app` pays for it. */
   readonly loadServer: () => Promise<SvelteKitServer>;
+  /** The UI's static files, embedded by scripts/release/build.ts. */
+  readonly staticFiles: StaticFiles;
 }
 
 export const runStandalone = async (app: StandaloneApp): Promise<void> => {
@@ -34,7 +36,7 @@ export const runStandalone = async (app: StandaloneApp): Promise<void> => {
       const { serveApp } = await import('./app-server');
       // The shim installs VERSION beside the binary; release apps report it so a newer release can replace them.
       const version = (await Bun.file(join(resources, 'VERSION')).text().catch(() => 'unknown')).trim();
-      await serveApp({ server: await app.loadServer(), clientDir: join(resources, 'client'), version });
+      await serveApp({ server: await app.loadServer(), staticFiles: app.staticFiles, version });
       return;
     }
     default:

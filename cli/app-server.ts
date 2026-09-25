@@ -1,9 +1,6 @@
-// Serves the built UI from the standalone binary: static files from disk, and
+// Serves the built UI from the standalone binary: static files embedded in it, and
 // everything else (pages, the API, the guard in hooks.server.ts) through the
 // SvelteKit server. Loopback only, like `bun run start`.
-
-import { stat } from 'node:fs/promises';
-import { join, normalize, sep } from 'node:path';
 
 /** The parts of SvelteKit's generated `Server` (build/server/index.js) this uses. */
 export interface SvelteKitServer {
@@ -16,18 +13,20 @@ export const APP_PORT = 5173;
 
 const IMMUTABLE = '/_app/immutable/';
 
-/** The file a request path names inside clientDir, or null if it would escape it or is malformed. */
-export const staticFilePath = (clientDir: string, pathname: string): string | null => {
-  let decoded: string;
+/**
+ * The UI's static files, embedded in the binary: request path (`/_app/immutable/…`)
+ * to the embedded file's path. A lookup, so a request can only reach a file that was
+ * built into the release.
+ */
+export type StaticFiles = ReadonlyMap<string, string>;
+
+/** The embedded file a request path names, or null if there is none or the path is malformed. */
+export const staticFile = (files: StaticFiles, pathname: string): string | null => {
   try {
-    decoded = decodeURIComponent(pathname);
+    return files.get(decodeURIComponent(pathname)) ?? null;
   } catch {
     return null;
   }
-  if (decoded.includes('\0')) return null;
-  const root = clientDir.endsWith(sep) ? clientDir : `${clientDir}${sep}`;
-  const full = normalize(join(clientDir, decoded));
-  return full.startsWith(root) && full.length > root.length ? full : null;
 };
 
 /** GET: the running app's version, so a newer release can tell it's stale (cli/app-launch.ts). */
@@ -58,15 +57,19 @@ export const appControl = (request: Request, version: string): AppControl | null
 
 export interface ServeAppOptions {
   readonly server: SvelteKitServer;
-  readonly clientDir: string;
+  readonly staticFiles: StaticFiles;
   readonly version: string;
   readonly port?: number;
 }
 
 export const serveApp = async (options: ServeAppOptions): Promise<void> => {
-  const { server, clientDir, version } = options;
+  const { server, staticFiles, version } = options;
   const port = options.port ?? Number(process.env['PORT'] || APP_PORT);
-  await server.init({ env: process.env as Record<string, string>, read: (file) => Bun.file(join(clientDir, file)).stream() });
+  await server.init({ env: process.env as Record<string, string>, read: (file) => {
+      const embedded = staticFiles.get(`/${file}`);
+      if (!embedded) throw new Error(`${file} isn't one of the app's static files`);
+      return Bun.file(embedded).stream();
+    } });
 
   try {
     const http = Bun.serve({
@@ -85,9 +88,8 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
 
         const url = new URL(request.url);
         if (request.method === 'GET' || request.method === 'HEAD') {
-          const path = staticFilePath(clientDir, url.pathname);
-          const file = path ? await stat(path).catch(() => null) : null;
-          if (path && file?.isFile()) {
+          const path = staticFile(staticFiles, url.pathname);
+          if (path) {
             const headers: Record<string, string> = url.pathname.startsWith(IMMUTABLE) ? { 'cache-control': 'public, max-age=31536000, immutable' } : {};
             return new Response(Bun.file(path), { headers });
           }

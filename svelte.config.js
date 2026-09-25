@@ -5,7 +5,9 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
   preprocess: vitePreprocess(),
   kit: {
-    adapter: adapter(),
+    // No .gz/.br copies: the app is served on loopback, and the release binary embeds
+    // the static files, so they would only add hundreds of files to the plugin.
+    adapter: adapter({ precompress: false }),
     alias: {
       $api: 'src/api',
       '$api/*': 'src/api/*',

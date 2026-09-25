@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { appControl, staticFilePath } from '../app-server';
+import { appControl, staticFile } from '../app-server';
 import { appLaunchCommand, appUrl, isWorkingNotesCommand, planAppLaunch } from '../app-launch';
 
 describe('isWorkingNotesCommand', () => {
@@ -53,15 +53,20 @@ describe('planAppLaunch', () => {
   });
 });
 
-describe('staticFilePath', () => {
-  it('maps a request path to a file inside the client folder', () => {
-    expect(staticFilePath('/opt/wn/client', '/_app/immutable/entry/start.js')).toBe('/opt/wn/client/_app/immutable/entry/start.js');
-    expect(staticFilePath('/opt/wn/client', '/favicon%20copy.png')).toBe('/opt/wn/client/favicon copy.png');
+describe('staticFile', () => {
+  const files = new Map([
+    ['/_app/immutable/entry/start.js', '/$bunfs/root/start-a1.js'],
+    ['/favicon copy.png', '/$bunfs/root/favicon copy-b2.png']
+  ]);
+
+  it('finds the embedded file a request path names', () => {
+    expect(staticFile(files, '/_app/immutable/entry/start.js')).toBe('/$bunfs/root/start-a1.js');
+    expect(staticFile(files, '/favicon%20copy.png')).toBe('/$bunfs/root/favicon copy-b2.png');
   });
 
-  it('refuses the folder itself, paths that escape it, and malformed paths', () => {
-    for (const path of ['/', '/../secret', '/%2e%2e/secret', '/_app/../../secret', '/%E0%A4%A', '/a%00b']) {
-      expect(staticFilePath('/opt/wn/client', path)).toBeNull();
+  it('refuses anything that isn’t an embedded file, and malformed paths', () => {
+    for (const path of ['/', '/../secret', '/%2e%2e/secret', '/_app/../_app/immutable/entry/start.js', '/%E0%A4%A', '/a%00b']) {
+      expect(staticFile(files, path)).toBeNull();
     }
   });
 });

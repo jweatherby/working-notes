@@ -55,6 +55,10 @@ jobs:
     if: needs.plan.outputs.release == 'true'
     # Apple silicon. Intel Macs would need a darwin-x64 build on an Intel runner.
     runs-on: macos-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,6 +79,14 @@ jobs:
 
       - name: Smoke test
         run: bun run release:smoke dist/plugin
+
+      # A signed record that this workflow built the binary from RELEASE_SHA, so anyone
+      # (or an organisation's reviewer) can check a copy with
+      # `gh attestation verify <binary> --repo <owner>/<repo>`.
+      - name: Attest the binary's provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/plugin/server/wnotes-darwin-arm64
 
       - uses: actions/upload-artifact@v4
         with:

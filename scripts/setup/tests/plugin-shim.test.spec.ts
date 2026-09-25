@@ -25,8 +25,7 @@ const fakeRelease = (version: string): string => {
   mkdirSync(join(plugin, 'scripts'));
   copyFileSync(SHIM, join(plugin, 'scripts', 'wnotes'));
   const server = join(plugin, 'server');
-  mkdirSync(join(server, 'client', '_app'), { recursive: true });
-  mkdirSync(join(server, 'migrations'));
+  mkdirSync(join(server, 'migrations'), { recursive: true });
   writeFileSync(join(server, `wnotes-${TARGET}`), '#!/bin/sh\necho "release $0"\nfor a in "$@"; do printf "%s\\n" "$a"; done\n');
   writeFileSync(join(server, 'VERSION'), `${version}\n`);
   return plugin;
@@ -92,7 +91,6 @@ describe('plugin wnotes shim', () => {
     const installed = join(dataDirFor(home), 'App', '9.9.9');
     expect(r.stdout).toBe(`release ${join(installed, 'wnotes')}\nperson.list\n--name\ntwo words\n`);
     expect(statSync(join(installed, 'wnotes')).mode & 0o111).not.toBe(0);
-    expect(existsSync(join(installed, 'client', '_app'))).toBe(true);
     expect(existsSync(join(installed, 'migrations'))).toBe(true);
     expect(readlinkSync(join(dataDirFor(home), 'App', 'current'))).toBe('9.9.9');
 

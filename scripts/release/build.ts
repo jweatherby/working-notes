@@ -1,15 +1,17 @@
 #!/usr/bin/env bun
 // Builds the standalone plugin: one `wnotes` binary (the CLI, MCP server, backups and
-// UI, with Bun built in), the UI's static files and the migrations, in a copy of
-// plugin/. A machine that installs it needs no clone and no Bun.
+// UI, with Bun and the UI's static files built in) and the migrations, in a copy of
+// plugin/. A machine that installs it needs no clone and no Bun. The static files are
+// embedded rather than shipped as hundreds of minified files, so an organisation's
+// plugin security scan has less to read on every update.
 //   bun run release:build [--target darwin-arm64]
 // Output:
 //   dist/plugin/                                  the built plugin (published to the `dist` branch)
 //   dist/working-notes-<version>-<target>.zip     the same, zipped for Claude desktop Chat
 
 import { spawnSync } from 'node:child_process';
-import { cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { cp, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { join, relative, resolve, sep } from 'node:path';
 import { agreedVersion } from './versions';
 import { libsqlNativePlugin } from './libsql';
 
@@ -49,12 +51,22 @@ const main = async (): Promise<void> => {
   await cp(join(REPO, 'plugin'), plugin, { recursive: true, filter: (src) => !src.endsWith('.DS_Store') });
   await mkdir(server, { recursive: true });
 
+  // Every static file is imported `with { type: 'file' }`, which embeds it unchanged; the
+  // map from request path to embedded path is what cli/app-server.ts serves.
+  const clientDir = join(REPO, 'build', 'client');
+  const clientFiles = (await readdir(clientDir, { recursive: true, withFileTypes: true }))
+    .filter((e) => e.isFile() && e.name !== '.DS_Store')
+    .map((e) => join(e.parentPath, e.name))
+    .sort();
+
   // The generated entry imports the built SvelteKit server, so it isn't type-checked source.
   const entry = join(DIST, '.build', 'wnotes.ts');
   await mkdir(join(DIST, '.build'), { recursive: true });
   await writeFile(entry, [
     `import { runStandalone } from ${JSON.stringify(join(REPO, 'cli/standalone.ts'))};`,
+    ...clientFiles.map((file, i) => `import f${i} from ${JSON.stringify(file)} with { type: 'file' };`),
     'await runStandalone({',
+    `  staticFiles: new Map([${clientFiles.map((file, i) => `[${JSON.stringify(`/${relative(clientDir, file).split(sep).join('/')}`)}, f${i}]`).join(', ')}]),`,
     '  loadServer: async () => {',
     `    const [{ Server }, { manifest }] = await Promise.all([import(${JSON.stringify(join(REPO, 'build/server/index.js'))}), import(${JSON.stringify(join(REPO, 'build/server/manifest.js'))})]);`,
     '    return new Server(manifest);',
@@ -71,7 +83,6 @@ const main = async (): Promise<void> => {
   });
   if (!built.success) throw new Error(`Compiling failed:\n${built.logs.map(String).join('\n')}`);
 
-  await cp(join(REPO, 'build', 'client'), join(server, 'client'), { recursive: true });
   await cp(join(REPO, 'prisma', 'migrations'), join(server, 'migrations'), { recursive: true });
   await writeFile(join(server, 'VERSION'), `${version.value}\n`);
 
@@ -82,7 +93,7 @@ const main = async (): Promise<void> => {
 
   const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   const zipSize = (await stat(zip)).size;
-  console.log(`\nBuilt ${plugin}\n  binary ${mb((await stat(binary)).size)}\n  zip    ${zip} (${mb(zipSize)})`);
+  console.log(`\nBuilt ${plugin}\n  binary ${mb((await stat(binary)).size)}, with ${clientFiles.length} static files\n  zip    ${zip} (${mb(zipSize)})`);
   if (zipSize > CHAT_UPLOAD_LIMIT) console.warn(`The zip is over Claude desktop's ${mb(CHAT_UPLOAD_LIMIT)} upload limit.`);
 };
 

@@ -47,7 +47,7 @@ if [ -z "$app" ] && [ -f "$bundled" ]; then
     # restores the execute bit that an unzipped or cloned plugin may have lost.
     cat "$bundled" > "$tmp/wnotes"
     chmod 755 "$tmp/wnotes"
-    cp -R "$plugin/server/client" "$plugin/server/migrations" "$plugin/server/VERSION" "$tmp/"
+    cp -R "$plugin/server/migrations" "$plugin/server/VERSION" "$tmp/"
     # Another start may have installed this version meanwhile.
     if [ -e "$dest" ]; then rm -rf "$tmp"; else mv "$tmp" "$dest"; fi
   fi
