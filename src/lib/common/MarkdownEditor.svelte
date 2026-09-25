@@ -10,11 +10,13 @@
     wrapInBulletListCommand,
     wrapInOrderedListCommand,
     wrapInBlockquoteCommand,
-    toggleLinkCommand,
     turnIntoTextCommand,
+    linkSchema,
   } from '@milkdown/preset-commonmark';
   import { gfm, toggleStrikethroughCommand } from '@milkdown/preset-gfm';
   import { listener, listenerCtx } from '@milkdown/plugin-listener';
+  import { history, undoCommand, redoCommand } from '@milkdown/kit/plugin/history';
+  import { applyLink, findLinkRange } from '$lib/shared/components/milkdown-link';
   import { exitCodeBlockPlugin } from '$lib/shared/components/milkdown-exit-code-block';
   import { createImageDropPlugin } from '$lib/shared/components/milkdown-image-drop';
   import { imageResizeView } from '$lib/shared/components/milkdown-image-resize';
@@ -31,12 +33,17 @@
   let editorEl: HTMLDivElement;
   let editor: Editor | null = null;
 
+  // ProseMirror's own focus, so its selection and the DOM's stay in step.
+  const focusEditor = (): void => {
+    editor?.action((ctx) => ctx.get(editorViewCtx).focus());
+  };
+
   const runCommand = <Args extends unknown[]>(
     cmd: { run: (...args: Args) => boolean },
     ...args: Args
   ): void => {
     cmd.run(...args);
-    editorEl?.querySelector<HTMLElement>('.editor')?.focus();
+    focusEditor();
   };
 
   const clearFormatting = () => {
@@ -52,7 +59,42 @@
       });
       dispatch(tr);
     });
-    editorEl?.querySelector<HTMLElement>('.editor')?.focus();
+    focusEditor();
+  };
+
+  // The Link button opens a URL field under the toolbar. The editor keeps its
+  // selection while the field has focus, so Apply links whatever was selected.
+  let linkOpen = $state(false);
+  let linkHref = $state('');
+  let linkInput = $state<HTMLInputElement | null>(null);
+
+  const openLink = () => {
+    if (!editor) return;
+    linkHref = editor.action((ctx) => {
+      const { state } = ctx.get(editorViewCtx);
+      return findLinkRange(state, linkSchema.type(ctx))?.href ?? '';
+    });
+    linkOpen = true;
+    queueMicrotask(() => linkInput?.select());
+  };
+
+  const closeLink = () => {
+    linkOpen = false;
+    focusEditor();
+  };
+
+  const saveLink = (href: string) => {
+    editor?.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const tr = applyLink(view.state, linkSchema.type(ctx), href);
+      if (tr) view.dispatch(tr);
+    });
+    closeLink();
+  };
+
+  const onLinkKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveLink(linkHref); }
+    if (e.key === 'Escape') { e.preventDefault(); closeLink(); }
   };
 
   const imagePlugin = pendingImages ? createImageDropPlugin(pendingImages) : undefined;
@@ -70,6 +112,7 @@
       .use(commonmark)
       .use(gfm)
       .use(listener)
+      .use(history)
       .use(exitCodeBlockPlugin);
 
     if (imagePlugin) builder = builder.use(imagePlugin);
@@ -85,6 +128,15 @@
 
 <div class="md-editor-container">
   <div class="editor-toolbar">
+    <div class="toolbar-group">
+      <button type="button" class="btn ghost sm tb" title="Undo (Ctrl+Z)" aria-label="Undo" onclick={() => editor && runCommand(undoCommand)}>
+        &#8630;
+      </button>
+      <button type="button" class="btn ghost sm tb" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" onclick={() => editor && runCommand(redoCommand)}>
+        &#8631;
+      </button>
+    </div>
+    <span class="toolbar-sep"></span>
     <div class="toolbar-group">
       <button type="button" class="btn ghost sm tb" title="Heading 1" onclick={() => editor && runCommand(wrapInHeadingCommand, 1)}>H1</button>
       <button type="button" class="btn ghost sm tb" title="Heading 2" onclick={() => editor && runCommand(wrapInHeadingCommand, 2)}>H2</button>
@@ -119,7 +171,7 @@
     </div>
     <span class="toolbar-sep"></span>
     <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Link" onclick={() => editor && runCommand(toggleLinkCommand)}>
+      <button type="button" class="btn ghost sm tb" title="Link" aria-label="Link" aria-expanded={linkOpen} onclick={openLink}>
         &#128279;
       </button>
       <button type="button" class="btn ghost sm tb" title="Clear formatting" onclick={clearFormatting}>
@@ -132,6 +184,22 @@
       </div>
     {/if}
   </div>
+  {#if linkOpen}
+    <div class="link-bar">
+      <input
+        class="sm"
+        type="text"
+        placeholder="https://… or /app/…"
+        aria-label="Link URL"
+        bind:value={linkHref}
+        bind:this={linkInput}
+        onkeydown={onLinkKeydown}
+      />
+      <button type="button" class="btn primary sm" onclick={() => saveLink(linkHref)}>Apply</button>
+      <button type="button" class="btn ghost sm" onclick={() => saveLink('')}>Remove</button>
+      <button type="button" class="btn ghost sm" onclick={closeLink}>Cancel</button>
+    </div>
+  {/if}
   <div class="md-editor-wrap" bind:this={editorEl}></div>
 </div>
 
@@ -166,6 +234,16 @@
     display: flex;
     align-items: center;
     gap: var(--sp-2);
+  }
+
+  .link-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-2);
+    border-bottom: 1px solid var(--border);
+
+    input { flex: 1; }
   }
 
   .toolbar-sep {
