@@ -3,7 +3,6 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
-  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import GoalForm from '$lib/goal/components/GoalForm.svelte';
   import GoalRows from '$lib/goal/components/GoalRows.svelte';
   import ProgressLineChart from '$lib/goal/components/ProgressLineChart.svelte';
@@ -150,6 +149,7 @@
   entityId={goal.id}
   archivedAt={goal.archivedAt}
   entityName={goal.title}
+  description={goal.description}
   breadcrumbLabel="Goals"
   breadcrumbHref="/app/goals"
   editPopupTitle="Edit goal"
@@ -201,11 +201,6 @@
   {/snippet}
 
   {#snippet renderOverview({ openEdit })}
-    {#if goal.description}
-      <section class="section">
-        <div class="description"><MarkdownRenderer content={goal.description} /></div>
-      </section>
-    {/if}
 
     <section class="section">
       <div class="section-header">
@@ -316,7 +311,6 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
   .check-in-form {
     margin-top: var(--sp-2);
     input, select { width: auto; }

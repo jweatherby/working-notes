@@ -9,6 +9,7 @@
   import DocsManager from '$lib/common/DocsManager.svelte';
   import { page } from '$app/state';
   import DocEditor from '$lib/common/DocEditor.svelte';
+  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import { printUrl } from '$lib/doc/print-options';
   import { DOC_PARAM, NEW_DOC, openDocUrl, closeDocUrl } from '$lib/doc/doc-url';
   import NoteEditor from '$lib/common/NoteEditor.svelte';
@@ -79,6 +80,8 @@
     readonly todos: readonly TodoItem[];
     readonly reports?: readonly ReportItem[];
     readonly relations?: readonly RelationGroup[];
+    /** Markdown, shown in an outlined box above the docs list. */
+    readonly description?: string | null;
     /** Set for archivable entities. An archived entity shows a banner and no edit button. */
     readonly archivedAt?: Date | string | null;
     readonly renderOverview: Snippet<[OverviewCtx]>;
@@ -100,6 +103,7 @@
     todos,
     reports = [],
     relations = [],
+    description = null,
     archivedAt = undefined,
     renderOverview,
     renderMeta = undefined,
@@ -385,6 +389,10 @@
       <div class="meta-panel">{@render renderMeta({ openEdit })}</div>
     {/if}
 
+    {#if description?.trim() && !docOpen}
+      <div class="card compact description-panel"><MarkdownRenderer content={description} /></div>
+    {/if}
+
     {#if acceptsDocs(entityType)}
       <div class="docs-panel">
         <DocsManager
@@ -512,10 +520,12 @@
   // whatever is open. The extra margin puts them on the same rhythm as the
   // `.section`s in the overview below.
   .meta-panel,
+  .description-panel,
   .docs-panel {
     max-width: 720px;
     margin-bottom: var(--sp-2);
   }
+  .description-panel { color: var(--text-2); }
   .pane-card { max-width: 640px; }
   .pane-header {
     display: flex;

@@ -3,7 +3,6 @@
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
-  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
@@ -42,6 +41,7 @@
   entityId={department.id}
   archivedAt={department.archivedAt}
   entityName={department.name}
+  description={department.description}
   breadcrumbLabel="Departments"
   breadcrumbHref="/app/departments"
   editPopupTitle="Edit department"
@@ -52,11 +52,6 @@
   {relations}
 >
   {#snippet renderOverview()}
-    {#if department.description}
-      <section class="section">
-        <div class="description"><MarkdownRenderer content={department.description} /></div>
-      </section>
-    {/if}
 
     <section class="section">
       <div class="section-header">
@@ -96,6 +91,5 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0; color: var(--text-2); }
   .section-footer { margin-top: var(--sp-2); }
 </style>

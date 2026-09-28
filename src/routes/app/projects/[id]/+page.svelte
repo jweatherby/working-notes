@@ -3,7 +3,6 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
-  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import GoalRows from '$lib/goal/components/GoalRows.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
@@ -126,6 +125,7 @@
   entityId={project.id}
   archivedAt={project.archivedAt}
   entityName={project.name}
+  description={project.description}
   breadcrumbLabel="Projects"
   breadcrumbHref="/app/projects"
   editPopupTitle="Edit project"
@@ -184,11 +184,6 @@
   {/snippet}
 
   {#snippet renderOverview()}
-    {#if project.description}
-      <section class="section">
-        <div class="description"><MarkdownRenderer content={project.description} /></div>
-      </section>
-    {/if}
 
     <section class="section">
       <div class="section-header">
@@ -243,7 +238,6 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0 0 var(--sp-3); color: var(--text-2); }
   .child-form {
     margin-top: var(--sp-2);
     max-width: 360px;

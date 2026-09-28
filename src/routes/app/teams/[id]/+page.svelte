@@ -3,7 +3,6 @@
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
-  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import TeamForm from '$lib/team/components/TeamForm.svelte';
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
@@ -42,6 +41,7 @@
   entityId={team.id}
   archivedAt={team.archivedAt}
   entityName={team.name}
+  description={team.description}
   breadcrumbLabel="Teams"
   breadcrumbHref="/app/teams"
   editPopupTitle="Edit team"
@@ -52,11 +52,6 @@
   {relations}
 >
   {#snippet renderOverview()}
-    {#if team.description}
-      <section class="section">
-        <div class="description"><MarkdownRenderer content={team.description} /></div>
-      </section>
-    {/if}
 
     <OwnedWork goals={data.ownedGoals} projects={data.ownedProjects} />
 
@@ -96,6 +91,5 @@
 </EntityDetailPage>
 
 <style lang="scss">
-  .description { margin: 0; color: var(--text-2); }
   .section-footer { margin-top: var(--sp-2); }
 </style>
