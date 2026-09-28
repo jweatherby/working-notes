@@ -127,79 +127,81 @@
 </script>
 
 <div class="md-editor-container">
-  <div class="editor-toolbar">
-    <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Undo (Ctrl+Z)" aria-label="Undo" onclick={() => editor && runCommand(undoCommand)}>
-        &#8630;
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" onclick={() => editor && runCommand(redoCommand)}>
-        &#8631;
-      </button>
+  <div class="editor-bar">
+    <div class="editor-toolbar">
+      <div class="toolbar-group">
+        <button type="button" class="btn ghost sm tb" title="Undo (Ctrl+Z)" aria-label="Undo" onclick={() => editor && runCommand(undoCommand)}>
+          &#8630;
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" onclick={() => editor && runCommand(redoCommand)}>
+          &#8631;
+        </button>
+      </div>
+      <span class="toolbar-sep"></span>
+      <div class="toolbar-group">
+        <button type="button" class="btn ghost sm tb" title="Heading 1" onclick={() => editor && runCommand(wrapInHeadingCommand, 1)}>H1</button>
+        <button type="button" class="btn ghost sm tb" title="Heading 2" onclick={() => editor && runCommand(wrapInHeadingCommand, 2)}>H2</button>
+        <button type="button" class="btn ghost sm tb" title="Heading 3" onclick={() => editor && runCommand(wrapInHeadingCommand, 3)}>H3</button>
+      </div>
+      <span class="toolbar-sep"></span>
+      <div class="toolbar-group">
+        <button type="button" class="btn ghost sm tb" title="Bold (Ctrl+B)" onclick={() => editor && runCommand(toggleStrongCommand)}>
+          <strong>B</strong>
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Italic (Ctrl+I)" onclick={() => editor && runCommand(toggleEmphasisCommand)}>
+          <em>I</em>
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Strikethrough" onclick={() => editor && runCommand(toggleStrikethroughCommand)}>
+          <s>S</s>
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Inline code" onclick={() => editor && runCommand(toggleInlineCodeCommand)}>
+          <code>&lt;/&gt;</code>
+        </button>
+      </div>
+      <span class="toolbar-sep"></span>
+      <div class="toolbar-group">
+        <button type="button" class="btn ghost sm tb" title="Bullet list" onclick={() => editor && runCommand(wrapInBulletListCommand)}>
+          &#8226;&#8801;
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Ordered list" onclick={() => editor && runCommand(wrapInOrderedListCommand)}>
+          1.&#8801;
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Blockquote" onclick={() => editor && runCommand(wrapInBlockquoteCommand)}>
+          &#10077;
+        </button>
+      </div>
+      <span class="toolbar-sep"></span>
+      <div class="toolbar-group">
+        <button type="button" class="btn ghost sm tb" title="Link" aria-label="Link" aria-expanded={linkOpen} onclick={openLink}>
+          &#128279;
+        </button>
+        <button type="button" class="btn ghost sm tb" title="Clear formatting" onclick={clearFormatting}>
+          &#10005;
+        </button>
+      </div>
+      {#if toolbarEnd}
+        <div class="toolbar-end">
+          {@render toolbarEnd()}
+        </div>
+      {/if}
     </div>
-    <span class="toolbar-sep"></span>
-    <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Heading 1" onclick={() => editor && runCommand(wrapInHeadingCommand, 1)}>H1</button>
-      <button type="button" class="btn ghost sm tb" title="Heading 2" onclick={() => editor && runCommand(wrapInHeadingCommand, 2)}>H2</button>
-      <button type="button" class="btn ghost sm tb" title="Heading 3" onclick={() => editor && runCommand(wrapInHeadingCommand, 3)}>H3</button>
-    </div>
-    <span class="toolbar-sep"></span>
-    <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Bold (Ctrl+B)" onclick={() => editor && runCommand(toggleStrongCommand)}>
-        <strong>B</strong>
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Italic (Ctrl+I)" onclick={() => editor && runCommand(toggleEmphasisCommand)}>
-        <em>I</em>
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Strikethrough" onclick={() => editor && runCommand(toggleStrikethroughCommand)}>
-        <s>S</s>
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Inline code" onclick={() => editor && runCommand(toggleInlineCodeCommand)}>
-        <code>&lt;/&gt;</code>
-      </button>
-    </div>
-    <span class="toolbar-sep"></span>
-    <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Bullet list" onclick={() => editor && runCommand(wrapInBulletListCommand)}>
-        &#8226;&#8801;
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Ordered list" onclick={() => editor && runCommand(wrapInOrderedListCommand)}>
-        1.&#8801;
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Blockquote" onclick={() => editor && runCommand(wrapInBlockquoteCommand)}>
-        &#10077;
-      </button>
-    </div>
-    <span class="toolbar-sep"></span>
-    <div class="toolbar-group">
-      <button type="button" class="btn ghost sm tb" title="Link" aria-label="Link" aria-expanded={linkOpen} onclick={openLink}>
-        &#128279;
-      </button>
-      <button type="button" class="btn ghost sm tb" title="Clear formatting" onclick={clearFormatting}>
-        &#10005;
-      </button>
-    </div>
-    {#if toolbarEnd}
-      <div class="toolbar-end">
-        {@render toolbarEnd()}
+    {#if linkOpen}
+      <div class="link-bar">
+        <input
+          class="sm"
+          type="text"
+          placeholder="https://… or /app/…"
+          aria-label="Link URL"
+          bind:value={linkHref}
+          bind:this={linkInput}
+          onkeydown={onLinkKeydown}
+        />
+        <button type="button" class="btn primary sm" onclick={() => saveLink(linkHref)}>Apply</button>
+        <button type="button" class="btn ghost sm" onclick={() => saveLink('')}>Remove</button>
+        <button type="button" class="btn ghost sm" onclick={closeLink}>Cancel</button>
       </div>
     {/if}
   </div>
-  {#if linkOpen}
-    <div class="link-bar">
-      <input
-        class="sm"
-        type="text"
-        placeholder="https://… or /app/…"
-        aria-label="Link URL"
-        bind:value={linkHref}
-        bind:this={linkInput}
-        onkeydown={onLinkKeydown}
-      />
-      <button type="button" class="btn primary sm" onclick={() => saveLink(linkHref)}>Apply</button>
-      <button type="button" class="btn ghost sm" onclick={() => saveLink('')}>Remove</button>
-      <button type="button" class="btn ghost sm" onclick={closeLink}>Cancel</button>
-    </div>
-  {/if}
   <div class="md-editor-wrap" bind:this={editorEl}></div>
 </div>
 
@@ -208,7 +210,18 @@
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     background: var(--surface);
-    overflow: hidden;
+    // clip, not hidden: hidden would make this box the scroll container the
+    // toolbar sticks to, and it never scrolls, so the toolbar would scroll away.
+    overflow: clip;
+  }
+
+  // The toolbar and link field stay in view while a long doc scrolls. A page
+  // with its own sticky header sets --sticky-top to that header's height.
+  .editor-bar {
+    position: sticky;
+    top: var(--sticky-top, 0);
+    z-index: var(--z-sticky);
+    background: var(--surface);
   }
 
   .editor-toolbar {
@@ -218,10 +231,6 @@
     gap: 2px;
     padding: var(--sp-1) var(--sp-2);
     border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    position: sticky;
-    top: 0;
-    z-index: var(--z-sticky);
   }
 
   .toolbar-group {

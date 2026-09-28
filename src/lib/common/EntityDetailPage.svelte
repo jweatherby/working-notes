@@ -217,6 +217,8 @@
   });
   // The chat tab reads the page as the user sees it: the center pane, then the notes.
   let centerEl: HTMLDivElement | undefined = $state();
+  // Sticky things in the pane (the doc editor's toolbar) sit below the sticky header.
+  let centerHeaderH = $state(0);
   const getPageText = (): string => {
     const notesText = notes.map((n) => n.content).join('\n\n---\n\n');
     return [centerEl?.innerText ?? '', notesText ? `Notes:\n\n${notesText}` : ''].filter(Boolean).join('\n\n');
@@ -351,8 +353,8 @@
     </div>
   {/snippet}
 
-  <div class="center-pane" bind:this={centerEl}>
-    <div class="center-header">
+  <div class="center-pane" bind:this={centerEl} style="--sticky-top: {centerHeaderH}px">
+    <div class="center-header" bind:offsetHeight={centerHeaderH}>
       <nav aria-label="breadcrumb">
         <ul>
           <li><a href={breadcrumbHref}>{breadcrumbLabel}</a></li>

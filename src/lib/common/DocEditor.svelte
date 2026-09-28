@@ -278,8 +278,13 @@
     flex-direction: column;
     min-height: 0;
   }
+  // Stays in view while a long doc scrolls, like the editor's toolbar.
   .write-actions {
+    position: sticky;
+    top: var(--sticky-top, 0);
+    z-index: var(--z-sticky);
     padding: var(--sp-2) 0;
+    background: var(--surface);
   }
   .doc-textarea {
     width: 100%;
