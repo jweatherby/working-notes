@@ -7,6 +7,7 @@
   import { submit } from '$lib/ui/submit';
   import { toRelationInput, type PickedLink } from '$shared/utils/relations';
   import TodoLinks from './TodoLinks.svelte';
+  import { entityTypeLabel } from '$shared/utils/entity';
 
   interface Props {
     /** Omit both entity props to let the form ask which entity the todo belongs to. */
@@ -36,6 +37,8 @@
   let error = $state('');
   let loaded = $state(!editId);
   let pendingLinks = $state<readonly PickedLink[]>([]);
+  // The entity an existing todo belongs to, linked at the top of the form.
+  let owner = $state<{ label: string; path: string } | null>(null);
 
   $effect(() => {
     if (editId && !loaded) loadTodo(editId);
@@ -52,6 +55,8 @@
         priority: number;
         entityType: EntityType;
         entityId: string;
+        entityLabel: string | null;
+        entityPath: string;
         targetDate: Date | null;
       }[]).find((t) => t.id === id);
       if (!todo) {
@@ -65,6 +70,7 @@
       status = todo.status;
       pickedEntityType = todo.entityType;
       pickedEntityId = todo.entityId;
+      owner = { label: todo.entityLabel ?? `Missing ${entityTypeLabel(todo.entityType).toLowerCase()}`, path: todo.entityPath };
       targetDate = todo.targetDate ? new Date(todo.targetDate).toISOString().slice(0, 10) : '';
       error = '';
       loaded = true;
@@ -149,6 +155,15 @@
 
 {#if loaded}
   <form class="form-grid" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+    {#if owner}
+      <dl class="meta-list">
+        <div>
+          <dt>{entityTypeLabel(pickedEntityType)}</dt>
+          <dd><a href={owner.path}>{owner.label}</a></dd>
+        </div>
+      </dl>
+    {/if}
+
     <Field label="Title">
       {#snippet children({ id })}
         <input {id} type="text" bind:value={title} placeholder="What needs doing?" />
