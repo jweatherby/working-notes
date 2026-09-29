@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NO_BRANDING, printUrl, resolvePrintOptions, withoutLeadingTitle } from '../print-options';
+import { NO_BRANDING, printUrl, resolvePrintOptions, wikiPrintUrl, withoutLeadingTitle } from '../print-options';
 
 const brandings = [
   { id: 'brand_acme', isDefault: true },
@@ -42,6 +42,13 @@ describe('printUrl', () => {
   it('round-trips the choices', () => {
     const url = new URL(printUrl('doc_1', 'brand_side', false), 'http://127.0.0.1');
     expect(resolve(url.searchParams.toString())).toEqual({ choice: 'brand_side', brandingId: 'brand_side', header: false });
+  });
+});
+
+describe('wikiPrintUrl', () => {
+  it('points at the wiki page with the same options', () => {
+    expect(wikiPrintUrl('page_1')).toBe('/app/wiki/page_1/print');
+    expect(wikiPrintUrl('page_1', 'none', false)).toBe('/app/wiki/page_1/print?branding=none&header=0');
   });
 });
 

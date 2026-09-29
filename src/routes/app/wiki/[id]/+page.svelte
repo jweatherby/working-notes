@@ -14,6 +14,7 @@
   import { PAGE_KIND_FIELDS } from '$shared/types/pages';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import { PAGE_KIND_LABELS, formatPropertyValue } from '$lib/page/utils';
+  import { wikiPrintUrl } from '$lib/doc/print-options';
   import type { PageDetail, PageSummary } from '$shared/types/pages';
 
   const { data } = $props<{ data: PageData }>();
@@ -149,12 +150,18 @@
         onSave={handleSaveContent}
         onSaveTitle={handleSaveTitle}
         onClose={handleCloseEditor}
+        exportHref={wikiPrintUrl(wikiPage.id)}
       />
     {:else}
       <section class="section">
         <div class="section-header">
           <h4>Content</h4>
-          <button type="button" class="btn icon sm" aria-label="Edit the content of {wikiPage.title}" title="Edit content" onclick={() => { editing = true; }}><PencilIcon /></button>
+          <span class="content-actions">
+            {#if wikiPage.content.trim()}
+              <a class="btn ghost sm" href={wikiPrintUrl(wikiPage.id)} target="_blank" rel="noopener">Export PDF</a>
+            {/if}
+            <button type="button" class="btn icon sm" aria-label="Edit the content of {wikiPage.title}" title="Edit content" onclick={() => { editing = true; }}><PencilIcon /></button>
+          </span>
         </div>
         {#if wikiPage.content.trim()}
           <MarkdownRenderer content={wikiPage.content} />
@@ -206,6 +213,11 @@
 <style lang="scss">
   // Only the "Fill in the details" link can follow the list in the meta panel.
   .meta-list:not(:last-child) { margin-bottom: var(--sp-3); }
+  .content-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
   .child-form {
     margin-top: var(--sp-2);
     max-width: 360px;
