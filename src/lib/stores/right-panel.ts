@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import type { EntityType } from '$shared/types/enums';
 
 interface Note {
   readonly id: string;
@@ -18,7 +19,7 @@ export interface RightPanelNotes {
 
 /** The entity page open in the center, for the chat tab. */
 export interface RightPanelPage {
-  readonly entityType: string;
+  readonly entityType: EntityType;
   readonly entityId: string;
   readonly entityName: string;
   /** The page's text as the user sees it: the center pane and the notes. */

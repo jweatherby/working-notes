@@ -358,3 +358,19 @@ model Emoji {
   @@unique([entityType, entityId, emoji])
   @@map("emoji")
 }
+
+// ----- Page chat: the web app's conversation with the local Claude about one entity page -----
+
+// One per entity; the Chat tab's Clear deletes it. `messages` is JSON:
+// [{ "role": "user" | "assistant", "content": "..." }], oldest first.
+model PageChat {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  messages   String   @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([entityType, entityId])
+  @@map("page_chat")
+}

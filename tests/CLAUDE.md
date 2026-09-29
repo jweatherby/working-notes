@@ -18,6 +18,7 @@
   - `notebook`: person → team → note → todo → tag
   - `reports`: branding resolution, chart validation
   - `goals-wiki`: project owner, goal cascade, check-ins and progress, project links, page properties, mentions from content, relation and attachment cleanup on delete
+  - `page-chat`: the Chat tab's saved conversation per entity, Clear, and cleanup when the entity is deleted
   - `migrate`: fresh, idempotent, edited-migration refusal
   - `backup`: change detection, hard links, restore round trip, snapshots kept per notebook, refusal while the app runs
   - `cli`: `bin/wnotes` from another directory with no server, including `--notebook`

@@ -1,6 +1,6 @@
 // Runs the local Claude Code CLI for a page chat reply, one background job per
-// chat. Like the PDF converter, only the web app's tRPC context holds this, and
-// jobs live in memory.
+// chat. Like the PDF converter, only the web app's tRPC context holds this. Job
+// states live in memory; the job saves the reply to the notebook when it's done.
 
 import { tmpdir } from 'node:os';
 import { buildChatArgs, parseChatOutput } from './claude-cli';
@@ -27,7 +27,13 @@ const reply = async (job: PageChatJob): Promise<PageChatStatus> => {
     };
   }
   const parsed = parseChatOutput(stdout);
-  return parsed.ok ? { state: 'done', reply: parsed.value } : { state: 'failed', message: parsed.error.message };
+  if (!parsed.ok) return { state: 'failed', message: parsed.error.message };
+  try {
+    await job.saveReply(parsed.value);
+  } catch (error: unknown) {
+    return { state: 'failed', message: `Claude replied, but the reply couldn't be saved: ${error instanceof Error ? error.message : String(error)}` };
+  }
+  return { state: 'done', reply: parsed.value };
 };
 
 export const createPageChat = (): PageChat => {
@@ -47,6 +53,8 @@ export const createPageChat = (): PageChat => {
         .then((status) => { jobs.set(job.key, status); });
       return ok(undefined);
     },
+
+    running: (key) => jobs.get(key)?.state === 'running',
 
     status: (key) => {
       const status = jobs.get(key) ?? { state: 'idle' };
