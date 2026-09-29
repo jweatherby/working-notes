@@ -135,7 +135,8 @@ Each of these is deliberate. A change that breaks one needs a different design:
   reads or links across notebooks.
 - **No LLM, no secrets, no outbound network.** The two model-backed features — `doc.convertPdf` and
   the page Chat tab — run the user's own `claude` CLI and are HTTP-context only, excluded from the
-  CLI and MCP. The app holds no key and makes no request itself.
+  CLI and MCP. The app holds no key and makes no request itself. Chat conversations are saved per
+  entity in the notebook (`page_chat`) until cleared or the entity is deleted.
 - **The network boundary is the security boundary** (`src/hooks.server.ts`). Keep all three parts:
   the server binds to `127.0.0.1`; requests whose hostname isn't loopback get 403 (blocks DNS
   rebinding); `/api/trpc` requires the `x-working-notes: 1` header (blocks cross-site requests).

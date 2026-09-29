@@ -6,7 +6,7 @@ follow up on.
 
 You put things in by telling Claude. You read them in an app on your own Mac.
 
-![The home dashboard: open todos, a feed of recent changes, and a graph of how everything links up](docs/images/home.png)
+![The home dashboard: open todos, a feed of recent changes, and a graph of what links to one thing](docs/images/home.png)
 
 ## What you can use it for
 
@@ -65,6 +65,9 @@ goals.
 > took another 80ms off.
 
 Each check-in adds to a timeline instead of overwriting a number, so the chart is the history.
+The period is read as dates: `2026-H2` is July to December, so the page shows how much of it has
+gone by, the chart draws the pace you would need, and a goal that trails it is flagged "Behind
+pace". The flag is a hint; it never changes the goal's status.
 
 ![The goal page: a progress bar, a line chart of check-ins against the target, and the check-in history](docs/images/goal.png)
 
@@ -79,8 +82,8 @@ stay comparable.
 
 ![The Datadog page: vendor fields, notes, and a sidebar showing what relates to it and what mentions it](docs/images/wiki-page.png)
 
-Anything can link to anything — related, or one depends on the other. Mention a project inside a
-page and the project gains a "Mentioned in" entry by itself.
+Anything can link to anything — related, or one depends on the other — todos included. Mention a
+project inside a page and the project gains a "Mentioned in" entry by itself.
 
 ### Writing it up
 
@@ -90,20 +93,26 @@ Docs are markdown, and a doc can hold charts drawn from figures you give Claude.
 
 ![A doc on the Platform team: prose and a bar chart of committed against delivered story points](docs/images/doc-charts.png)
 
+Paste or drop an image into a doc and it is stored with the notebook. Any doc or wiki page exports
+to PDF, with your branding's letterhead or without.
+
 ## The app
 
 The app is mostly for reading, usually in a browser pane beside Claude. You can install it on your
 Mac so that it gets a Dock icon and a window of its own — see
 [docs/INSTALL.md](docs/INSTALL.md#install-it-as-a-mac-app).
 
-The home screen shows your open todos, what changed lately, and a graph of how things connect. The
-org map shows reporting lines. Everything else gets a page of its own, with its docs down the
-middle, its todos and links in the sidebar and its notes on the right.
+The home screen shows your open todos, what changed lately, and a graph with one thing in the
+middle and everything linked to it around it; click a neighbour to move there. The org map shows
+reporting lines, or switch it to **Work** for each owner's projects and goals and the arrows between
+them. The projects page has a **Map** view that lays projects out by what depends on what, with the
+goals they deliver. Everything else gets a page of its own, with its docs down the middle, its todos
+and links in the sidebar and its notes on the right.
 
 Press ⌘K to search. Start with `/` to look in one place only, as in `/person dana`.
 
-Every page has a **Chat** tab for asking about what is on screen. It runs your own copy of Claude
-and saves nothing.
+Every page has a **Chat** tab for asking about what is on screen. It runs your own copy of Claude,
+and keeps each page's conversation in the notebook until you clear it or delete the page.
 
 Nothing is lost by accident. Archiving keeps a thing and its history but takes it out of every list.
 Deleting takes its notes and todos with it, so Claude offers to archive first.

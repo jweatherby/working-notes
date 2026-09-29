@@ -77,6 +77,10 @@ wnotes page.create --title Datadog --kind SOFTWARE \
   --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'
 ```
 
+A goal's `period` is a calendar year, half or quarter (`2026`, `2026-H2`, `2026-Q3`). The app reads
+it as dates to show time elapsed, draw a pace line from `baseline` to `target`, and flag a goal
+"Behind pace" or "Period ended". The flags are hints and never change `status`.
+
 A check-in needs at least one of `value`, `status` or `comment`. If it carries a status, that
 becomes the goal's status too. `goal.get` returns `current` and `progress`, and calculates progress
 correctly when a lower number is better, as in 480 ms down to 200 ms.
@@ -96,7 +100,8 @@ wnotes project.update --id <project> --ownerType TEAM --ownerId <team>
 wnotes goal.addProject --goalId <goal> --projectId <project>
 ```
 
-**Relations.** `relation.add` links any two entities, with only two kinds on purpose:
+**Relations.** `relation.add` links any two entities (people, teams, departments, projects, goals,
+pages, docs, notes and todos), with only two kinds on purpose:
 
 ```bash
 wnotes relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> \
@@ -109,6 +114,9 @@ wnotes relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --to
 duplicate. `DEPENDS_ON` reads from `from` to `to`: Checkout depends on the API, and the API shows it
 as "Needed by". For anything else — uses, replaces, applies to — use `RELATED` and say how in
 `--note`. `relation.forEntity` shows both directions, grouped by label.
+
+`project.dependencies` returns every project `DEPENDS_ON` link and goal–project link in one call,
+with each goal's status and progress: the data behind the projects page's dependency map.
 
 **Backlinks are automatic.** Write a markdown link to an app path in a page, doc, note or report,
 and saving the content creates a `MENTIONS` relation — the target then shows "Mentioned in".
@@ -205,6 +213,14 @@ wnotes doc.attachSource --docId <doc> --contentType application/pdf --dataBase64
 
 In the web app, "Convert with Claude" on a doc does the same by running your own `claude` CLI with
 only the Read tool. Without `claude` installed it returns a warning and the PDF just stays attached.
+
+## Exporting to PDF
+
+Exporting happens in the app, not the CLI. A doc's **Export PDF** opens `/app/docs/<id>/print`, and
+a wiki page's opens `/app/wiki/<id>/print`, which also prints the page's properties under the
+title. The toolbar picks the branding and turns the letterhead on or off. **Download PDF** builds
+the file in the browser, as page images; **Print…** uses the browser's dialog, for a PDF with
+selectable text. A line of just `<!-- pagebreak -->` starts a new page.
 
 ## Backups
 
