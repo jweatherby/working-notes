@@ -9,13 +9,29 @@
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { GOAL_STATUSES, type GoalStatus, type OwnerType } from '$shared/types/enums';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
-  import { GOAL_STATUS_LABELS, formatGoalValue, goalStatusBadgeClass, progressTone } from '$lib/goal/utils';
+  import { GOAL_STATUS_LABELS, GOAL_TIME_FLAGS, formatGoalValue, goalStatusBadgeClass, goalTimeFlag, progressTone } from '$lib/goal/utils';
+  import { localDay, periodPhase, type PeriodPhase } from '$shared/utils/period';
   import type { GoalSummary } from '$shared/types/goals';
 
   const { data } = $props<{ data: PageData }>();
   const goals = $derived(data.goals as readonly GoalSummary[]);
 
-  let periodFilter = $state('ALL');
+  const today = localDay();
+
+  // Period filter: a phase (current, past, upcoming), goals with no period, all,
+  // or one period. It opens on the current periods when any goal has one.
+  const PHASE_FILTERS: Readonly<Record<string, PeriodPhase>> = { CURRENT: 'current', PAST: 'past', UPCOMING: 'future' };
+  let periodChoice = $state<string | null>(null);
+  const hasCurrent = $derived(goals.some((g) => g.period && periodPhase(g.period, today) === 'current'));
+  const periodFilter = $derived(periodChoice ?? (hasCurrent ? 'CURRENT' : 'ALL'));
+
+  const matchesPeriod = (g: GoalSummary): boolean => {
+    if (periodFilter === 'ALL') return true;
+    if (periodFilter === 'NONE') return !g.period;
+    const phase = PHASE_FILTERS[periodFilter];
+    if (phase) return !!g.period && periodPhase(g.period, today) === phase;
+    return g.period === periodFilter;
+  };
   let statusFilter = $state<GoalStatus | 'ALL'>('ALL');
   let ownerTypeFilter = $state<OwnerType | 'ALL'>('ALL');
   let ownerFilter = $state('ALL');
@@ -40,7 +56,7 @@
     flattenTree(
       buildTree(
         goals.filter((g) =>
-          (periodFilter === 'ALL' || g.period === periodFilter) && (statusFilter === 'ALL' || g.status === statusFilter) && matchesOwner(g),
+          matchesPeriod(g) && (statusFilter === 'ALL' || g.status === statusFilter) && matchesOwner(g),
         ),
         (g) => g.parentId,
       ),
@@ -60,11 +76,19 @@
   <div class="toolbar filters">
     <ArchiveFilter />
     {#if data.goals.length > 0}
-      <select class="sm" bind:value={periodFilter} aria-label="Filter by period">
+      <select class="sm" value={periodFilter} onchange={(e) => (periodChoice = e.currentTarget.value)} aria-label="Filter by period">
+        <option value="CURRENT">Current periods</option>
+        <option value="PAST">Past periods</option>
+        <option value="UPCOMING">Upcoming periods</option>
+        <option value="NONE">No period</option>
         <option value="ALL">All periods</option>
-        {#each periods as period (period)}
-          <option value={period}>{period}</option>
-        {/each}
+        {#if periods.length > 0}
+          <optgroup label="Period">
+            {#each periods as period (period)}
+              <option value={period}>{period}</option>
+            {/each}
+          </optgroup>
+        {/if}
       </select>
       <select class="sm" bind:value={statusFilter} aria-label="Filter by status">
         <option value="ALL">All statuses</option>
@@ -104,6 +128,7 @@
           </thead>
           <tbody>
             {#each rows as { item: goal, depth } (goal.id)}
+              {@const timeFlag = goalTimeFlag(goal, today)}
               <tr>
                 <td>
                   <span class="goal-name" style="--depth: {depth}">
@@ -115,7 +140,12 @@
                   {#if goal.owner}<a href={goal.owner.path}>{goal.owner.label ?? '—'}</a>{:else}Organisation{/if}
                 </td>
                 <td class="text-2">{goal.period ?? ''}</td>
-                <td><span class={goalStatusBadgeClass(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</span></td>
+                <td>
+                  <span class="status-cell">
+                    <span class={goalStatusBadgeClass(goal.status)}>{GOAL_STATUS_LABELS[goal.status]}</span>
+                    {#if timeFlag}<span class={GOAL_TIME_FLAGS[timeFlag].badge}>{GOAL_TIME_FLAGS[timeFlag].label}</span>{/if}
+                  </span>
+                </td>
                 <td class="progress-cell">
                   {#if goal.target !== null}
                     <ProgressBar
@@ -154,6 +184,11 @@
   .tree-indent {
     color: var(--border-strong);
     font-size: var(--fs-sm);
+  }
+  .status-cell {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
   }
   .progress-cell { min-width: 180px; }
 </style>

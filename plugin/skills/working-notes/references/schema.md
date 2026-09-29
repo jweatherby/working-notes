@@ -25,7 +25,7 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 **Goal**: `title`, `description?`, an owner (`ownerType` `PERSON`, `TEAM` or `DEPARTMENT` + `ownerId`; no owner means org-wide), `parentId?` (the cascade, e.g. a team goal under a department goal), `period?`, `status`, and an optional metric: `unit?`, `baseline?`, `target?`.
 
-- `period` is `2026`, `2026-H2` or `2026-Q3`.
+- `period` is `2026`, `2026-H2` or `2026-Q3`: a calendar year, half or quarter. The app reads it as dates (`2026-H2` is 1 Jul to 31 Dec 2026), shows how much of it has gone by, draws a pace line from `baseline` to `target` across it, and flags a goal "Behind pace" when `progress` trails the time elapsed by more than 10 points, or "Period ended" when the period is over and the goal isn't `DONE` or `DROPPED`. The flags are hints; they never change `status`.
 - `status` is one of `NOT_STARTED ON_TRACK AT_RISK OFF_TRACK DONE DROPPED` (default `NOT_STARTED`).
 - `goal.list` filters by `ownerType` + `ownerId`, `period`, `status`, `parentId` (`null` for top-level goals) and `projectId`.
 - `goal.get` returns the owner, parent, sub-goals, check-ins (newest first), linked projects, `current`, `progress` and `path`. `goal.create` returns `{ id, path }`.

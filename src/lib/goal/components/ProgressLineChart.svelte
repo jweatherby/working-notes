@@ -1,7 +1,8 @@
 <script lang="ts">
-  // Check-in values over time, with the target as a flat second line.
+  // Check-in values over time, with the target as a flat line and, when the goal
+  // has a period, the pace: where it should be on each check-in date.
   import { renderChart } from '$lib/report/chart-render';
-  import { progressAxis } from '$lib/goal/utils';
+  import { paceValue, progressAxis } from '$lib/goal/utils';
   import type { ChartSeries, ChartSpec } from '$shared/types/charts';
   import type { GoalCheckInItem } from '$shared/types/goals';
 
@@ -10,9 +11,10 @@
     readonly baseline?: number | null;
     readonly target?: number | null;
     readonly unit?: string | null;
+    readonly period?: string | null;
   }
 
-  const { checkIns, baseline = null, target = null, unit = null }: Props = $props();
+  const { checkIns, baseline = null, target = null, unit = null, period = null }: Props = $props();
 
   const day = (d: Date | string): string => new Date(d).toISOString().slice(0, 10);
 
@@ -24,6 +26,10 @@
 
     const series: ChartSeries[] = [{ label: unit ? `Value (${unit})` : 'Value', values: points.map((c) => c.value) }];
     if (target !== null) series.push({ label: 'Target', values: points.map(() => target) });
+    if (target !== null && period) {
+      const pace = points.map((c) => paceValue(baseline ?? 0, target, period, day(c.date)));
+      if (pace.every((v): v is number => v !== null)) series.push({ label: 'Pace', values: pace });
+    }
 
     // The axis covers the check-ins, the target and the baseline, so the line
     // stays readable for a metric that sits far from zero (99.5% to 99.9% uptime).

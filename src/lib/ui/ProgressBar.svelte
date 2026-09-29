@@ -3,7 +3,7 @@
   // renders an empty track.
   interface Props {
     readonly value: number | null;
-    readonly tone?: 'accent' | 'success' | 'warning' | 'danger';
+    readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'muted';
     readonly label?: string;
   }
 
@@ -49,5 +49,6 @@
     &.success { background: var(--success); }
     &.warning { background: var(--warning); }
     &.danger { background: var(--danger); }
+    &.muted { background: var(--border-strong); }
   }
 </style>

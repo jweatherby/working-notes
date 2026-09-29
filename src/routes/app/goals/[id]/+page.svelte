@@ -15,7 +15,8 @@
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
   import { wouldCreateCycle } from '$shared/utils/hierarchy';
   import { statusBadgeClass } from '$lib/project/utils';
-  import { GOAL_STATUS_LABELS, formatGoalValue, goalStatusBadgeClass, progressTone } from '$lib/goal/utils';
+  import { GOAL_STATUS_LABELS, GOAL_TIME_FLAGS, formatGoalValue, goalStatusBadgeClass, goalTimeFlag, progressTone } from '$lib/goal/utils';
+  import { localDay, periodElapsed, periodPhase, periodSpan } from '$shared/utils/period';
   import type { GoalDetail, GoalSummary } from '$shared/types/goals';
 
   interface ProjectOption {
@@ -51,6 +52,19 @@
   );
 
   const day = (d: Date | string): string => new Date(d).toISOString().slice(0, 10);
+
+  // ----- Period -----
+  const today = localDay();
+  const span = $derived(goal.period ? periodSpan(goal.period) : null);
+  const elapsed = $derived(goal.period ? periodElapsed(goal.period, today) : null);
+  const timeFlag = $derived(goalTimeFlag(goal, today));
+  const timeLabel = $derived.by(() => {
+    if (!goal.period || elapsed === null) return '';
+    const phase = periodPhase(goal.period, today);
+    if (phase === 'future') return `${span} hasn't started`;
+    if (phase === 'past') return `${span} is over`;
+    return `${Math.round(elapsed * 100)}% of ${span} gone`;
+  });
 
   const update = async (changes: Record<string, unknown>) => {
     await submitOrThrow(() => trpc().goal.update.mutate({ id: goal.id, ...changes }));
@@ -183,7 +197,10 @@
       {#if goal.period}
         <div>
           <dt>Period</dt>
-          <dd>{goal.period}</dd>
+          <dd>
+            {goal.period}{#if span}<span class="muted">{span}</span>{/if}
+            {#if timeFlag}<span class={GOAL_TIME_FLAGS[timeFlag].badge}>{GOAL_TIME_FLAGS[timeFlag].label}</span>{/if}
+          </dd>
         </div>
       {/if}
       <div>
@@ -212,8 +229,10 @@
           tone={progressTone(goal.status)}
           label="{formatGoalValue(goal.current, goal.unit)} of {formatGoalValue(goal.target, goal.unit)}, from {formatGoalValue(goal.baseline ?? 0, goal.unit)}"
         />
-        <ProgressLineChart checkIns={goal.checkIns} baseline={goal.baseline} target={goal.target} unit={goal.unit} />
+        {#if elapsed !== null}<ProgressBar value={elapsed} tone="muted" label={timeLabel} />{/if}
+        <ProgressLineChart checkIns={goal.checkIns} baseline={goal.baseline} target={goal.target} unit={goal.unit} period={goal.period} />
       {:else}
+        {#if elapsed !== null}<ProgressBar value={elapsed} tone="muted" label={timeLabel} />{/if}
         <EmptyState message="Not measured yet. Give the goal a target to track progress.">
           <button type="button" class="btn sm" onclick={openEdit}>Set a target</button>
         </EmptyState>

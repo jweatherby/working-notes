@@ -9,6 +9,7 @@
   import type { EntityOwner } from '$shared/types/owner';
   import { ownerOptionValue, parseOwnerOptionValue, type OwnerOption } from '$shared/trpc/load-owner-options';
   import { GOAL_STATUS_LABELS } from '$lib/goal/utils';
+  import { localDay, periodOptions } from '$shared/utils/period';
 
   interface GoalData {
     readonly id?: string;
@@ -34,6 +35,7 @@
   const { initial = {}, ownerOptions, onSuccess, onCancel, onDelete }: Props = $props();
 
   const isEdit = $derived(!!initial.id);
+  const periods = $derived(periodOptions(localDay(), initial.period ?? null));
 
   const ownerValue = (owner: EntityOwner | null | undefined): string =>
     owner ? ownerOptionValue(owner.type, owner.id) : '';
@@ -72,7 +74,7 @@
           description: description.trim() || null,
           ownerType: picked?.ownerType ?? null,
           ownerId: picked?.ownerId ?? null,
-          period: period.trim() || null,
+          period: period || null,
           status,
           unit: unit.trim() || null,
           baseline: baseline ?? null,
@@ -83,7 +85,7 @@
           description: description.trim() || undefined,
           ...(picked ?? {}),
           parentId: initial.parentId ?? undefined,
-          period: period.trim() || undefined,
+          period: period || undefined,
           status,
           unit: unit.trim() || undefined,
           baseline: baseline ?? undefined,
@@ -126,9 +128,12 @@
         </select>
       {/snippet}
     </Field>
-    <Field label="Period" hint="2026, 2026-H2 or 2026-Q3">
+    <Field label="Period">
       {#snippet children({ id })}
-        <input {id} type="text" bind:value={period} placeholder="2026-H2" />
+        <select {id} bind:value={period}>
+          <option value="">No period</option>
+          <GroupedOptions options={periods} />
+        </select>
       {/snippet}
     </Field>
   </div>

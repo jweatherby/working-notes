@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GOAL_STATUSES } from '$shared/types/enums';
-import { formatGoalValue, goalStatusBadgeClass, progressAxis, progressTone } from '../utils';
+import { formatGoalValue, goalStatusBadgeClass, goalTimeFlag, paceValue, progressAxis, progressTone } from '../utils';
 
 describe('goal status styling', () => {
   it('gives every status a badge and a tone', () => {
@@ -60,5 +60,35 @@ describe('progressAxis', () => {
 
   it('has nothing to say about an empty series', () => {
     expect(progressAxis([])).toBeNull();
+  });
+});
+
+describe('goalTimeFlag', () => {
+  const goal = { period: '2026-H2', status: 'ON_TRACK' as const, progress: 0.2 };
+
+  it('flags an open goal whose period is over', () => {
+    expect(goalTimeFlag(goal, '2027-01-01')).toBe('ended');
+    expect(goalTimeFlag({ ...goal, status: 'DONE' }, '2027-01-01')).toBeNull();
+    expect(goalTimeFlag({ ...goal, status: 'DROPPED' }, '2027-01-01')).toBeNull();
+  });
+
+  it('flags progress trailing the time elapsed by more than the slack', () => {
+    // About half of H2 has gone by on 1 October.
+    expect(goalTimeFlag(goal, '2026-10-01')).toBe('behind');
+    expect(goalTimeFlag({ ...goal, progress: 0.45 }, '2026-10-01')).toBeNull();
+    expect(goalTimeFlag({ ...goal, progress: null }, '2026-10-01')).toBeNull();
+  });
+
+  it('leaves goals without a period, or not started yet, alone', () => {
+    expect(goalTimeFlag({ ...goal, period: null }, '2026-10-01')).toBeNull();
+    expect(goalTimeFlag(goal, '2026-03-01')).toBeNull();
+  });
+});
+
+describe('paceValue', () => {
+  it('moves from baseline to target across the period', () => {
+    expect(paceValue(10, 20, '2026', '2026-01-01')).toBe(10);
+    expect(paceValue(10, 20, '2026', '2027-01-01')).toBe(20);
+    expect(paceValue(99.5, 99.9, '2026-H2', '2026-10-01')).toBeCloseTo(99.5 + 0.4 * (92 / 184));
   });
 });

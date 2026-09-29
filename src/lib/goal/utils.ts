@@ -1,4 +1,5 @@
 import type { GoalStatus } from '$shared/types/enums';
+import { periodElapsed, periodPhase } from '$shared/utils/period';
 
 export const GOAL_STATUS_LABELS: Readonly<Record<GoalStatus, string>> = {
   NOT_STARTED: 'Not started',
@@ -82,4 +83,40 @@ export const progressAxis = (values: readonly number[]): ProgressAxis | null => 
 
   const pad = span * 0.15;
   return { min: lo - pad, max: hi + pad };
+};
+
+export type GoalTimeFlag = 'ended' | 'behind';
+
+/** How far progress may trail the time elapsed before a goal reads as behind pace. */
+const PACE_SLACK = 0.1;
+
+interface TimedGoal {
+  readonly period: string | null;
+  readonly status: GoalStatus;
+  readonly progress: number | null;
+}
+
+/**
+ * A hint about a goal's period, never a status change: `ended` when the period
+ * is over and the goal isn't done or dropped, `behind` when a measured goal's
+ * progress trails the time elapsed by more than PACE_SLACK.
+ */
+export const goalTimeFlag = (goal: TimedGoal, today: string): GoalTimeFlag | null => {
+  if (!goal.period || goal.status === 'DONE' || goal.status === 'DROPPED') return null;
+  const phase = periodPhase(goal.period, today);
+  if (phase === 'past') return 'ended';
+  const elapsed = periodElapsed(goal.period, today);
+  if (phase === 'current' && goal.progress !== null && elapsed !== null && goal.progress + PACE_SLACK < elapsed) return 'behind';
+  return null;
+};
+
+export const GOAL_TIME_FLAGS: Readonly<Record<GoalTimeFlag, { readonly label: string; readonly badge: string }>> = {
+  ended: { label: 'Period ended', badge: 'badge danger' },
+  behind: { label: 'Behind pace', badge: 'badge warning' }
+};
+
+/** Where a measured goal should be on `day` to reach its target by the period's end. */
+export const paceValue = (baseline: number, target: number, period: string, day: string): number | null => {
+  const elapsed = periodElapsed(period, day);
+  return elapsed === null ? null : baseline + (target - baseline) * elapsed;
 };
