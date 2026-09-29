@@ -3,10 +3,12 @@
   import type { EntityType, TodoStatus } from '../utils';
   import Field from '$lib/ui/Field.svelte';
   import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
+  import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
   import { toRelationInput, type PickedLink } from '$shared/utils/relations';
   import TodoLinks from './TodoLinks.svelte';
+  import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { entityTypeLabel } from '$shared/utils/entity';
 
   interface Props {
@@ -37,6 +39,8 @@
   let error = $state('');
   let loaded = $state(!editId);
   let pendingLinks = $state<readonly PickedLink[]>([]);
+  // An existing todo's description shows rendered, so its links work, until Edit.
+  let editingDescription = $state(false);
   // The entity an existing todo belongs to, linked at the top of the form.
   let owner = $state<{ label: string; path: string } | null>(null);
 
@@ -172,7 +176,14 @@
 
     <Field label="Description">
       {#snippet children({ id })}
-        <MarkdownEditor value={description} onChange={(md: string) => { description = md; }} />
+        {#if isEdit && description.trim() && !editingDescription}
+          <div class="description-view" {id}>
+            <MarkdownRenderer content={description} />
+            <button type="button" class="btn icon sm" aria-label="Edit the description" title="Edit description" onclick={() => { editingDescription = true; }}><PencilIcon /></button>
+          </div>
+        {:else}
+          <MarkdownEditor value={description} onChange={(md: string) => { description = md; }} />
+        {/if}
       {/snippet}
     </Field>
 
@@ -245,3 +256,15 @@
     </div>
   </form>
 {/if}
+
+<style lang="scss">
+  .description-view {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    > :global(:first-child) { flex: 1; min-width: 0; }
+  }
+</style>

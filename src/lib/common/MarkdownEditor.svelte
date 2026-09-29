@@ -97,6 +97,16 @@
     if (e.key === 'Escape') { e.preventDefault(); closeLink(); }
   };
 
+  // A click in the editor places the cursor, so a link opens with ⌘/Ctrl-click
+  // instead, in a new tab so this editor keeps its unsaved text.
+  const openLinkOnModClick = (e: MouseEvent) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const href = (e.target as Element | null)?.closest('a[href]')?.getAttribute('href');
+    if (!href) return;
+    e.preventDefault();
+    window.open(href, '_blank', 'noopener');
+  };
+
   const imagePlugin = pendingImages ? createImageDropPlugin(pendingImages) : undefined;
 
   onMount(() => {
@@ -172,7 +182,7 @@
       </div>
       <span class="toolbar-sep"></span>
       <div class="toolbar-group">
-        <button type="button" class="btn ghost sm tb" title="Link" aria-label="Link" aria-expanded={linkOpen} onclick={openLink}>
+        <button type="button" class="btn ghost sm tb" title="Link (⌘-click a link to open it)" aria-label="Link" aria-expanded={linkOpen} onclick={openLink}>
           &#128279;
         </button>
         <button type="button" class="btn ghost sm tb" title="Clear formatting" onclick={clearFormatting}>
@@ -197,12 +207,15 @@
           onkeydown={onLinkKeydown}
         />
         <button type="button" class="btn primary sm" onclick={() => saveLink(linkHref)}>Apply</button>
+        {#if linkHref.trim()}<a class="btn ghost sm" href={linkHref.trim()} target="_blank" rel="noopener">Open</a>{/if}
         <button type="button" class="btn ghost sm" onclick={() => saveLink('')}>Remove</button>
         <button type="button" class="btn ghost sm" onclick={closeLink}>Cancel</button>
       </div>
     {/if}
   </div>
-  <div class="md-editor-wrap" bind:this={editorEl}></div>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="md-editor-wrap" bind:this={editorEl} onclick={openLinkOnModClick}></div>
 </div>
 
 <style lang="scss">
