@@ -79,9 +79,9 @@ wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --t
 
 From the CLI or MCP, the app stores PDFs but doesn't read them. (The web app's "Convert with Claude" runs the local `claude` CLI instead; see § Ground rules.) Read the PDF yourself, write the markdown with `doc.add` and `doc.update --content-file`, and optionally attach the original with `doc.attachSource --dataBase64-file` (base64 of the PDF).
 
-### Exporting a doc to PDF
+### Exporting a doc or wiki page to PDF
 
-A doc's "Export PDF" opens `/app/docs/<id>/print`. **Download PDF** builds the file in the browser (`src/lib/doc/export-pdf.ts`: html2canvas-pro draws the page, jsPDF cuts it into A4 pages at block edges), so its pages are images and the text isn't selectable; **Print…** is the browser's dialog, for a PDF with real text. A line of just `<!-- pagebreak -->` (outside code blocks) starts a new page in both (`markPageBreaks` in `src/lib/doc/pdf-pages.ts`); elsewhere it's an invisible comment. Its toolbar picks the branding (the default, another one, or none) and turns the branded header on or off; the choices live in the URL. It works while reports are switched off.
+A doc's "Export PDF" opens `/app/docs/<id>/print`, and a wiki page's (beside its Content heading, or in its editor) opens `/app/wiki/<id>/print`, which also prints the page's filled-in properties under the title. Both render `src/lib/doc/PrintView.svelte`. **Download PDF** builds the file in the browser (`src/lib/doc/export-pdf.ts`: html2canvas-pro draws the page, jsPDF cuts it into A4 pages at block edges), so its pages are images and the text isn't selectable; **Print…** is the browser's dialog, for a PDF with real text. A line of just `<!-- pagebreak -->` (outside code blocks) starts a new page in both (`markPageBreaks` in `src/lib/doc/pdf-pages.ts`); elsewhere it's an invisible comment. Its toolbar picks the branding (the default, another one, or none) and turns the branded header on or off; the choices live in the URL. It works while reports are switched off.
 
 ### Reports and charts
 
