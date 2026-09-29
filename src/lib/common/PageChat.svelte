@@ -6,6 +6,8 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { errorMessage } from '$lib/ui/submit';
   import { askAboutPage } from '$lib/common/use-page-chat';
+  import { browserChatStorage, loadChat, saveChat, type ChatPage } from '$lib/common/page-chat-storage';
+  import { page as appPage } from '$app/stores';
 
   interface Props {
     readonly page: RightPanelPage;
@@ -13,13 +15,26 @@
 
   const { page }: Props = $props();
 
-  // One chat per mount: RightPanel remounts this when the page changes.
+  // One chat per mount: RightPanel remounts this when the page changes. The
+  // conversation is kept in localStorage per notebook and entity, so it resumes
+  // after a reload or on coming back to the page; Clear forgets it.
+  const storage = browserChatStorage();
+  const chatPage = $derived<ChatPage>({
+    notebookId: $appPage.data.notebook?.id ?? '',
+    entityType: page.entityType,
+    entityId: page.entityId
+  });
+  const restore = (): readonly ChatMessage[] => loadChat(storage, chatPage);
   let chatId = $state(crypto.randomUUID());
-  let messages = $state<readonly ChatMessage[]>([]);
+  let messages = $state<readonly ChatMessage[]>(restore());
   let draft = $state('');
   let waiting = $state(false);
   let notice = $state<{ readonly tone: 'warning' | 'error'; readonly message: string } | null>(null);
   let listEl: HTMLDivElement | undefined = $state();
+
+  $effect(() => {
+    saveChat(storage, chatPage, messages);
+  });
 
   $effect(() => {
     void messages.length;

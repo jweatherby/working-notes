@@ -1,6 +1,7 @@
 // Sends a page chat message and waits for Claude's reply, which the server
 // produces in the background with the local Claude Code CLI (see
-// src/api/assist/chat.ts). The conversation lives only in the component.
+// src/api/assist/chat.ts). The conversation lives in the component,
+// which keeps it in localStorage (page-chat-storage.ts).
 
 import { submitOrThrow } from '$lib/ui/submit';
 import type { ChatMessage, PageChatStatus, SendChatResult } from '$shared/types/page-chat';
