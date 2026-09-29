@@ -18,6 +18,29 @@ export const wouldCreateCycle = (
   return false;
 };
 
+/**
+ * The ancestors of `id`, root first: its parent's parent's… down to its parent.
+ * The chain stops at a parent that isn't in `items`, and at a loop.
+ */
+export const ancestorsOf = <T extends { readonly id: string }>(
+  items: readonly T[],
+  id: string,
+  getParentId: (item: T) => string | null | undefined
+): readonly T[] => {
+  const byId = new Map(items.map((item): [string, T] => [item.id, item]));
+  const chain: T[] = [];
+  const seen = new Set([id]);
+  let parentId = byId.has(id) ? getParentId(byId.get(id)!) : null;
+  while (parentId && !seen.has(parentId)) {
+    const parent = byId.get(parentId);
+    if (!parent) break;
+    seen.add(parentId);
+    chain.push(parent);
+    parentId = getParentId(parent);
+  }
+  return chain.reverse();
+};
+
 export interface TreeNode<T> {
   readonly item: T;
   readonly depth: number;

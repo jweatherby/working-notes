@@ -68,6 +68,11 @@
     readonly openEdit: () => void;
   }
 
+  interface BreadcrumbLink {
+    readonly label: string;
+    readonly href: string;
+  }
+
   interface Props {
     readonly entityType: string;
     readonly entityId: string;
@@ -80,6 +85,8 @@
     readonly todos: readonly TodoItem[];
     readonly reports?: readonly ReportItem[];
     readonly relations?: readonly RelationGroup[];
+    /** Links between the list and the entity in the breadcrumb, such as a wiki page's parents. */
+    readonly breadcrumbTrail?: readonly BreadcrumbLink[];
     /** Markdown, shown in an outlined box above the docs list. */
     readonly description?: string | null;
     /** Set for archivable entities. An archived entity shows a banner and no edit button. */
@@ -104,6 +111,7 @@
     reports = [],
     relations = [],
     description = null,
+    breadcrumbTrail = [],
     archivedAt = undefined,
     renderOverview,
     renderMeta = undefined,
@@ -362,6 +370,9 @@
       <nav aria-label="breadcrumb">
         <ul>
           <li><a href={breadcrumbHref}>{breadcrumbLabel}</a></li>
+          {#each breadcrumbTrail as link (link.href)}
+            <li><a href={link.href}>{link.label}</a></li>
+          {/each}
           <li>{entityName}</li>
         </ul>
       </nav>

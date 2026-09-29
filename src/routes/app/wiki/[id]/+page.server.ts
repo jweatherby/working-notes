@@ -7,7 +7,8 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
   const client = trpc(fetch);
   const [result, allPages, assets] = await Promise.all([
     client.page.get.query({ id: params.id }),
-    client.page.list.query(),
+    // Archived pages too, so an archived parent still shows in the breadcrumb.
+    client.page.list.query({ archived: 'include' }),
     loadEntityAssets(client, 'PAGE', params.id)
   ]);
   if (!result.ok) throw error(404, 'Page not found');

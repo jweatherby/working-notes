@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTree, flattenTree, scopeTree, wouldCreateCycle } from '../hierarchy';
+import { ancestorsOf, buildTree, flattenTree, scopeTree, wouldCreateCycle } from '../hierarchy';
 
 const parentsOf = (map: Readonly<Record<string, string | null>>) => (id: string) => map[id];
 
@@ -24,6 +24,29 @@ describe('wouldCreateCycle', () => {
 
   it('stops on a loop that does not include the item', () => {
     expect(wouldCreateCycle(parentsOf({ x: 'y', y: 'x', a: null }), 'a', 'x')).toBe(false);
+  });
+});
+
+describe('ancestorsOf', () => {
+  const items = [
+    { id: 'a', parentId: null },
+    { id: 'b', parentId: 'a' },
+    { id: 'c', parentId: 'b' },
+    { id: 'x', parentId: 'y' },
+    { id: 'y', parentId: 'x' },
+    { id: 'z', parentId: 'gone' }
+  ];
+  const ids = (id: string) => ancestorsOf(items, id, (i) => i.parentId).map((i) => i.id);
+
+  it('lists the ancestors root first', () => {
+    expect(ids('c')).toEqual(['a', 'b']);
+    expect(ids('a')).toEqual([]);
+  });
+
+  it('stops at a missing parent or a loop', () => {
+    expect(ids('z')).toEqual([]);
+    expect(ids('x')).toEqual(['y']);
+    expect(ids('missing')).toEqual([]);
   });
 });
 

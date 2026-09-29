@@ -12,7 +12,7 @@
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { submit, submitOrThrow } from '$lib/ui/submit';
   import { PAGE_KIND_FIELDS } from '$shared/types/pages';
-  import { wouldCreateCycle } from '$shared/utils/hierarchy';
+  import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import { PAGE_KIND_LABELS, formatPropertyValue } from '$lib/page/utils';
   import type { PageDetail, PageSummary } from '$shared/types/pages';
 
@@ -31,9 +31,15 @@
   const parentOptions = $derived.by(() => {
     const parents = new Map(allPages.map((p): [string, string | null] => [p.id, p.parentId]));
     return allPages
+      .filter((p) => !p.archivedAt)
       .filter((p) => !wouldCreateCycle((id) => parents.get(id), wikiPage.id, p.id))
       .map((p) => ({ id: p.id, name: p.title }));
   });
+
+  // Every parent up to the top of the wiki, for the breadcrumb.
+  const breadcrumbTrail = $derived(
+    ancestorsOf(allPages, wikiPage.id, (p) => p.parentId).map((p) => ({ label: p.title, href: `/app/wiki/${p.id}` })),
+  );
 
   let editing = $state(false);
 
@@ -126,6 +132,7 @@
   entityName={wikiPage.title}
   breadcrumbLabel="Wiki"
   breadcrumbHref="/app/wiki"
+  {breadcrumbTrail}
   editPopupTitle="Edit page"
   {docs}
   {notes}
