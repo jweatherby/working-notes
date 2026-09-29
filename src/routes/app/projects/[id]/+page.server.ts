@@ -8,7 +8,8 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
   const client = trpc(fetch);
   const [result, allProjects, allGoals, linkedGoals, ownerOptions, assets] = await Promise.all([
     client.project.get.query({ id: params.id }),
-    client.project.list.query(),
+    // Archived projects too, so an archived parent still shows in the breadcrumb.
+    client.project.list.query({ archived: 'include' }),
     client.goal.list.query(),
     client.goal.list.query({ projectId: params.id }),
     loadOwnerOptions(client),

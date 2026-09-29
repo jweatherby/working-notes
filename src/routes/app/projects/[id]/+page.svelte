@@ -11,13 +11,14 @@
   import { submit, submitOrThrow } from '$lib/ui/submit';
   import { statusBadgeClass } from '$lib/project/utils';
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
-  import { wouldCreateCycle } from '$shared/utils/hierarchy';
+  import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import type { GoalSummary } from '$shared/types/goals';
 
   interface ProjectOption {
     readonly id: string;
     readonly name: string;
     readonly parentId: string | null;
+    readonly archivedAt: Date | null;
   }
 
   const { data } = $props<{ data: PageData }>();
@@ -30,11 +31,16 @@
   const linkedGoals = $derived(data.linkedGoals as readonly GoalSummary[]);
 
   // Any project except this one and its sub-projects can be its parent.
+  const allProjects = $derived(data.allProjects as readonly ProjectOption[]);
   const parentOptions = $derived.by(() => {
-    const allProjects = data.allProjects as readonly ProjectOption[];
     const parents = new Map(allProjects.map((p): [string, string | null] => [p.id, p.parentId]));
-    return allProjects.filter((p) => !wouldCreateCycle((id) => parents.get(id), project.id, p.id));
+    return allProjects.filter((p) => !p.archivedAt && !wouldCreateCycle((id) => parents.get(id), project.id, p.id));
   });
+
+  // Every parent up to the top-level project, for the breadcrumb.
+  const breadcrumbTrail = $derived(
+    ancestorsOf(allProjects, project.id, (p) => p.parentId).map((p) => ({ label: p.name, href: `/app/projects/${p.id}` })),
+  );
 
   const goalOptions = $derived(
     (data.allGoals as readonly GoalSummary[])
@@ -128,6 +134,7 @@
   description={project.description}
   breadcrumbLabel="Projects"
   breadcrumbHref="/app/projects"
+  {breadcrumbTrail}
   editPopupTitle="Edit project"
   {docs}
   {notes}

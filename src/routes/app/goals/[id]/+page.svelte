@@ -13,7 +13,7 @@
   import { submit, submitOrThrow } from '$lib/ui/submit';
   import { GOAL_STATUSES, type GoalStatus } from '$shared/types/enums';
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
-  import { wouldCreateCycle } from '$shared/utils/hierarchy';
+  import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import { statusBadgeClass } from '$lib/project/utils';
   import { GOAL_STATUS_LABELS, GOAL_TIME_FLAGS, formatGoalValue, goalStatusBadgeClass, goalTimeFlag, progressTone } from '$lib/goal/utils';
   import { localDay, periodElapsed, periodPhase, periodSpan } from '$shared/utils/period';
@@ -37,9 +37,15 @@
   const parentOptions = $derived.by(() => {
     const parents = new Map(allGoals.map((g): [string, string | null] => [g.id, g.parentId]));
     return allGoals
+      .filter((g) => !g.archivedAt)
       .filter((g) => !wouldCreateCycle((id) => parents.get(id), goal.id, g.id))
       .map((g) => ({ id: g.id, name: g.title }));
   });
+
+  // Every parent up to the top-level goal, for the breadcrumb.
+  const breadcrumbTrail = $derived(
+    ancestorsOf(allGoals, goal.id, (g) => g.parentId).map((g) => ({ label: g.title, href: g.path })),
+  );
 
   const projectOptions = $derived(
     (data.allProjects as readonly ProjectOption[])
@@ -166,6 +172,7 @@
   description={goal.description}
   breadcrumbLabel="Goals"
   breadcrumbHref="/app/goals"
+  {breadcrumbTrail}
   editPopupTitle="Edit goal"
   {docs}
   {notes}
