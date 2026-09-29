@@ -237,7 +237,7 @@
   };
 
   $effect(() => {
-    rightPanelPage.set({ entityType, entityId, entityName, getPageText });
+    rightPanelPage.set({ entityType: entityType as EntityType, entityId, entityName, getPageText });
   });
   onDestroy(() => {
     rightPanelNotes.set(null);

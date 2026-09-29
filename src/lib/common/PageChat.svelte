@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte';
   import { trpc } from '$shared/trpc/client';
   import type { ChatMessage } from '$shared/types/page-chat';
   import type { RightPanelPage } from '$lib/stores/right-panel';
   import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
-  import { errorMessage } from '$lib/ui/submit';
-  import { askAboutPage } from '$lib/common/use-page-chat';
+  import { errorMessage, submitOrThrow } from '$lib/ui/submit';
+  import { askAboutPage, waitForReply } from '$lib/common/use-page-chat';
 
   interface Props {
     readonly page: RightPanelPage;
@@ -13,13 +14,19 @@
 
   const { page }: Props = $props();
 
-  // One chat per mount: RightPanel remounts this when the page changes.
-  let chatId = $state(crypto.randomUUID());
+  // RightPanel remounts this when the page changes. The conversation is saved
+  // on the server per entity, so it's loaded on mount and resumes after a
+  // reload; Clear deletes it.
+  let loaded = $state(false);
   let messages = $state<readonly ChatMessage[]>([]);
   let draft = $state('');
   let waiting = $state(false);
   let notice = $state<{ readonly tone: 'warning' | 'error'; readonly message: string } | null>(null);
   let listEl: HTMLDivElement | undefined = $state();
+  const closed = new AbortController();
+  onDestroy(() => closed.abort());
+
+  const entity = () => ({ entityType: page.entityType, entityId: page.entityId });
 
   $effect(() => {
     void messages.length;
@@ -27,26 +34,56 @@
     listEl?.scrollTo({ top: listEl.scrollHeight });
   });
 
+  /** Reads the saved conversation; returns the chat to wait on when Claude is still replying. */
+  const load = async (): Promise<string | null> => {
+    try {
+      const saved = await submitOrThrow(() => trpc().chat.get.query(entity()));
+      messages = saved.messages;
+      return saved.replying ? saved.chatId : null;
+    } catch (e: unknown) {
+      notice = { tone: 'error', message: errorMessage(e) };
+      return null;
+    } finally {
+      loaded = true;
+    }
+  };
+
+  const showReply = async (reply: string | null) => {
+    if (closed.signal.aborted) return;
+    if (reply === null) await load();
+    else messages = [...messages, { role: 'assistant', content: reply }];
+  };
+
+  onMount(async () => {
+    const replying = await load();
+    if (!replying) return;
+    waiting = true;
+    try {
+      await showReply(await waitForReply(trpc().chat, replying, { signal: closed.signal }));
+    } catch (e: unknown) {
+      notice = { tone: 'error', message: errorMessage(e) };
+    } finally {
+      waiting = false;
+    }
+  });
+
   const send = async () => {
     const content = draft.trim();
-    if (!content || waiting) return;
-    const sent = [...messages, { role: 'user' as const, content }];
-    messages = sent;
+    if (!content || waiting || !loaded) return;
+    messages = [...messages, { role: 'user', content }];
     draft = '';
     notice = null;
     waiting = true;
     try {
-      const reply = await askAboutPage(trpc().chat, {
-        chatId,
-        entityType: page.entityType,
-        entityName: page.entityName,
-        pageText: page.getPageText(),
-        messages: sent
-      });
-      if (reply.kind === 'reply') messages = [...sent, { role: 'assistant', content: reply.content }];
+      const reply = await askAboutPage(
+        trpc().chat,
+        { ...entity(), entityName: page.entityName, pageText: page.getPageText(), content },
+        { signal: closed.signal }
+      );
+      if (reply.kind === 'reply') await showReply(reply.content);
       else {
-        // Nothing was sent: put the message back to send again.
-        messages = sent.slice(0, -1);
+        // Nothing was sent or saved: put the message back to send again.
+        messages = messages.slice(0, -1);
         draft = content;
         notice = { tone: 'warning', message: reply.message };
       }
@@ -57,10 +94,14 @@
     }
   };
 
-  const clear = () => {
-    messages = [];
-    notice = null;
-    chatId = crypto.randomUUID();
+  const clear = async () => {
+    try {
+      await submitOrThrow(() => trpc().chat.clear.mutate(entity()));
+      messages = [];
+      notice = null;
+    } catch (e: unknown) {
+      notice = { tone: 'error', message: errorMessage(e) };
+    }
   };
 
   const onKeydown = (e: KeyboardEvent) => {
@@ -73,7 +114,7 @@
 
 <div class="page-chat">
   <div class="messages" bind:this={listEl}>
-    {#if messages.length === 0}
+    {#if loaded && messages.length === 0}
       <EmptyState small message="Ask Claude about {page.entityName}. It reads what's on this page and doesn't change anything." />
     {/if}
     {#each messages as message, i (i)}
@@ -103,9 +144,9 @@
     ></textarea>
     <div class="composer-actions">
       {#if messages.length > 0}
-        <button type="button" class="btn ghost sm" onclick={clear} disabled={waiting}>Clear</button>
+        <button type="button" class="btn ghost sm" onclick={() => void clear()} disabled={waiting}>Clear</button>
       {/if}
-      <button type="submit" class="btn primary sm" disabled={waiting || !draft.trim()} aria-busy={waiting}>
+      <button type="submit" class="btn primary sm" disabled={waiting || !loaded || !draft.trim()} aria-busy={waiting}>
         {waiting ? 'Waiting…' : 'Send'}
       </button>
     </div>

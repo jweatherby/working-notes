@@ -24,6 +24,8 @@ export interface PageChatJob {
   readonly claudePath: string;
   /** The whole prompt: page contents and the conversation so far. */
   readonly prompt: string;
+  /** Stores the reply. It runs before the job reads as done, so a reload after that finds it. */
+  readonly saveReply: (reply: string) => Promise<void>;
 }
 
 export interface PageChat {
@@ -31,10 +33,20 @@ export interface PageChat {
   readonly locate: () => string | null;
   /** Starts the job, or returns an error if one is already running for `key`. */
   readonly start: (job: PageChatJob) => Result<void>;
+  /** Whether a reply is being written for `key`; unlike `status`, this doesn't use up a finished status. */
+  readonly running: (key: string) => boolean;
   /** A failed or done status is reported once, then the chat reads as idle. */
   readonly status: (key: string) => PageChatStatus;
 }
 
+/** A page's saved conversation, and whether Claude is still replying to it. */
+export interface StoredPageChat {
+  /** Null until the first message is sent. */
+  readonly chatId: string | null;
+  readonly messages: readonly ChatMessage[];
+  readonly replying: boolean;
+}
+
 export type SendChatResult =
-  | { readonly started: true }
+  | { readonly started: true; readonly chatId: string }
   | { readonly started: false; readonly warning: string };

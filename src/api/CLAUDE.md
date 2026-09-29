@@ -81,7 +81,7 @@ Goal and project owners (`ownerType` + `ownerId`) and both ends of a relation ar
 
 Nothing polymorphic has a foreign key, so a delete cleans up after itself. Every delete of a person, team, department, project, goal, page or report calls `planEntityCleanup(reg, type, id)` and runs its `ops` in the same `$transaction` as the delete:
 
-- delete the docs, notes, reports, todos, links, tag attachments, comments and emoji attached to the entity
+- delete the docs, notes, reports, todos, links, tag attachments, comments, emoji and page chat attached to the entity
 - delete relations at either end
 - clear goal and project owners that point at it
 
@@ -128,8 +128,8 @@ There is no `notebook.delete`, on purpose: Claude should never be one tool call 
 - **Converting a PDF in the web app** (`aux/doc/convert.ts`):
   - `doc.convertPdf` starts by looking for `claude` (`findClaude` in `$shared/assist/claude-cli`: PATH, then where installers put it). Without it, the result is `{ started: false, warning }`.
   - Otherwise it starts a background job (`$shared/assist/pdf-converter.server`) that runs `claude -p` in the PDF's folder with only the Read tool, and saves the markdown through `updateDoc`. The UI polls `doc.pdfConversion`.
-- **Page chat** (`api/assist/chat.ts`, `ctx.pageChat`, web app only like the converter): `chat.send` takes a client-made `chatId`, the entity, the page's visible text and the whole conversation, and starts a background `claude -p` job (`$shared/assist/page-chat.server`) with the prompt on stdin and no tools. The UI polls `chat.status`, which reports `done` with the reply (or `failed`) once. Nothing is stored; the conversation lives in `PageChat.svelte`. Both run `claude` through `$shared/assist/claude-process.server`.
-  - Both procedures are excluded from the CLI and MCP in `cli/api.ts`.
+- **Page chat** (`api/assist/chat.ts`, `ctx.pageChat`, web app only like the converter): each entity has one saved conversation, a `PageChat` row with the messages as JSON. `chat.send` takes the entity, the page's visible text and the new message; it stores the message and starts a background `claude -p` job (`$shared/assist/page-chat.server`) with the prompt (the page and the last `CHAT_LIMITS.messages` messages) on stdin and no tools. The job appends the reply to the row (`saveChatReply`, a no-op if the chat was cleared meanwhile) before it reads as done. The UI polls `chat.status` with the returned `chatId`, which reports `done` with the reply (or `failed`) once. `chat.get` loads the conversation and whether a reply is still running; `chat.clear` deletes it. Without `claude`, `chat.send` warns and stores nothing. Chatting doesn't check `ensureWritable`: it never changes the entity. Both features run `claude` through `$shared/assist/claude-process.server`.
+  - `chat.*` and the converter's procedures are excluded from the CLI and MCP in `cli/api.ts`.
   - `storage.pathFor(key)` gives the file's path on disk.
 - **Branding:** images upload as base64 through `branding.uploadImage`, which returns a storage key. `branding.update` saves the key and deletes any file it replaces.
 

@@ -37,6 +37,7 @@ export const planEntityCleanup = async (
       p.tagAttachment.deleteMany(attached),
       p.comment.deleteMany(attached),
       p.emoji.deleteMany(attached),
+      p.pageChat.deleteMany(attached),
       relationCleanupOp(reg, entityType, entityId),
       p.goal.updateMany(owned),
       p.project.updateMany(owned)
