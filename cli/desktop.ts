@@ -11,7 +11,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { cp, copyFile, mkdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, cp, copyFile, mkdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
 import { dataDirFor, type AppDirsHost } from '../src/shared/settings/server/app-dirs';
@@ -42,7 +42,15 @@ const install = async (): Promise<{ readonly version: string; readonly binary: s
     const staging = join(appDir, `.install-${version}-${process.pid}`);
     await rm(staging, { recursive: true, force: true });
     await mkdir(staging, { recursive: true });
-    await copyFile(process.execPath, join(staging, binaryName));
+    // On macOS, write the bytes rather than copy the file: a copy keeps the quarantine
+    // flag of a downloaded app, which would stop the copy from running (the plugin
+    // shim uses cat for the same reason).
+    if (process.platform === 'darwin') {
+      await writeFile(join(staging, binaryName), await readFile(process.execPath));
+      await chmod(join(staging, binaryName), 0o755);
+    } else {
+      await copyFile(process.execPath, join(staging, binaryName));
+    }
     await cp(migrations, join(staging, 'migrations'), { recursive: true });
     await writeFile(join(staging, 'VERSION'), `${version}\n`);
     // Another start may have installed this version meanwhile.

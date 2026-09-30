@@ -1,12 +1,15 @@
-# Builds the desktop app (desktop/, Tauri 2) for macOS, Windows and Linux, and keeps
-# the installers as workflow artifacts. Run it by hand from the Actions tab: it isn't
-# part of the release yet, and the installers aren't signed, so macOS and Windows warn
-# before opening them.
-#   macOS: .dmg and .app   Windows: .msi and setup .exe   Linux: .deb and .AppImage
+# Builds the desktop app (desktop/, Tauri 2) as a macOS .dmg and keeps it as a workflow
+# artifact. It isn't part of the release yet. The app is ad-hoc signed, not notarized,
+# so macOS asks before opening a downloaded copy. Windows (.msi) and Linux (.deb) builds
+# come back once the macOS app is settled: add their rows to the matrix and bundles.
+# Runs by hand from the Actions tab, and on pushes to the desktop branch while it's in
+# review (remove that trigger when it merges).
 name: Desktop
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ccr-d83e80cc-ac2pbc]
 
 permissions:
   contents: read
@@ -21,8 +24,6 @@ jobs:
       matrix:
         include:
           - { target: darwin-arm64, os: macos-latest }
-          - { target: windows-x64, os: windows-latest }
-          - { target: linux-x64, os: ubuntu-24.04 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -65,15 +66,10 @@ jobs:
         run: cargo test
 
       - name: Build the desktop app
-        run: bun run desktop:build
+        run: bun run desktop:build --bundles dmg
 
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.target }}
-          path: |
-            desktop/src-tauri/target/release/bundle/dmg/*.dmg
-            desktop/src-tauri/target/release/bundle/msi/*.msi
-            desktop/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/release/bundle/deb/*.deb
-            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+          path: desktop/src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error
