@@ -115,6 +115,21 @@ duplicate. `DEPENDS_ON` reads from `from` to `to`: Checkout depends on the API, 
 as "Needed by". For anything else — uses, replaces, applies to — use `RELATED` and say how in
 `--note`. `relation.forEntity` shows both directions, grouped by label.
 
+**Finding things by their source.** Attach a link to the Linear issue, Notion page or other place
+something came from, and `link.find` finds it again:
+
+```bash
+wnotes link.add --entityType PROJECT --entityId <checkout> \
+  --url https://linear.app/acme/project/checkout-4f2a --title "Linear: Checkout"
+wnotes link.find --url http://www.linear.app/acme/project/checkout-4f2a/
+wnotes link.find --contains ENG-123
+```
+
+`--url` ignores the protocol, `www.`, a trailing slash, the fragment and tracking parameters.
+`--contains` matches any part of the address, ignoring case, which helps when a title in the URL
+has changed. Each match comes back with the entity it's attached to. The skill uses this to keep
+Linear or Notion items it imports from turning into duplicates.
+
 `project.dependencies` returns every project `DEPENDS_ON` link and goal–project link in one call,
 with each goal's status and progress: the data behind the projects page's dependency map.
 

@@ -1,7 +1,10 @@
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
+import { resolveEntityLabel } from '$api/_entity-labels';
 import type { EntityType } from '$shared/types/enums';
+import { entityPath } from '$shared/utils/entity';
+import { linkSearchKey, normalizeLinkUrl } from './url';
 
 // ----- Types -----
 
@@ -11,6 +14,20 @@ export interface LinkSummary {
   readonly title: string | null;
   readonly createdAt: Date;
 }
+
+export interface LinkMatch extends LinkSummary {
+  readonly entityType: EntityType;
+  readonly entityId: string;
+  readonly label: string;
+  readonly path: string;
+}
+
+export interface FindLinksInput {
+  readonly url?: string;
+  readonly contains?: string;
+}
+
+const FIND_LIMIT = 50;
 
 // ----- Operations -----
 
@@ -29,6 +46,48 @@ export const listLinks = async (
     title: l.title,
     createdAt: l.createdAt
   })));
+};
+
+/**
+ * Links whose URL is the given one (compared normalized: protocol, `www.`,
+ * trailing slash, fragment and tracking parameters don't matter), or contains
+ * the given text (case-insensitive), with the entity each is attached to.
+ * Answers "is this Linear issue or Notion page already in the notebook?".
+ * Links on deleted entities are left out.
+ */
+export const findLinks = async (
+  reg: Pick<Registry, 'prisma'>,
+  input: FindLinksInput
+): Promise<Result<readonly LinkMatch[]>> => {
+  const url = input.url?.trim();
+  const contains = input.contains?.trim();
+  if (!url && !contains) return err(new Error('Pass --url (the exact address) or --contains (a stable part of it, such as ENG-123 or a Notion page id)'));
+
+  const needle = url ? linkSearchKey(url) : contains ?? '';
+  const rows = await reg.prisma.link.findMany({
+    where: { url: { contains: needle } },
+    orderBy: { createdAt: 'desc' }
+  });
+  const target = url ? normalizeLinkUrl(url) : null;
+  const matching = target ? rows.filter((l) => normalizeLinkUrl(l.url) === target) : rows;
+
+  const matches: LinkMatch[] = [];
+  for (const l of matching.slice(0, FIND_LIMIT)) {
+    const entityType = l.entityType as EntityType;
+    const label = await resolveEntityLabel(reg, entityType, l.entityId);
+    if (label === null) continue;
+    matches.push({
+      id: l.id,
+      url: l.url,
+      title: l.title,
+      createdAt: l.createdAt,
+      entityType,
+      entityId: l.entityId,
+      label,
+      path: entityPath(entityType, l.entityId)
+    });
+  }
+  return ok(matches);
 };
 
 export const addLink = async (

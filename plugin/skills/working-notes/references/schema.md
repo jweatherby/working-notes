@@ -81,11 +81,13 @@ Deleting a person, team, department, project, goal, page or report also deletes 
 | **Note** | `content` (markdown), `parentId?` for a reply | `note.list`, `note.add`, `note.update`, `note.remove` |
 | **Doc** | `title`, `content` (markdown), `sortOrder`, `sourceUrl?` (attached PDF) | `doc.list`, `doc.get`, `doc.add`, `doc.update`, `doc.reorder`, `doc.attachSource`, `doc.getReadUrl`, `doc.remove` |
 | **Todo** | `title`, `description?`, `status`, `priority` 0–3 (3 is highest), `targetDate?`, `completedAt` (set automatically) | `todo.list` (filter `--status`, `--entityType`), `todo.forEntity`, `todo.create`, `todo.update`, `todo.delete` |
-| **Link** | `url`, `title?` | `link.list`, `link.add`, `link.remove` |
+| **Link** | `url`, `title?` | `link.list`, `link.find` (`--url`, or `--contains` text; returns the entity each match is attached to, with `label` and `path`), `link.add`, `link.remove` |
 | **Tag** | `name` (unique), `color` | `tag.list`, `tag.create`, `tag.delete`; `tag.forEntity`, `tag.attach`, `tag.detach` |
 | **Comment** | `content` | `comment.list`, `comment.add`, `comment.remove` |
 
 Todo `status` is one of `PENDING ACTIVE COMPLETE CANCELLED`. `todo.list` returns each todo's `entityLabel` (the person/team/project name) and `entityPath`.
+
+`link.find --url` compares URLs normalized: protocol, `www.`, host case, a trailing slash, the fragment and tracking parameters (`utm_*` and similar) don't matter, but the path's case and other query parameters do. `--contains` matches any part of the URL, ignoring case. Either returns at most 50 links, newest first, leaving out links on deleted entities. Use it to find the entity an imported item (a Linear issue, a Notion page) already lives on.
 
 Docs are for longer reference material (a career plan, an imported PDF). They attach to anything except a wiki page: `doc.add` on a `PAGE` fails, because the page's own `content` is the place for that material. Notes are short, dated observations. Reports are switched off for now, so write finished write-ups as docs.
 

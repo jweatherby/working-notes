@@ -32,6 +32,11 @@ depends on the payments API?" and get an answer instead of a search result.
 **Nothing leaves your Mac.** No accounts, no keys, no sync, nothing sent anywhere. The app itself
 never calls a language model — Claude works on it from outside.
 
+**It sits beside your other tools.** Linear, Notion and the rest hold the team's version of things.
+Ask Claude to bring a project or page in and it copies only the parts that matter to you, links back
+to the source, and updates the same entry next time instead of making a second one. Your own notes
+and opinions stay yours.
+
 **Work and side projects stay apart.** Each notebook is separate, and nothing links across them.
 
 ## What using it looks like

@@ -1,6 +1,6 @@
 ---
 name: working-notes
-description: Read and write the user's local Working Notes notebooks (separate ones for work and for personal projects) — their org chart (people, reporting lines, teams, departments), projects and who owns them, goals with targets and check-ins, a wiki of pages (policies, products, software, decisions), relations between any of these, notes, docs (with charts), todos and tags. Use whenever the user talks about the people or teams they work with, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, or wants a PDF imported into their notes.
+description: Read and write the user's local Working Notes notebooks (separate ones for work and for personal projects) — their org chart (people, reporting lines, teams, departments), projects and who owns them, goals with targets and check-ins, a wiki of pages (policies, products, software, decisions), relations between any of these, notes, docs (with charts), todos and tags. Use whenever the user talks about the people or teams they work with, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, wants a PDF imported into their notes, or wants projects, issues, pages or people from Linear, Notion, Jira, GitHub or another tool brought into their notes.
 ---
 
 # Working Notes
@@ -85,6 +85,7 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "Add the expense policy, version 2, effective 1 October" | `page.list`, then `page.create --title "Expense policy" --kind POLICY --properties '{"status":"ACTIVE","version":"2","effectiveDate":"2026-10-01"}' --content-file policy.md` |
 | "We pay Datadog $40k a year; it renews in March" | `page.create --title Datadog --kind SOFTWARE --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'` |
 | "Platform uses Datadog for alerting" | `relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> --note "Uses it for alerting"` (kind defaults to `RELATED`) |
+| "Pull my Linear project into my notes" / "Track this Notion page" | Follow **Importing from other tools** below: `link.find --url <url>` first, and update what it finds instead of creating a second one |
 | "Checkout can't ship until the payments API is done" | `relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <payments api> --kind DEPENDS_ON` |
 
 Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`, except that docs don't attach to a `PAGE` (put the material in the page's content, or a sub-page). They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
@@ -103,6 +104,21 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
 3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
 4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding.
+
+## Importing from other tools
+
+The notebook is the user's own layer over the shared tools (Linear, Notion, Jira, GitHub, a spreadsheet): the parts that matter to them, plus their own view of it. When the user asks you to bring something in, read it with that tool's MCP tools, then:
+
+1. **Import only what the user touches.** Their team, projects they own or depend on, goals they report on, people they manage or work with. Never mirror a whole workspace or project board. If the user asks for "everything", say how many items that is and ask which ones they care about.
+2. **Find it first.** `link.find --url <the item's URL>` returns every entity already carrying that link, however the URL was written. Titles in Linear and Notion URLs change on rename, so when that finds nothing, try `link.find --contains <stable id>`: the issue or project key (`ENG-123`), or the 32-character id at the end of a Notion URL. Then check by name with the usual `list` calls (rule 1).
+   - **Found:** update that entity. Don't create another.
+   - **Not found:** create it, then `link.add --entityType <type> --entityId <id> --url <url> --title "<Tool>: <key or title>"`, for example `--title "Linear: ENG-123"`. Every imported entity carries a link to its source.
+3. **Map shared facts onto fields.** Name and status (`project.status` is free text, so keep the tool's own word: "In progress"), dates, owner (look the owner up; create a person only if the user wants them tracked), parent project, `DEPENDS_ON` relations between items you're importing (only between items already in the notebook), and goal–project links.
+4. **Record each sync as a note.** `note.add` on the entity: "From Linear, 30 Sep: In progress, due 15 Oct, 6 of 9 issues done." Notes are dated, so the latest one says when the entity was last synced. Don't copy the item's description or comments in bulk; summarise only what the user needs, and keep the link for the rest.
+5. **The source owns shared facts; the user owns their view.** On a re-sync, update fields to match the source and add a new sync note. Never edit or remove the user's own notes, todos, relations or judgements ("I don't believe that date"): they're the reason the notebook exists. When the source disagrees with something the user said, tell them rather than choosing.
+6. **Check before you state it as current.** When you answer from an imported entity whose last sync note is more than about a week old, and the tool is available, re-read the source first. If it isn't available, say when the information dates from.
+
+Say what you did by name and source: "Updated the Checkout project from Linear (now In progress, due 15 Oct); added the Payments API project, which it depends on."
 
 ## Importing a PDF
 
