@@ -50,6 +50,7 @@
   {todos}
   {reports}
   {relations}
+  links={data.links}
 >
   {#snippet renderOverview()}
 

@@ -18,6 +18,7 @@
   import TodoForm from '$lib/todo/components/TodoForm.svelte';
   import ReportsWidget from '$lib/report/components/ReportsWidget.svelte';
   import RelationsWidget from '$lib/relation/components/RelationsWidget.svelte';
+  import LinksWidget from '$lib/link/components/LinksWidget.svelte';
   import { createDocHandlers } from '$lib/common/use-doc-handlers';
   import { createNoteHandlers } from '$lib/common/use-note-handlers';
   import { rightPanelNotes, rightPanelPage, activeDrawer } from '$lib/stores/right-panel';
@@ -59,6 +60,13 @@
     readonly updatedAt: Date | string;
   }
 
+  interface LinkItem {
+    readonly id: string;
+    readonly url: string;
+    readonly title: string | null;
+    readonly syncedAt: Date | string | null;
+  }
+
   interface EditFormCtx {
     readonly onSuccess: () => Promise<void>;
     readonly onCancel: () => void;
@@ -85,6 +93,8 @@
     readonly todos: readonly TodoItem[];
     readonly reports?: readonly ReportItem[];
     readonly relations?: readonly RelationGroup[];
+    /** External links; the sidebar lists them, with their source tool and last sync, when there are any. */
+    readonly links?: readonly LinkItem[];
     /** Links between the list and the entity in the breadcrumb, such as a wiki page's parents. */
     readonly breadcrumbTrail?: readonly BreadcrumbLink[];
     /** Markdown, shown in an outlined box above the docs list. */
@@ -110,6 +120,7 @@
     todos,
     reports = [],
     relations = [],
+    links = [],
     description = null,
     breadcrumbTrail = [],
     archivedAt = undefined,
@@ -363,6 +374,11 @@
     <div class="section">
       <RelationsWidget {entityType} {entityId} groups={relations} readOnly={!!archivedAt} />
     </div>
+    {#if links.length > 0}
+      <div class="section">
+        <LinksWidget {links} readOnly={!!archivedAt} />
+      </div>
+    {/if}
   {/snippet}
 
   <div class="center-pane" bind:this={centerEl} style="--sticky-top: {centerHeaderH}px">

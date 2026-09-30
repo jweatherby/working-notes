@@ -141,6 +141,7 @@
   {todos}
   {reports}
   {relations}
+  links={data.links}
 >
   {#snippet renderMeta()}
     <dl class="meta-list">

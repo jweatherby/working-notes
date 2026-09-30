@@ -111,8 +111,9 @@ The home screen shows your open todos, what changed lately, and a graph with one
 middle and everything linked to it around it; click a neighbour to move there. The org map shows
 reporting lines, or switch it to **Work** for each owner's projects and goals and the arrows between
 them. The projects page has a **Map** view that lays projects out by what depends on what, with the
-goals they deliver. Everything else gets a page of its own, with its docs down the middle, its todos
-and links in the sidebar and its notes on the right.
+goals they deliver. Everything else gets a page of its own, with its docs down the middle, its todos,
+related things and links in the sidebar and its notes on the right. A link to Linear, Notion, GitHub
+or another tool shows the tool's mark, and when Claude last synced the page from it.
 
 Press ⌘K to search. Start with `/` to look in one place only, as in `/person dana`.
 

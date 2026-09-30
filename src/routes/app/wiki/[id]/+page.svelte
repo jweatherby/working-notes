@@ -140,6 +140,7 @@
   {todos}
   {reports}
   {relations}
+  links={data.links}
   renderMeta={editing ? undefined : pageMeta}
 >
   {#snippet renderOverview()}
