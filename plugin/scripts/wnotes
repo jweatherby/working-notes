@@ -8,7 +8,16 @@
 #      <data dir>/App/<version>, with App/current pointing at it (for the backup
 #      LaunchAgent and terminals), so no clone or Bun is needed.
 # It isn't in bin/: claude.ai-hosted plugins (Cowork) reject bin/ executables.
+# On Windows, scripts/wnotes.cmd does the same.
 set -e
+
+# Under Git Bash, MSYS or Cygwin on Windows, the Windows launcher does the work.
+case $(uname -s) in
+  MINGW* | MSYS* | CYGWIN*)
+    # //d //c: Git Bash would otherwise rewrite /d and /c as paths.
+    exec cmd.exe //d //c "$(cygpath -w "$(dirname "$0")/wnotes.cmd")" "$@"
+    ;;
+esac
 
 if [ "$(uname -s)" = Darwin ]; then
   data="$HOME/Library/Application Support/Working Notes"

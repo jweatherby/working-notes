@@ -245,7 +245,7 @@ selectable text. A line of just `<!-- pagebreak -->` starts a new page.
 ```bash
 wnotes backup --force --reason "before the reorg"   # snapshot now, regardless
 wnotes backup list                                  # snapshots with counts, per notebook
-wnotes backup install                               # hourly LaunchAgent (macOS)
+wnotes backup install                               # hourly LaunchAgent (macOS; Claude and the app back up hourly anyway)
 wnotes backup restore latest --notebook <id>        # app must be closed
 ```
 

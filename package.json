@@ -1,6 +1,6 @@
 {
   "name": "working-notes",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,6 +22,7 @@
     "setup": "bun scripts/setup/main.ts",
     "release:version": "bun scripts/release/version.ts",
     "release:build": "bun scripts/release/build.ts",
+    "release:package": "bun scripts/release/package.ts",
     "release:smoke": "bun scripts/release/smoke.ts",
     "icons": "bun scripts/icons/render.ts",
     "wnotes": "bun cli/main.ts"

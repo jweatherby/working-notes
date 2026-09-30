@@ -5,7 +5,7 @@ description: Read and write the user's local Working Notes notebooks (separate o
 
 # Working Notes
 
-Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Working Notes` on macOS, `~/.local/share/working-notes` on Linux). Each notebook (their work, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
+Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Working Notes` on macOS, `%LOCALAPPDATA%\Working Notes` on Windows, `~/.local/share/working-notes` on Linux). Each notebook (their work, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
 
 ## Calling it
 
@@ -131,8 +131,8 @@ The app stores PDFs but can't read them; you do the reading.
 
 ## Backups
 
-Snapshots are kept on this computer in the `Backups` folder, per notebook. On macOS every notebook is snapshotted hourly, when something changed, if the user ran `wnotes backup install`.
+Snapshots are kept on this computer in the `Backups` folder, per notebook. Every notebook that changed is snapshotted hourly while the Working Notes tools or the app are running, and on macOS also by the LaunchAgent if the user ran `wnotes backup install`.
 
 - A snapshot covers one notebook: `backup_snapshot` with `notebook`, or `wnotes backup --force --reason "<why>" --notebook <id>`. Snapshot the notebook you're about to change.
 - `backup_list` (with `notebook`), or `wnotes backup list` for every notebook
-- Restore **only when the user asks**, and only from a shell on the user's Mac: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their Mac, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup restore <id|latest> --notebook <id>`.
+- Restore **only when the user asks**, and only from a shell on the user's computer: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their computer, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup restore <id|latest> --notebook <id>` on a Mac, or in PowerShell on Windows: `& "$env:LOCALAPPDATA\Working Notes\App\current\wnotes.exe" backup restore <id|latest> --notebook <id>`.

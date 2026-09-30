@@ -1,7 +1,8 @@
 # Install
 
-Working Notes runs on your own Mac. A release contains the application itself, so Claude is the
-only thing you need beforehand. Releases are built for Apple silicon.
+Working Notes runs on your own computer. A release contains the application itself, so Claude is
+the only thing you need beforehand. Releases are built for Macs with Apple silicon, and, as a
+preview, for Windows (x64) and Linux (x64).
 
 To work on the code instead, read [DEVELOPMENT.md](DEVELOPMENT.md).
 
@@ -43,14 +44,30 @@ Do not attach the data folder to a session. Two programs must never open the sam
 
 **Claude desktop Chat**
 
-Download `working-notes-<version>-darwin-arm64.zip` from the
+Download `working-notes-<version>-darwin-arm64.zip` (`-windows-x64` or `-linux-x64` on those
+systems) from the
 [latest release](https://github.com/jweatherby/working-notes/releases/latest) and add it as a
 plugin. Repeat with each new release — Chat takes uploads only.
 
+**Windows (preview)**
+
+The plugin starts its server with `sh`, which Windows doesn't have unless Git Bash is on your
+PATH; Claude's plugin settings can't name a different command per system yet. Until that's solved,
+add the server yourself after installing the plugin, pointing at the Windows launcher inside it:
+
+```powershell
+claude mcp add working-notes -- cmd /d /c "<plugin folder>\scripts\wnotes.cmd" mcp
+```
+
+In Claude desktop, the same goes in `claude_desktop_config.json` under `mcpServers`, as
+`"command": "cmd"` with `"args": ["/d", "/c", "<plugin folder>\\scripts\\wnotes.cmd", "mcp"]`.
+The launcher installs the app into `%LOCALAPPDATA%\Working Notes\App` and runs it from there.
+
 ## First run
 
-The first time Claude starts the plugin, it installs the app into
-`~/Library/Application Support/Working Notes/App`, and creates a notebook called `notebook`. Your
+The first time Claude starts the plugin, it installs the app into the `App` folder of your data
+folder (see [Where your data lives](#where-your-data-lives)), and creates a notebook called
+`notebook`. Your
 notebooks stay in that folder across updates.
 
 Nothing else to set up. Try it by telling Claude something like *"Dana Park joined Platform as a
@@ -88,20 +105,27 @@ ask Claude to open Working Notes, or run `wnotes app` — and reload.
 
 ## Hourly backups
 
+Working Notes snapshots every notebook that changed, once an hour, whenever Claude or the app is
+open, on every system. There's nothing to set up.
+
+On a Mac you can also add a LaunchAgent, so backups carry on while neither is running:
+
 ```bash
 "$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup install
 ```
 
-This adds a LaunchAgent that snapshots every notebook hourly, when something changed. It keeps
-working across app updates. The log is `~/Library/Logs/Working Notes/backup.log`, and `backup
+The LaunchAgent snapshots every notebook hourly, when something changed, and keeps working across
+app updates. It shares the hour with Claude and the app, so nothing is snapshotted twice. The log is `~/Library/Logs/Working Notes/backup.log`, and `backup
 uninstall` removes it.
 
-Snapshots live on this disk, so they don't protect against losing the disk. Time Machine does, and
-it backs up Application Support automatically.
+Snapshots live on this disk, so they don't protect against losing the disk. Time Machine does on a
+Mac, and it backs up Application Support automatically; on Windows and Linux, use the system's own
+backup.
 
 ## Where your data lives
 
-`~/Library/Application Support/Working Notes/` (`$XDG_DATA_HOME/working-notes` on Linux):
+`~/Library/Application Support/Working Notes/` on a Mac, `%LOCALAPPDATA%\Working Notes\` on
+Windows, and `$XDG_DATA_HOME/working-notes` (usually `~/.local/share/working-notes`) on Linux:
 
 | | |
 |---|---|
@@ -118,6 +142,9 @@ clone. From a release, use the full path:
 ```bash
 "$HOME/Library/Application Support/Working Notes/App/current/wnotes" help
 ```
+
+On Windows: `& "$env:LOCALAPPDATA\Working Notes\App\current\wnotes.exe" help`. On Linux:
+`~/.local/share/working-notes/App/current/wnotes help`.
 
 **The app is stuck, or shows an old version.** Run `wnotes app restart`. It stops the running app,
 whatever version it is, and starts the current one. Claude can do the same with its `app_restart`

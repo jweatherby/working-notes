@@ -11,21 +11,30 @@ import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { dataDirFor } from '../../src/shared/settings/server/app-dirs';
 
+const windows = process.platform === 'win32';
 const plugin = resolve(process.argv[2] ?? 'dist/plugin');
-const binary = readdirSync(join(plugin, 'server')).find((name) => name.startsWith('wnotes-'));
-if (!binary) throw new Error(`No wnotes binary in ${plugin}/server`);
+// This machine's binary: a merged plugin carries one per platform.
+const hostBinary = `wnotes-${windows ? 'windows' : process.platform}-${process.arch}${windows ? '.exe' : ''}`;
+const binary = readdirSync(join(plugin, 'server')).find((name) => name === hostBinary);
+if (!binary) throw new Error(`No ${hostBinary} in ${plugin}/server`);
 
 const cwd = mkdtempSync(join(tmpdir(), 'wnotes-smoke-'));
 const home = mkdtempSync(join(tmpdir(), 'wnotes-home-'));
-const env = { ...process.env, APP_ENV: 'test', HOME: home, PATH: '/usr/bin:/bin' };
+// No Bun on PATH, so nothing can fall back to a clone. Windows keeps its PATH for system tools.
+const env = windows
+  ? { ...process.env, APP_ENV: 'test', USERPROFILE: home, LOCALAPPDATA: join(home, 'AppData', 'Local') }
+  : { ...process.env, APP_ENV: 'test', HOME: home, PATH: '/usr/bin:/bin' };
 const check = (label: string, passed: boolean, detail = ''): void => {
   console.log(`${passed ? '✓' : '✗'} ${label}${detail ? ` — ${detail}` : ''}`);
   if (!passed) process.exitCode = 1;
 };
 
 // 1. Through the shim, with no Bun on PATH and no clone.
-const listed = spawnSync('sh', [join(plugin, 'scripts', 'wnotes'), 'notebook.list'], { cwd, env, encoding: 'utf8' });
+const listed = windows
+  ? spawnSync('cmd.exe', ['/d', '/c', join(plugin, 'scripts', 'wnotes.cmd'), 'notebook.list'], { cwd, env, encoding: 'utf8' })
+  : spawnSync('sh', [join(plugin, 'scripts', 'wnotes'), 'notebook.list'], { cwd, env, encoding: 'utf8' });
 const notebooks = (() => {
   try {
     return JSON.parse(listed.stdout) as { ok: boolean; value: Array<{ id: string }> };
@@ -35,8 +44,9 @@ const notebooks = (() => {
 })();
 check('shim runs notebook.list', listed.status === 0 && notebooks?.ok === true && notebooks.value[0]?.id === 'notebook', listed.stderr.trim().split('\n').at(-1));
 const version = (await Bun.file(join(plugin, 'server', 'VERSION')).text()).trim();
-const installed = platformDataDir(home);
-check('shim installed the binary', existsSync(join(installed, 'App', version, 'wnotes')) && existsSync(join(installed, 'App', 'current', 'wnotes')));
+const installed = dataDirFor({ platform: process.platform, home, env });
+const exeName = windows ? 'wnotes.exe' : 'wnotes';
+check('shim installed the binary', existsSync(join(installed, 'App', version, exeName)) && existsSync(join(installed, 'App', 'current', exeName)));
 
 // 2. The MCP server.
 const exe = join(plugin, 'server', binary);
@@ -79,9 +89,5 @@ const stopped = await fetch(`${base}/__wnotes/app/stop`, { method: 'POST', heade
 await Bun.sleep(500);
 check('app stops for a newer version', stopped.status === 202 && (await fetch(`${base}/app`).catch(() => null)) === null);
 app.kill();
-
-function platformDataDir(homeDir: string): string {
-  return process.platform === 'darwin' ? join(homeDir, 'Library', 'Application Support', 'Working Notes') : join(homeDir, '.local', 'share', 'working-notes');
-}
 
 process.exit(process.exitCode ?? 0);

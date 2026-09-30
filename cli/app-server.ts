@@ -103,4 +103,8 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
     console.error(inUse ? `Something is already running on ${APP_HOST}:${port}. If it's Working Notes, open http://${APP_HOST}:${port}/app` : error);
     process.exit(1);
   }
+  // Hourly snapshots while the app is open, on every platform (see scripts/backup/schedule.ts).
+  const { startBackupSchedule } = await import('../scripts/backup/schedule');
+  startBackupSchedule((message) => console.error(message));
 };
+
