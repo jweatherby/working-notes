@@ -12,6 +12,8 @@ export interface LinkSummary {
   readonly id: string;
   readonly url: string;
   readonly title: string | null;
+  /** When the entity was last brought up to date from this source; null for a plain link. */
+  readonly syncedAt: Date | null;
   readonly createdAt: Date;
 }
 
@@ -44,6 +46,7 @@ export const listLinks = async (
     id: l.id,
     url: l.url,
     title: l.title,
+    syncedAt: l.syncedAt,
     createdAt: l.createdAt
   })));
 };
@@ -80,6 +83,7 @@ export const findLinks = async (
       id: l.id,
       url: l.url,
       title: l.title,
+      syncedAt: l.syncedAt,
       createdAt: l.createdAt,
       entityType,
       entityId: l.entityId,
@@ -91,10 +95,10 @@ export const findLinks = async (
 };
 
 export const addLink = async (
-  reg: Pick<Registry, 'prisma'>,
+  reg: Pick<Registry, 'prisma' | 'now'>,
   entityType: EntityType,
   entityId: string,
-  input: { readonly url: string; readonly title?: string }
+  input: { readonly url: string; readonly title?: string; readonly synced?: boolean }
 ): Promise<Result<{ readonly id: string }>> => {
   const writable = await ensureWritable(reg, entityType, entityId);
   if (!writable.ok) return err(writable.error);
@@ -103,10 +107,26 @@ export const addLink = async (
       entityType,
       entityId,
       url: input.url,
-      title: input.title
+      title: input.title,
+      syncedAt: input.synced ? reg.now() : null
     }
   });
   return ok({ id: link.id });
+};
+
+/** Records that the entity was just brought up to date from this link's source. */
+export const markLinkSynced = async (
+  reg: Pick<Registry, 'prisma' | 'now'>,
+  id: string
+): Promise<Result<{ readonly id: string; readonly syncedAt: Date }>> => {
+  const existing = await reg.prisma.link.findUnique({ where: { id } });
+  if (!existing) return err(new Error('Link not found. Find it with link.find --url, or add it with link.add --synced true'));
+  const writable = await ensureWritable(reg, existing.entityType, existing.entityId);
+  if (!writable.ok) return err(writable.error);
+
+  const syncedAt = reg.now();
+  await reg.prisma.link.update({ where: { id }, data: { syncedAt } });
+  return ok({ id, syncedAt });
 };
 
 export const removeLink = async (

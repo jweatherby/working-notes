@@ -120,14 +120,17 @@ something came from, and `link.find` finds it again:
 
 ```bash
 wnotes link.add --entityType PROJECT --entityId <checkout> \
-  --url https://linear.app/acme/project/checkout-4f2a --title "Linear: Checkout"
+  --url https://linear.app/acme/project/checkout-4f2a --title "Linear: Checkout" --synced true
 wnotes link.find --url http://www.linear.app/acme/project/checkout-4f2a/
 wnotes link.find --contains ENG-123
+wnotes link.markSynced --id <link>
 ```
 
 `--url` ignores the protocol, `www.`, a trailing slash, the fragment and tracking parameters.
 `--contains` matches any part of the address, ignoring case, which helps when a title in the URL
-has changed. Each match comes back with the entity it's attached to. The skill uses this to keep
+has changed. Each match comes back with the entity it's attached to, and its `syncedAt`: when the
+entity was last brought up to date from that source. `--synced true` on `link.add`, and
+`link.markSynced`, set it to now. The skill uses this to keep
 Linear or Notion items it imports from turning into duplicates.
 
 `project.dependencies` returns every project `DEPENDS_ON` link and goal–project link in one call,

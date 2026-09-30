@@ -307,6 +307,7 @@ model Link {
   entityId   String   @map("entity_id")
   url        String
   title      String?
+  syncedAt   DateTime? @map("synced_at")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([entityType, entityId])

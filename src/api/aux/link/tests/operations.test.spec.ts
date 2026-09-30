@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import { findLinks } from '../operations';
+import { addLink, findLinks, markLinkSynced } from '../operations';
 import { linkSearchKey, normalizeLinkUrl } from '../url';
 
 describe('normalizeLinkUrl', () => {
@@ -35,7 +35,7 @@ describe('linkSearchKey', () => {
 
 describe('findLinks', () => {
   const row = (id: string, url: string, entityId: string) => ({
-    id, url, title: null, createdAt: new Date(0), entityType: 'PROJECT', entityId
+    id, url, title: null, syncedAt: null, createdAt: new Date(0), entityType: 'PROJECT', entityId
   });
 
   const registry = (rows: readonly ReturnType<typeof row>[]) => {
@@ -80,5 +80,40 @@ describe('findLinks', () => {
     const result = await findLinks(reg, { contains: 'ENG-123' });
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { url: { contains: 'ENG-123' } } }));
     expect(result.ok && result.value.map((m) => m.id)).toEqual(['l1']);
+  });
+});
+
+describe('syncedAt', () => {
+  const now = new Date('2026-09-30T12:00:00Z');
+  const team = { findUnique: vi.fn().mockResolvedValue({ name: 'Platform', archivedAt: null }) };
+
+  it('link.add stamps syncedAt only when the link is a sync source', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 'l1' });
+    const reg = createTestRegistry({ now: () => now, prisma: { team, link: { create } } as unknown as Registry['prisma'] });
+    await addLink(reg, 'TEAM', 't1', { url: 'https://linear.app/acme', synced: true });
+    await addLink(reg, 'TEAM', 't1', { url: 'https://example.com' });
+    expect(create.mock.calls.map(([arg]) => arg.data.syncedAt)).toEqual([now, null]);
+  });
+
+  it('markSynced sets syncedAt to now', async () => {
+    const update = vi.fn();
+    const reg = createTestRegistry({
+      now: () => now,
+      prisma: {
+        team,
+        link: { findUnique: vi.fn().mockResolvedValue({ id: 'l1', entityType: 'TEAM', entityId: 't1' }), update }
+      } as unknown as Registry['prisma']
+    });
+    const result = await markLinkSynced(reg, 'l1');
+    expect(result.ok && result.value).toEqual({ id: 'l1', syncedAt: now });
+    expect(update).toHaveBeenCalledWith({ where: { id: 'l1' }, data: { syncedAt: now } });
+  });
+
+  it('markSynced says how to recover from an unknown link', async () => {
+    const reg = createTestRegistry({
+      prisma: { link: { findUnique: vi.fn().mockResolvedValue(null) } } as unknown as Registry['prisma']
+    });
+    const result = await markLinkSynced(reg, 'nope');
+    expect(!result.ok && result.error.message).toContain('link.find');
   });
 });
