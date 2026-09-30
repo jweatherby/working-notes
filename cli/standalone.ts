@@ -28,14 +28,23 @@ export const runStandalone = async (app: StandaloneApp): Promise<void> => {
       process.argv.splice(2, 1);
       await import('../scripts/backup/main');
       return;
+    case 'install':
+    case 'connect': {
+      const { runDesktopCommand } = await import('./desktop');
+      process.exit(await runDesktopCommand(process.argv[2], process.argv.slice(3)));
+    }
     case 'app': {
       if (process.argv[3] === 'restart') {
         await import('./app-restart');
         return;
       }
+      if (process.argv[3] === 'ensure') {
+        const { runDesktopCommand } = await import('./desktop');
+        process.exit(await runDesktopCommand('ensure', []));
+      }
       const { serveApp } = await import('./app-server');
       // The shim installs VERSION beside the binary; release apps report it so a newer release can replace them.
-      const version = (await Bun.file(join(resources, 'VERSION')).text().catch(() => 'unknown')).trim();
+      const version = process.env['WNOTES_VERSION'] ?? (await Bun.file(join(resources, 'VERSION')).text().catch(() => 'unknown')).trim();
       await serveApp({ server: await app.loadServer(), staticFiles: app.staticFiles, version });
       return;
     }

@@ -54,6 +54,7 @@ The install and uninstall logic is the pure `planInstall`/`planUninstall` in
 | `bun run db:migrate --name <change>` | Author a migration against the default notebook |
 | `bun run db:studio` | Prisma Studio, on the same notebook |
 | `bun run setup [uninstall]` | PATH, plugin zip, Claude Code plugin |
+| `bun run desktop:prepare` then `desktop:dev` / `desktop:build` | The Tauri desktop app in `desktop/` (after `release:build`) |
 
 You author migrations against a real notebook, so run `bun run backup --force` first. Every other
 notebook migrates forward the next time a process opens it. If a migration reports "database is

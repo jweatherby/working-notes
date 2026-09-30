@@ -160,5 +160,6 @@ Working Notes is one person's tool, built in the open. Expect it to change.
 Reports — branded write-ups printed to PDF — are built but switched off while they are unfinished.
 Write-ups go in docs instead.
 
-Releases are built for Apple silicon Macs, with Windows and Linux builds in preview. On Windows, the
-Claude plugin needs one manual step for now; see [docs/INSTALL.md](docs/INSTALL.md).
+Releases are built for Apple silicon Macs, with Windows and Linux builds in preview, and a desktop
+app for all three is on the way. On Windows, connecting Claude needs one extra step for now; see
+[docs/INSTALL.md](docs/INSTALL.md).

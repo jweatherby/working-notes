@@ -52,8 +52,10 @@ plugin. Repeat with each new release — Chat takes uploads only.
 **Windows (preview)**
 
 The plugin starts its server with `sh`, which Windows doesn't have unless Git Bash is on your
-PATH; Claude's plugin settings can't name a different command per system yet. Until that's solved,
-add the server yourself after installing the plugin, pointing at the Windows launcher inside it:
+PATH; Claude's plugin settings can't name a different command per system yet. The simplest way
+round it is the desktop app (below): install it, then choose **Claude → Connect to Claude desktop**
+or **Connect to Claude Code**. Or add the server yourself after installing the plugin, pointing at
+the Windows launcher inside it:
 
 ```powershell
 claude mcp add working-notes -- cmd /d /c "<plugin folder>\scripts\wnotes.cmd" mcp
@@ -83,6 +85,17 @@ Ask Claude to "open Working Notes" and it will start the app and hand you the li
 
 Then go to http://127.0.0.1:5173/app. The server binds to 127.0.0.1 and refuses any request that
 didn't come from this machine.
+
+## The desktop app (preview)
+
+A desktop app for macOS, Windows and Linux opens Working Notes in a window of its own. It brings
+the same app with it, starts it when you open the window, and leaves it running for Claude when you
+close it. Its **Claude** menu connects Working Notes to Claude desktop or Claude Code, for when you
+don't use the plugin (on Windows, for now, you need it). Each asks before changing Claude's
+settings.
+
+The installers aren't signed yet, so macOS and Windows warn before opening them. Builds are in the
+**Desktop** workflow's artifacts on GitHub.
 
 ## Install it as a Mac app
 
