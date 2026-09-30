@@ -2,9 +2,10 @@
 
 Working Notes remembers what you would otherwise carry in your head: who reports to whom, which team
 owns which project, where a goal stands this month, why you chose that vendor, what you promised to
-follow up on.
+follow up on. It keeps them exactly as you said them, for as long as you need them.
 
-You put things in by telling Claude. You read them in an app on your own Mac.
+You put things in by telling Claude. Claude looks them up when you ask, and you read them in an app
+on your own Mac.
 
 ![The home dashboard: open todos, a feed of recent changes, and a graph of what links to one thing](docs/images/home.png)
 
@@ -25,14 +26,21 @@ You put things in by telling Claude. You read them in an app on your own Mac.
 **You talk, Claude files.** Say "Dana moved from Platform to Payments" and Claude makes the change.
 There is no form to fill in, and the app does not need to be open.
 
+**It does not forget.** What you tell it is stored, not summarised into a memory that fades or
+blurs. A note from March reads the same in September, and Claude looks it up rather than trying to
+recall it.
+
 **It keeps the shape of things.** A person has a manager. A project has an owner. A goal has
 check-ins with dates and values. That is what lets you ask "what do I know about Dana?" or "what
-depends on the payments API?" and get an answer instead of a search result.
+depends on the payments API?" and get an answer instead of a search result — the same answer
+each time.
 
 **Nothing leaves your Mac.** No accounts, no keys, no sync, nothing sent anywhere. The app itself
-never calls a language model — Claude works on it from outside.
+never calls a language model — Claude works on it from outside. That matters when the notes are
+about people.
 
-**It sits beside your other tools.** Linear, Notion and the rest hold the team's version of things.
+**It sits beside your other tools.** Linear, Notion and the rest hold the team's version of things;
+Working Notes holds yours.
 Ask Claude to bring a project or page in and it copies only the parts that matter to you, links back
 to the source, and updates the same entry next time instead of making a second one. Your own notes
 and opinions stay yours.
