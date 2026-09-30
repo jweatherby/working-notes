@@ -1,5 +1,7 @@
 # Working Notes
 
+A local, structured notebook that your AI assistant writes to over MCP. Works with Claude today.
+
 Working Notes remembers what you would otherwise carry in your head: who reports to whom, which team
 owns which project, where a goal stands this month, why you chose that vendor, what you promised to
 follow up on. It keeps them exactly as you said them, for as long as you need them.
