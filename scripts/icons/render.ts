@@ -12,9 +12,12 @@ interface Output {
   readonly source: string;
 }
 
-/** The Dock drawing without its margin and shadow: tiny favicons can't spare the pixels. */
+/** The Dock drawing without its margin, shadow or the text lines on its notes: tiny favicons can't spare the pixels. */
 export const toFaviconSvg = (svg: string): string =>
-  svg.replace('viewBox="0 0 512 512"', 'viewBox="50 50 412 412"').replace(' filter="url(#shadow)"', '');
+  svg
+    .replace('viewBox="0 0 512 512"', 'viewBox="50 50 412 412"')
+    .replace(' filter="url(#shadow)"', '')
+    .replace(/\s*<!--[^>]*-->\s*<g id="note-lines"[\s\S]*?<\/g>/, '');
 
 export const renderPng = (svg: string, size: number): Buffer =>
   Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: size } }).render().asPng());
