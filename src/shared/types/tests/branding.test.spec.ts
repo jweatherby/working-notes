@@ -18,6 +18,6 @@ describe('chartBaseColor', () => {
   });
 
   it('uses the app default without a branding', () => {
-    expect(chartBaseColor(null)).toBe('#4f46e5');
+    expect(chartBaseColor(null)).toBe('#52525b');
   });
 });
