@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 import { getRegistry } from '../../src/shared/registry.server';
 import { createSnapshot, listSnapshots } from '../../scripts/backup/snapshot';
 import { restoreSnapshot } from '../../scripts/backup/restore';
+import { readLastRun, runBackupsIfDue, withBackupLock } from '../../scripts/backup/schedule';
 import { OTHER_NOTEBOOK, TEST_NOTEBOOK } from './test-notebooks';
 
 const at = (second: number): Date => new Date(Date.UTC(2026, 8, 12, 12, 0, second));
@@ -77,5 +78,27 @@ describe('backups', () => {
     } finally {
       server.close();
     }
+  });
+
+  it('runs the hourly backup once an hour, in one process at a time', async () => {
+    await getRegistry(TEST_NOTEBOOK).prisma.person.create({ data: { id: 'person_erin', name: 'Erin Lee' } });
+    const hour = new Date(Date.UTC(2026, 8, 13, 9, 0, 0));
+
+    // Another process holds the lock: this one skips.
+    const blocked = await withBackupLock(() => runBackupsIfDue(() => hour));
+    expect(blocked).toBeNull();
+
+    const first = await runBackupsIfDue(() => hour);
+    expect(first?.failed).toEqual([]);
+    expect(first?.created.some((c) => c.startsWith(`${TEST_NOTEBOOK}/`))).toBe(true);
+    expect((await readLastRun())?.toISOString()).toBe(hour.toISOString());
+    const newest = (await listSnapshots(TEST_NOTEBOOK))[0];
+    expect(newest?.manifest.reason).toBe('hourly');
+
+    expect(await runBackupsIfDue(() => new Date(hour.getTime() + 30 * 60_000))).toBeNull();
+
+    // An hour later with nothing changed: it runs, but takes no new snapshot.
+    const later = await runBackupsIfDue(() => new Date(hour.getTime() + 61 * 60_000));
+    expect(later).toEqual({ created: [], failed: [] });
   });
 });

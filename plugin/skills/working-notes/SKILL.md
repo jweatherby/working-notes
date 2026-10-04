@@ -5,7 +5,7 @@ description: Read and write the user's local Working Notes notebooks (separate o
 
 # Working Notes
 
-Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Working Notes` on macOS, `~/.local/share/working-notes` on Linux). Each notebook (their work, their home life, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
+Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Working Notes` on macOS, `%LOCALAPPDATA%\Working Notes` on Windows, `~/.local/share/working-notes` on Linux). Each notebook (their work, their home life, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
 
 On a phone, the user can reach you through Claude desktop's Remote Control: the session runs on their Mac, so these tools work the same way.
 
@@ -51,7 +51,7 @@ Every call works on one notebook: the default, unless you name another.
 
 ## Rules
 
-1. **Look before you write**, in the notebook you're writing to. Find ids with `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list`. Match names and titles case-insensitively. Never create a second person, team or project with a name that already exists, or a second goal or page with a title that already exists.
+1. **Look before you write**, in the notebook you're writing to. Find ids with `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list`, or `search.query` when you only know roughly what it's called. Match names and titles case-insensitively. Never create a second person, team or project with a name that already exists, or a second goal or page with a title that already exists.
 2. **Ask when it's ambiguous.** For example, two people match "Sam", or it's unclear which project a note belongs to.
 3. **Confirm before deleting anything**, and say exactly what will be removed. When someone leaves, or a team, project, goal or page is finished, offer to **archive** it instead: archiving keeps its history, and deleting removes everything attached to it.
 4. **Snapshot before bulk or destructive changes.** That means any delete, or more than about five writes in one go:
@@ -80,7 +80,9 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "That's done" | `todo.update --id <todo> --status COMPLETE` |
 | "Start a project for the Q4 migration" | `project.create --name "Q4 migration" --status active` (optional `--parentId`, `--startDate`, `--daysLikely`) |
 | "Tag Dana as high-potential" | `tag.list`, then `tag.create --name high-potential` if it's missing, then `tag.attach --tagId <tag> --entityType PERSON --entityId <dana>` |
-| "What do I know about Dana?" | `person.get`, then `note.list`, `todo.forEntity`, `doc.list` and `relation.forEntity` for `PERSON <dana>`, and `goal.list --ownerType PERSON --ownerId <dana>` |
+| "What do I know about Dana?" / "Catch me up on the Q4 migration" | `search.recall --entityType PERSON --entityId <dana>`: the entity, its notes, open todos, docs (with excerpts), links, tags, relations, owned goals and projects, and `unlinkedMentions` (notes and docs elsewhere that name Dana without linking her). Lists are capped at 10 (`--limit` up to 50) and flagged `truncated`; `doc.get` reads a whole doc |
+| "Where did I write about the vendor renewal?" / "Did anyone mention SSO?" | `search.query --q "vendor renewal"`. Each result has a `snippet` with the match in bold, and `on`: the entity a note, doc or todo is attached to |
+| "Anything about hiring on the Platform team?" | `search.query --q hiring --within '{"entityType":"TEAM","entityId":"<platform>"}'` (the team and what's attached to it) |
 | "Platform owns the Q4 migration" | `project.update --id <project> --ownerType TEAM --ownerId <platform>` (set both together; `--ownerType null --ownerId null` clears the owner) |
 | "Engineering's H2 goal is 99.9% uptime, and Platform has a sub-goal for it" | `goal.list`, then `goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> --period 2026-H2 --unit % --baseline 99.5 --target 99.9`, then `goal.create --title "..." --ownerType TEAM --ownerId <platform> --parentId <eng goal>` |
 | "Uptime is at 99.7%, and it's at risk" | `goal.checkIn --goalId <goal> --value 99.7 --status AT_RISK --comment "..."` (optional `--date`; the status also becomes the goal's status) |
@@ -111,6 +113,18 @@ Wiki (Library) pages have a kind, and each notebook defines its own kinds: a key
 
 Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`, except that docs don't attach to a `PAGE` (put the material in the page's content, or a sub-page). They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
 
+## Searching
+
+**Full-text search is part of Working Notes Pro.** Without an active license, `search.query` and `search.recall` return an error saying so. Then don't retry: answer with the list and get procedures instead (`person.get`, `note.list`, `todo.forEntity`, `doc.list`, `relation.forEntity`, and `<type>.list` to find ids by name), and mention once that full-text search comes with Pro. `license.status` says whether this computer has a license; if the user gives you a key (it starts `WN1.`), add it with `license.activate --key <key>`.
+
+`search.query --q "<words>"` searches the text of everything in the notebook: names and titles, notes, docs, wiki pages (content and property values), todos, comments, links and goal check-in comments. Matches in names and titles rank first.
+
+- **Words:** every word must match, and each also matches as a prefix (`migr` finds "migration"). Word endings are ignored (`leaving` finds "leave"), and so are case and accents.
+- **`"exact phrase"`**, **`a OR b`** (either), **`-word`** (leave out matches containing it).
+- **Narrow it:** `--types '["NOTE","DOC"]'` (also `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE TODO COMMENT LINK GOAL_CHECKIN`), `--within` one entity, `--limit` up to 50 (default 20).
+- Archived entities and what's attached to them are left out unless `--includeArchived true`, or you search `--within` them.
+- Search before saying the notebook has nothing on a topic, and before creating something that might exist under another name.
+
 ## Linking things
 
 - **Owners:** a project or goal's owner is its `ownerType` + `ownerId` (a person, team or department). There is no ownership relation.
@@ -124,7 +138,7 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
 3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding (Working Notes Pro).
 
 ## Importing from other tools
 
@@ -150,10 +164,14 @@ The app stores PDFs but can't read them; you do the reading.
 2. `wnotes doc.add --entityType PERSON --entityId <id> --title "<title>"`, then `wnotes doc.update --id <doc> --content-file /tmp/doc.md`
 3. To keep the original attached, when you have a shell: `base64 -i file.pdf > /tmp/pdf.b64`, then `wnotes doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64`
 
+## Working Notes Pro
+
+A yearly license unlocks three things: full-text search (`search.*`), branding (creating or changing brandings, and the app wearing them), and PDF export of docs and wiki pages. Everything else is free. Without a license, those procedures return an error that says so, and the app shows a Pro notice; nothing stored is lost, and it all comes back with the license. The license belongs to the computer, so it covers every notebook. Never look for, edit or work around the license file.
+
 ## Backups
 
-Snapshots are kept on this computer in the `Backups` folder, per notebook. On macOS every notebook is snapshotted hourly, when something changed, if the user ran `wnotes backup install`.
+Snapshots are kept on this computer in the `Backups` folder, per notebook. Every notebook that changed is snapshotted hourly while the Working Notes tools or the app are running, and on macOS also by the LaunchAgent if the user ran `wnotes backup install`.
 
 - A snapshot covers one notebook: `backup_snapshot` with `notebook`, or `wnotes backup --force --reason "<why>" --notebook <id>`. Snapshot the notebook you're about to change.
 - `backup_list` (with `notebook`), or `wnotes backup list` for every notebook
-- Restore **only when the user asks**, and only from a shell on the user's Mac: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their Mac, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup restore <id|latest> --notebook <id>`.
+- Restore **only when the user asks**, and only from a shell on the user's computer: `wnotes backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their computer, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Working Notes/App/current/wnotes" backup restore <id|latest> --notebook <id>` on a Mac, or in PowerShell on Windows: `& "$env:LOCALAPPDATA\Working Notes\App\current\wnotes.exe" backup restore <id|latest> --notebook <id>`.

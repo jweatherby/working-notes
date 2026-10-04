@@ -1,0 +1,41 @@
+// Pure planning for scripts/release/package.ts.
+
+import { join } from 'node:path';
+import { ok, err, type Result } from '$shared/utils/result';
+
+/** The target of a release binary's file name (`wnotes-linux-x64`, `wnotes-windows-x64.exe`), or null. */
+export const binaryTarget = (name: string): string | null => name.match(/^wnotes-([a-z]+-[a-z0-9]+)(\.exe)?$/)?.[1] ?? null;
+
+export interface BuiltPlugin {
+  readonly dir: string;
+  readonly version: string;
+  readonly binaries: readonly string[];
+}
+
+export interface MergePlan {
+  readonly version: string;
+  readonly base: string;
+  readonly copies: readonly { readonly from: string; readonly name: string }[];
+}
+
+/** Every build must be the same version, and each platform may come from only one of them. */
+export const mergePlan = (builds: readonly BuiltPlugin[]): Result<MergePlan> => {
+  const [first] = builds;
+  if (!first) return err(new Error('No built plugin to package'));
+  const mismatched = builds.find((b) => b.version !== first.version);
+  if (mismatched) return err(new Error(`${mismatched.dir} is version ${mismatched.version}, but ${first.dir} is ${first.version}`));
+  const seen = new Map<string, string>();
+  const copies: { from: string; name: string }[] = [];
+  for (const build of builds) {
+    for (const name of build.binaries) {
+      const target = binaryTarget(name);
+      if (!target) continue;
+      const other = seen.get(target);
+      if (other) return err(new Error(`Two builds for ${target}: ${other} and ${build.dir}`));
+      seen.set(target, build.dir);
+      copies.push({ from: join(build.dir, 'server', name), name });
+    }
+  }
+  if (copies.length === 0) return err(new Error('The built plugins have no wnotes binaries'));
+  return ok({ version: first.version, base: first.dir, copies });
+};

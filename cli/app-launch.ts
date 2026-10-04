@@ -13,11 +13,25 @@ import { isPortListening } from '../scripts/backup/restore';
 export interface LaunchCommand {
   readonly command: string;
   readonly args: readonly string[];
+  /** Working directory, when the command needs one. */
+  readonly cwd?: string;
 }
 
-/** A release runs its own binary; a clone runs bin/wnotes, which starts the dev server. */
-export const appLaunchCommand = (o: { readonly standalone: boolean; readonly execPath: string; readonly repoDir: string }): LaunchCommand =>
-  o.standalone ? { command: o.execPath, args: ['app'] } : { command: join(o.repoDir, 'bin', 'wnotes'), args: ['app'] };
+/**
+ * A release runs its own binary. A clone runs bin/wnotes, which starts the dev server;
+ * Windows can't run that shell script, so there Bun (this process) runs `bun run dev`
+ * in the clone, which is what the script does.
+ */
+export const appLaunchCommand = (o: {
+  readonly standalone: boolean;
+  readonly execPath: string;
+  readonly repoDir: string;
+  readonly platform?: NodeJS.Platform;
+}): LaunchCommand => {
+  if (o.standalone) return { command: o.execPath, args: ['app'] };
+  if ((o.platform ?? process.platform) === 'win32') return { command: o.execPath, args: ['run', 'dev'], cwd: o.repoDir };
+  return { command: join(o.repoDir, 'bin', 'wnotes'), args: ['app'] };
+};
 
 /** The app's address, opening the given notebook. */
 export const appUrl = (notebookId: string | null): string =>
@@ -75,7 +89,8 @@ const stopApp = async (): Promise<void> => {
 
 const startApp = async (launch: LaunchCommand, timeoutMs: number): Promise<void> => {
   let failure: Error | null = null;
-  const child = spawn(launch.command, [...launch.args], { detached: true, stdio: 'ignore' });
+  // windowsHide: no console window flashes up on Windows.
+  const child = spawn(launch.command, [...launch.args], { detached: true, stdio: 'ignore', windowsHide: true, cwd: launch.cwd });
   child.on('error', (error) => {
     failure = error;
   });
@@ -108,18 +123,38 @@ export const currentAppOwner = (repoDir: string): AppOwner => {
  * nothing else that happens to hold the port.
  */
 export const isWorkingNotesCommand = (command: string): boolean =>
-  /(^|\/)wnotes(\s|$)/.test(command) || /working-notes/i.test(command);
+  /(^|[\\/"])wnotes(\.exe)?(["\s]|$)/i.test(command) || /working-notes/i.test(command);
 
 const run = promisify(execFile);
 
-/** Stops whatever Working Notes process listens on the app port, by pid (for apps without the stop endpoint). */
-const stopByPid = async (): Promise<void> => {
-  const pids = (await run('lsof', ['-tiTCP:' + APP_PORT, '-sTCP:LISTEN']).then((r) => r.stdout, () => ''))
-    .split('\n')
+/** Pure. The pids in a command's output, one per line. */
+export const parsePids = (output: string): readonly number[] =>
+  output
+    .split(/\r?\n/)
     .map((line) => Number(line.trim()))
     .filter((pid) => Number.isInteger(pid) && pid > 0);
+
+const powershell = (script: string): Promise<string> =>
+  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true }).then((r) => r.stdout, () => '');
+
+/** Pids listening on a local TCP port: lsof on macOS and Linux, PowerShell on Windows. */
+const listeningPids = async (port: number): Promise<readonly number[]> =>
+  parsePids(process.platform === 'win32'
+    ? await powershell(`Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`)
+    : await run('lsof', ['-tiTCP:' + port, '-sTCP:LISTEN']).then((r) => r.stdout, () => ''));
+
+/** A process's full command line. */
+const commandLine = async (pid: number): Promise<string> =>
+  (process.platform === 'win32'
+    ? await powershell(`(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`)
+    : await run('ps', ['-o', 'command=', '-p', String(pid)]).then((r) => r.stdout, () => '')
+  ).trim();
+
+/** Stops whatever Working Notes process listens on the app port, by pid (for apps without the stop endpoint). */
+const stopByPid = async (): Promise<void> => {
+  const pids = await listeningPids(APP_PORT);
   for (const pid of pids) {
-    const command = (await run('ps', ['-o', 'command=', '-p', String(pid)]).then((r) => r.stdout, () => '')).trim();
+    const command = await commandLine(pid);
     if (!isWorkingNotesCommand(command)) {
       throw new Error(`Something other than Working Notes is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
     }

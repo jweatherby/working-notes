@@ -5,9 +5,13 @@
   import Field from '$lib/ui/Field.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
+  import ProLock from '$lib/ui/ProLock.svelte';
+  import { isProActive, lockedMessage } from '$shared/types/license';
 
   const { data } = $props<{ data: PageData }>();
   const brand = $derived(data.brand);
+  // Branding is Working Notes Pro: without a license the profile is shown but can't be changed.
+  const locked = $derived(!isProActive(data.license));
 
   let name = $state(brand.name);
   let primaryColor = $state(brand.primaryColor);
@@ -166,9 +170,13 @@
     <h1>{brand.name}</h1>
     <div class="actions">
       {#if saved}<span class="saved text-sm">Saved</span>{/if}
-      <button type="button" class="btn primary" onclick={handleSave} disabled={busy || !name.trim()} aria-busy={busy}>Save changes</button>
+      <button type="button" class="btn primary" onclick={handleSave} disabled={locked || busy || !name.trim()} aria-busy={busy}>Save changes</button>
     </div>
   </header>
+
+  {#if locked}
+    <ProLock title="Branding" message={lockedMessage('branding', data.license, 'app')} compact />
+  {/if}
 
   {#if error}
     <p class="form-error">{error}</p>
@@ -258,7 +266,7 @@
       </section>
 
       <section class="section danger-zone">
-        <ConfirmButton label="Delete profile" confirmLabel="Delete profile" variant="button" onConfirm={handleDelete} />
+        {#if !locked}<ConfirmButton label="Delete profile" confirmLabel="Delete profile" variant="button" onConfirm={handleDelete} />{/if}
       </section>
     </div>
 

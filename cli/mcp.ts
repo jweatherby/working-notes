@@ -38,16 +38,20 @@ const { appUrl, currentAppOwner, openApp, restartApp, restartStaleApp } = await 
 const appOwner = currentAppOwner(REPO);
 // An app an older release left running is replaced now, so updating the plugin updates the app too.
 void restartStaleApp(appOwner).catch((error: unknown) => console.error(error));
+// Hourly snapshots while Claude has the server open, on every platform (see scripts/backup/schedule.ts).
+const { startBackupSchedule } = await import('../scripts/backup/schedule');
+startBackupSchedule((message) => console.error(message));
 
 const INSTRUCTIONS = [
   "Working Notes holds the user's local notebooks. Each notebook (for example work, home life, or a personal project) has its own people and teams (in a home notebook: friends, family and groups, with partner, parent, sibling and friend relations and birthdays), projects, goals with check-ins, wiki pages of kinds the notebook defines (pageKind_*; expenses, recipes, places and the like), which page_query filters, groups and totals, relations between entities, notes, docs, recurring todos and tags.",
   'Before creating a page kind, check pageKind_list and propose its fields to the user.',
   "Every tool except notebook_* works on one notebook: the default, unless you pass `notebook` (an id or name). Call notebook_list first. If there is more than one notebook and the user hasn't made clear which one they mean, ask. Say which notebook you read or wrote.",
   'Each tool is one procedure: person_create is person.create. Find ids with the list and get tools before writing, and never create a second person, team or project with an existing name, or a second goal or page with an existing title, in the same notebook.',
+  'To find anything by what it says (notes, docs, wiki pages, todos, comments, names), call search_query. For "what do I know about X", call search_recall with the entity: it returns its notes, todos, docs, links, tags, relations, owned goals and projects, and text elsewhere that names it without linking it. Both need Working Notes Pro; without a license they say so, and then you answer with the list and get tools instead.',
   'Confirm with the user before any delete, remove or detach tool, and call backup_snapshot first before deletes or more than about five writes in one go.',
   'To show the user something in the app, call app_open and give them the link.',
   'When bringing in items from another tool (Linear, Notion, Jira), call link_find with the item URL first and update the entity it finds; attach a link to the source on anything you create.',
-  "Reach Working Notes only through these tools. Never read its data folder (~/Library/Application Support/Working Notes) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
+  "Reach Working Notes only through these tools. Never read its data folder (~/Library/Application Support/Working Notes on macOS, %LOCALAPPDATA%\\Working Notes on Windows) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
   'Report back by name, not id. The working-notes skill has the full rules and recipes.'
 ].join(' ');
 

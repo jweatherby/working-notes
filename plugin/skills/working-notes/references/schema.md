@@ -100,6 +100,15 @@ Todo `status` is one of `PENDING ACTIVE COMPLETE CANCELLED`. `todo.list` returns
 
 Docs are for longer reference material (a career plan, an imported PDF). They attach to anything except a wiki page: `doc.add` on a `PAGE` fails, because the page's own `content` is the place for that material. Notes are short, dated observations. Reports are switched off for now, so write finished write-ups as docs.
 
+## Search
+
+| Procedure | Inputs | Returns |
+|---|---|---|
+| `search.query` | `q` (1–200 chars; words, `"phrase"`, `OR`, `-exclude`), `types?`, `within?` (`{entityType, entityId}`), `includeArchived?`, `limit?` 1–50 | `results`: `entityType`, `entityId`, `name`, `path`, `on` (the entity an attachment hangs off: `entityType`, `entityId`, `name`), `snippet` (matches in `**bold**`), `score` (lower is more relevant) |
+| `search.recall` | `entityType` (`PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO`), `entityId`, `limit?` 1–50 (default 10) | `name`, `path`, `archived`, `entity` (what the type's `get` returns), `notes`, `comments`, `todos` (open only), `docs` (`excerpt` of the start), `links`, `tags`, `relations`, `ownedGoals` (with `latestCheckIn`), `ownedProjects`, `unlinkedMentions` (search results naming it without linking it). Each list is `{items, truncated}` |
+
+Search result types are the entity types plus `GOAL_CHECKIN`, a goal check-in's comment, which opens on its goal. Chats with Claude, relation notes and tag names aren't searched.
+
 ## Branding
 
 **Branding**: `name`, colours (`primaryColor`, `accentColor`, `primaryFontColor`, `accentFontColor`, as `#rrggbb`), an optional logo and icon, and `isDefault`. A report with no `brandingId` uses the default branding. Brandings are managed in the UI; you rarely need to touch them.

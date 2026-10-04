@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { appControl, staticFile } from '../app-server';
-import { appLaunchCommand, appUrl, isWorkingNotesCommand, planAppLaunch } from '../app-launch';
+import { appLaunchCommand, appUrl, isWorkingNotesCommand, parsePids, planAppLaunch } from '../app-launch';
 
 describe('isWorkingNotesCommand', () => {
   it('recognises a release binary and a clone’s dev server', () => {
     expect(isWorkingNotesCommand('/Users/me/Library/Application Support/Working Notes/App/0.6.7/wnotes app')).toBe(true);
     expect(isWorkingNotesCommand('node /Users/me/code/working-notes/node_modules/.bin/vite dev')).toBe(true);
+  });
+
+  it('recognises a Windows release binary', () => {
+    expect(isWorkingNotesCommand('"C:\\Users\\me\\AppData\\Local\\Working Notes\\App\\0.8.0\\wnotes.exe" app')).toBe(true);
+    expect(isWorkingNotesCommand('C:\\Tools\\wnotes.exe app')).toBe(true);
+    expect(isWorkingNotesCommand('C:\\Tools\\notwnotes.exe app')).toBe(false);
   });
 
   it('refuses anything else on the port', () => {
@@ -74,11 +80,20 @@ describe('staticFile', () => {
 describe('app launch', () => {
   it('runs the release binary, or the clone’s bin/wnotes', () => {
     expect(appLaunchCommand({ standalone: true, execPath: '/data/App/0.5.0/wnotes', repoDir: '/repo' })).toEqual({ command: '/data/App/0.5.0/wnotes', args: ['app'] });
-    expect(appLaunchCommand({ standalone: false, execPath: '/opt/homebrew/bin/bun', repoDir: '/repo' })).toEqual({ command: '/repo/bin/wnotes', args: ['app'] });
+    expect(appLaunchCommand({ standalone: false, execPath: '/opt/homebrew/bin/bun', repoDir: '/repo', platform: 'darwin' })).toEqual({ command: '/repo/bin/wnotes', args: ['app'] });
+    expect(appLaunchCommand({ standalone: false, execPath: 'C:\\bun\\bun.exe', repoDir: 'C:\\repo', platform: 'win32' })).toEqual({ command: 'C:\\bun\\bun.exe', args: ['run', 'dev'], cwd: 'C:\\repo' });
   });
 
   it('links to a notebook', () => {
     expect(appUrl(null)).toBe('http://127.0.0.1:5173/app');
     expect(appUrl('work-work')).toBe('http://127.0.0.1:5173/app?notebook=work-work');
+  });
+});
+
+describe('parsePids', () => {
+  it('reads one pid per line, from lsof or PowerShell', () => {
+    expect(parsePids('123\n456\n')).toEqual([123, 456]);
+    expect(parsePids('789\r\n\r\n')).toEqual([789]);
+    expect(parsePids('')).toEqual([]);
   });
 });

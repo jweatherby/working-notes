@@ -1,7 +1,7 @@
 // Filesystem locations derived from settings.dataDir.
 // Relative imports only — prisma.config.ts loads this outside SvelteKit.
 //
-// <data dir>/settings.json                the default notebook for the CLI and MCP
+// <data dir>/settings.json                the default notebook for the CLI and MCP, and the license key
 // <data dir>/Notebooks/<id>/              one notebook: notebook.json, working-notes.db, files/
 // <data dir>/Backups/<id>/<snapshot>/     that notebook's snapshots
 

@@ -1,5 +1,5 @@
-// tRPC context: the notebook a call runs against, its Registry (`reg`), and the
-// notebook store for the `notebook` procedures. Routes forward `ctx.reg` (or a
+// tRPC context: the notebook a call runs against, its Registry (`reg`), the
+// notebook store for the `notebook` procedures, and the Pro license check. Routes forward `ctx.reg` (or a
 // slice of it) into operations.
 //
 // Only the web app's context has `pdfConverter` and `pageChat`, which run the
@@ -9,9 +9,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { getPdfConverter } from '$shared/assist/pdf-converter.server';
 import { getPageChat } from '$shared/assist/page-chat.server';
 import { getReadyRegistry } from '$shared/db/bootstrap.server';
+import { currentLicense } from '$shared/license/store.server';
 import { getNotebookStore } from '$shared/notebooks/current.server';
 import type { NotebookStore } from '$shared/notebooks/store.server';
 import type { Registry } from '$shared/registry';
+import type { LicenseStatus } from '$shared/types/license';
 import type { NotebookInfo } from '$shared/types/notebook';
 import type { PdfConverter } from '$shared/types/pdf-conversion';
 import type { PageChat } from '$shared/types/page-chat';
@@ -20,6 +22,8 @@ export interface Context {
   readonly reg: Registry;
   readonly notebook: NotebookInfo;
   readonly notebooks: NotebookStore;
+  /** The Working Notes Pro license on this computer, checked when called (see src/api/_license.ts). */
+  readonly license: () => Promise<LicenseStatus>;
   readonly pdfConverter?: PdfConverter;
   readonly pageChat?: PageChat;
 }
@@ -28,7 +32,8 @@ export interface Context {
 export const createNotebookContext = async (notebook: NotebookInfo): Promise<Context> => ({
   reg: await getReadyRegistry(notebook.id),
   notebook,
-  notebooks: getNotebookStore()
+  notebooks: getNotebookStore(),
+  license: () => currentLicense()
 });
 
 /** `event.locals.notebook` is set by notebookHandle in hooks.server.ts. */

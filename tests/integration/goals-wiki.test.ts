@@ -9,7 +9,6 @@ import { createTeam } from '../../src/api/org/team/operations';
 import { createProject, getProject, listProjects, updateProject } from '../../src/api/project/operations';
 import { addCheckIn, addGoalProject, createGoal, getGoal, listGoals, updateGoal } from '../../src/api/goal/operations';
 import { createPage, deletePage, getPage, updatePage } from '../../src/api/page/operations';
-import { addStarterKinds } from '../../src/api/page-kind/operations';
 import { addDoc, getDoc, updateDoc } from '../../src/api/aux/doc/operations';
 import { addNote, listNotes } from '../../src/api/aux/note/operations';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
@@ -68,7 +67,6 @@ describe('goals', () => {
 describe('wiki pages and relations', () => {
   it('properties → mentions from content → typed relation → cleanup on delete', async () => {
     const reg = getRegistry(TEST_NOTEBOOK);
-    await addStarterKinds(reg);
 
     const bad = await createPage(reg, { title: 'Bad', kind: 'SOFTWARE', properties: { seats: 'ten' } });
     expect(!bad.ok && bad.error.message).toContain('seats');

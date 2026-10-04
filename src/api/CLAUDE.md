@@ -17,7 +17,7 @@ Current domains, grouped into folders:
 
 - `org/`: `person`, `team`, `department`
 - `aux/` (attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
-- flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `page-kind` (each notebook's page kinds), `relation`, `branding`, `home`, `health`, `trpc-meta`
+- flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `page-kind` (each notebook's page kinds), `relation`, `branding`, `home`, `search`, `health`, `trpc-meta`
 - `notebook`: lists, creates and renames notebooks and sets the default. It works on the notebook store (`ctx.notebooks`), not on a database. See § Notebooks.
 
 Loose backend helpers that aren't domains use an underscore prefix:
@@ -106,6 +106,17 @@ A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` a
 - `MENTIONS` relations are derived. `syncMentions` (`relation/mentions.ts`) runs whenever page, doc, note or report content is saved. It reads app links with `extractEntityLinks` (`$shared/utils/mentions`, which skips code blocks and uses `parseEntityPath`), keeps the ones whose entity exists, and replaces that source's `MENTIONS` rows. Nothing matches by title, so a rename needs no rescan.
 - `relation.add`, `update` and `remove` refuse `MENTIONS`; only the sync writes them.
 - Any new content save must call `syncMentions` after it writes.
+
+## Search
+
+`search.query` and `search.recall` (`search/`) read one FTS5 table, `search_index`: a row per entity, note, doc, report, todo, comment, link and goal check-in, with `entity_type`, `entity_id`, `parent_type`/`parent_id` (what an attachment hangs off), `title` and `body`. It uses the porter tokenizer with diacritics removed, so "leaving" finds "leave" and "cafe" finds "café".
+
+- **Triggers keep it current.** The `add_search_index` migration puts `AFTER INSERT/UPDATE/DELETE` triggers on every indexed table and backfills existing rows. No operation writes to the index, so a new write path needs nothing. `page_chat`, relation notes and tag names aren't indexed.
+- **Raw input never reaches `MATCH`.** `buildFtsQuery` (`search/fts-query.ts`) rebuilds the query from its letters and digits: words ANDed with a prefix match, `"phrases"`, `OR`, `-exclude`. `phraseQuery` quotes a name.
+- **Filters run in SQL:** types (reports only while `features.reports` is on), `within` one entity and its attachments, and hidden ids (archived entities and what's attached to them, from `loadArchivedIds`). Ranking is `bm25` with titles weighted 10×.
+- `search.recall` gathers one entity for Claude: the type's own `get`, its attachments (capped, with `truncated`), relations, owned goals and projects, and `unlinkedMentions`, a phrase search for its name that leaves out the entity, what's attached to it, and sources that already link to it (MENTIONS).
+- **Indexing a new table or field** takes a new migration: drop and recreate the affected triggers, then `DELETE FROM search_index WHERE entity_type = '<TYPE>'` and backfill with an `INSERT … SELECT`. Add the table to the trigger list in `tests/integration/search.test.ts`, the type to `SEARCH_TYPES` (`$shared/types/search`), and its path to `hitPath`.
+- Prisma doesn't know about any of this; see `prisma/CLAUDE.md` § Migrations.
 
 ## Notebooks
 

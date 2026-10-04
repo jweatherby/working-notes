@@ -6,9 +6,13 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import Field from '$lib/ui/Field.svelte';
   import { submit } from '$lib/ui/submit';
+  import ProLock from '$lib/ui/ProLock.svelte';
+  import { isProActive, lockedMessage } from '$shared/types/license';
 
   const { data } = $props<{ data: PageData }>();
   const brandings = $derived(data.brandings.ok ? data.brandings.value : []);
+  // Branding is Working Notes Pro: without a license, profiles are listed but can't be made or changed.
+  const locked = $derived(!isProActive(data.license));
 
   let busy = $state(false);
   let showCreate = $state(false);
@@ -33,10 +37,16 @@
 
 <div class="page">
   <PageHeader title="Branding" description="Logos and colours applied to reports and their printed PDFs.">
-    <button type="button" class="btn primary" onclick={() => { showCreate = !showCreate; }}>
-      {showCreate ? 'Cancel' : 'New profile'}
-    </button>
+    {#if !locked}
+      <button type="button" class="btn primary" onclick={() => { showCreate = !showCreate; }}>
+        {showCreate ? 'Cancel' : 'New profile'}
+      </button>
+    {/if}
   </PageHeader>
+
+  {#if locked}
+    <ProLock title="Branding" message={lockedMessage('branding', data.license, 'app')} compact />
+  {/if}
 
   {#if showCreate}
     <form class="card create-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
@@ -55,7 +65,7 @@
 
   {#if brandings.length === 0 && !showCreate}
     <EmptyState message="No branding profiles yet." boxed>
-      <button type="button" class="btn sm" onclick={() => { showCreate = true; }}>New profile</button>
+      {#if !locked}<button type="button" class="btn sm" onclick={() => { showCreate = true; }}>New profile</button>{/if}
     </EmptyState>
   {/if}
 

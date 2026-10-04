@@ -4,10 +4,9 @@
 // plugin/. A machine that installs it needs no clone and no Bun. The static files are
 // embedded rather than shipped as hundreds of minified files, so an organisation's
 // plugin security scan has less to read on every update.
-//   bun run release:build [--target darwin-arm64]
-// Output:
-//   dist/plugin/                                  the built plugin (published to the `dist` branch)
-//   dist/working-notes-<version>-<target>.zip     the same, zipped for Claude desktop Chat
+//   bun run release:build [--target darwin-arm64|darwin-x64|linux-x64|linux-arm64|windows-x64]
+// Output: dist/plugin/, the built plugin with this target's binary in server/. CI builds
+// each target on its own OS and scripts/release/package.ts merges them and zips them.
 
 import { spawnSync } from 'node:child_process';
 import { cp, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
@@ -17,8 +16,18 @@ import { libsqlNativePlugin } from './libsql';
 
 const REPO = resolve(import.meta.dir, '..', '..');
 const DIST = join(REPO, 'dist');
-const CHAT_UPLOAD_LIMIT = 50 * 1024 * 1024;
-const TARGETS = new Set(['darwin-arm64', 'darwin-x64']);
+// Each target's libsql native package. Build a target on its own OS: `bun install`
+// fetches only the host's native package, and the binary embeds it.
+const TARGETS: ReadonlyMap<string, { readonly libsql: string; readonly exe: string }> = new Map([
+  ['darwin-arm64', { libsql: 'darwin-arm64', exe: '' }],
+  ['darwin-x64', { libsql: 'darwin-x64', exe: '' }],
+  ['linux-x64', { libsql: 'linux-x64-gnu', exe: '' }],
+  ['linux-arm64', { libsql: 'linux-arm64-gnu', exe: '' }],
+  ['windows-x64', { libsql: 'win32-x64-msvc', exe: '.exe' }]
+]);
+
+/** The target this machine builds by default: Bun's names, with Windows as `windows`. */
+const hostTarget = (): string => `${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}`;
 
 const run = (command: string, args: readonly string[]): void => {
   const r = spawnSync(command, [...args], { cwd: REPO, stdio: 'inherit' });
@@ -31,8 +40,9 @@ const option = (name: string): string | undefined => {
 };
 
 const main = async (): Promise<void> => {
-  const target = option('target') ?? `${process.platform}-${process.arch}`;
-  if (!TARGETS.has(target)) throw new Error(`Can't build for ${target}. Targets: ${[...TARGETS].join(', ')}`);
+  const target = option('target') ?? hostTarget();
+  const spec = TARGETS.get(target);
+  if (!spec) throw new Error(`Can't build for ${target}. Targets: ${[...TARGETS.keys()].join(', ')}`);
 
   const version = agreedVersion(
     await Bun.file(join(REPO, 'plugin/.claude-plugin/plugin.json')).text(),
@@ -75,26 +85,19 @@ const main = async (): Promise<void> => {
     ''
   ].join('\n'));
 
-  const binary = join(server, `wnotes-${target}`);
+  const binary = join(server, `wnotes-${target}${spec.exe}`);
   const built = await Bun.build({
     entrypoints: [entry],
     compile: { target: `bun-${target}` as Bun.Build.CompileTarget, outfile: binary },
-    plugins: [libsqlNativePlugin(target)]
+    plugins: [libsqlNativePlugin(spec.libsql)]
   });
   if (!built.success) throw new Error(`Compiling failed:\n${built.logs.map(String).join('\n')}`);
 
   await cp(join(REPO, 'prisma', 'migrations'), join(server, 'migrations'), { recursive: true });
   await writeFile(join(server, 'VERSION'), `${version.value}\n`);
 
-  const zip = join(DIST, `working-notes-${version.value}-${target}.zip`);
-  await rm(zip, { force: true });
-  const zipped = spawnSync('zip', ['-r', '-X', '-q', zip, '.', '-x', '*.DS_Store'], { cwd: plugin, stdio: 'inherit' });
-  if (zipped.status !== 0) throw new Error('zip failed');
-
   const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  const zipSize = (await stat(zip)).size;
-  console.log(`\nBuilt ${plugin}\n  binary ${mb((await stat(binary)).size)}, with ${clientFiles.length} static files\n  zip    ${zip} (${mb(zipSize)})`);
-  if (zipSize > CHAT_UPLOAD_LIMIT) console.warn(`The zip is over Claude desktop's ${mb(CHAT_UPLOAD_LIMIT)} upload limit.`);
+  console.log(`\nBuilt ${plugin}\n  binary ${mb((await stat(binary)).size)}, with ${clientFiles.length} static files\nZip it with \`bun run release:package\`.`);
 };
 
 try {

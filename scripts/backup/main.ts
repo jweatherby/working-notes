@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-// Working Notes backups. Each notebook's snapshots stay on this Mac in <data dir>/Backups/<notebook>.
+// Working Notes backups. Each notebook's snapshots stay on this computer in <data dir>/Backups/<notebook>.
+// The MCP server and the app also take them hourly by themselves (scripts/backup/schedule.ts).
 //   bun run backup                          snapshot every notebook whose data changed (what the hourly LaunchAgent runs)
 //   bun run backup --force [--reason text]  snapshot even if unchanged
 //   bun run backup list                     list snapshots
@@ -19,6 +20,7 @@ import { ok, err, type Result } from '$shared/utils/result';
 import { createSnapshot, listSnapshots } from './snapshot';
 import { restoreSnapshot } from './restore';
 import { LABEL, backupCommand, installAgent, uninstallAgent } from './launchd';
+import { runBackupsIfDue, withBackupLock } from './schedule';
 
 const args = process.argv.slice(2);
 const command = args[0] && !args[0].startsWith('--') ? args[0] : 'run';
@@ -50,27 +52,45 @@ const main = async (): Promise<number> => {
         return 1;
       }
       const scheduled = process.env.XPC_SERVICE_NAME === LABEL;
-      let failed = false;
-      for (const notebook of notebooks.value) {
-        try {
-          const outcome = await createSnapshot({
-            notebook: notebook.id,
-            force: hasFlag('force'),
-            reason: option('reason') ?? (scheduled ? 'hourly' : 'manual')
-          });
-          const s = outcome.snapshot;
-          if (outcome.status === 'unchanged') {
-            console.log(`${stamp()} ${notebook.id}: unchanged since ${s?.id}`);
-          } else if (s) {
-            const pruned = outcome.pruned.length ? `, pruned ${outcome.pruned.length}` : '';
-            console.log(`${stamp()} ${notebook.id}: created ${s.id} (${s.manifest.reason}, ${size(s.manifest.bytes)})${pruned}`);
-          }
-        } catch (error) {
-          failed = true;
-          console.error(`${stamp()} ${notebook.id}: backup failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (scheduled && !hasFlag('notebook') && !hasFlag('force')) {
+        // The LaunchAgent shares the hour with the MCP server and the app: whoever comes first takes it.
+        const result = await runBackupsIfDue();
+        if (!result) {
+          console.log(`${stamp()} skipped: this hour's backup was already taken, or is being taken, by another Working Notes process`);
+          return 0;
         }
+        for (const created of result.created) console.log(`${stamp()} created ${created}`);
+        for (const failure of result.failed) console.error(`${stamp()} backup failed: ${failure}`);
+        return result.failed.length ? 1 : 0;
       }
-      return failed ? 1 : 0;
+      const ran = await withBackupLock(async () => {
+        let failed = false;
+        for (const notebook of notebooks.value) {
+          try {
+            const outcome = await createSnapshot({
+              notebook: notebook.id,
+              force: hasFlag('force'),
+              reason: option('reason') ?? (scheduled ? 'hourly' : 'manual')
+            });
+            const s = outcome.snapshot;
+            if (outcome.status === 'unchanged') {
+              console.log(`${stamp()} ${notebook.id}: unchanged since ${s?.id}`);
+            } else if (s) {
+              const pruned = outcome.pruned.length ? `, pruned ${outcome.pruned.length}` : '';
+              console.log(`${stamp()} ${notebook.id}: created ${s.id} (${s.manifest.reason}, ${size(s.manifest.bytes)})${pruned}`);
+            }
+          } catch (error) {
+            failed = true;
+            console.error(`${stamp()} ${notebook.id}: backup failed: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        return failed ? 1 : 0;
+      });
+      if (ran === null) {
+        console.error('Another Working Notes process is taking a backup. Try again in a minute.');
+        return 1;
+      }
+      return ran;
     }
     case 'list': {
       const notebooks = await selectedNotebooks();

@@ -4,6 +4,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
+import { testLicenseKey } from '../license-test-key';
 
 type Message = Record<string, unknown> & { result?: Record<string, unknown>; error?: { code: number; message: string } };
 
@@ -51,6 +52,8 @@ describe('wnotes mcp', () => {
     const byName = new Map(tools.map((t) => [t.name, t]));
     expect(tools.length).toBeGreaterThan(60);
     expect(byName.get('person_list')?.annotations.readOnlyHint).toBe(true);
+    expect(byName.get('search_query')?.annotations.readOnlyHint).toBe(true);
+    expect(byName.get('search_recall')?.annotations.readOnlyHint).toBe(true);
     expect(byName.get('person_delete')?.annotations.destructiveHint).toBe(true);
     expect(byName.get('goal_delete')?.annotations.destructiveHint).toBe(true);
     expect(byName.get('relation_remove')?.annotations.destructiveHint).toBe(true);
@@ -83,6 +86,18 @@ describe('wnotes mcp', () => {
 
     const person = JSON.parse((await callTool('person_get', { id })).text) as { name: string; title: string };
     expect(person).toMatchObject({ name: 'Mika Tanaka', title: '2024' });
+
+    // Full-text search is Working Notes Pro: refused, with the way out, until a license is added.
+    const locked = await callTool('search_query', { q: 'tanaka' });
+    expect(locked.isError).toBe(true);
+    expect(locked.text).toContain('Working Notes Pro');
+    expect(locked.text).toContain('license.activate');
+    expect((await callTool('license_activate', { key: testLicenseKey() })).isError).toBe(false);
+
+    const found = JSON.parse((await callTool('search_query', { q: 'tanaka' })).text) as { results: Array<{ entityId: string }> };
+    expect(found.results.map((r) => r.entityId)).toContain(id);
+    const recall = JSON.parse((await callTool('search_recall', { entityType: 'PERSON', entityId: id })).text) as { name: string };
+    expect(recall.name).toBe('Mika Tanaka');
   });
 
   it('returns invalid input and failed operations as tool errors', async () => {

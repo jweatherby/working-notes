@@ -1,6 +1,7 @@
 // Integration test setup. Runs before each test file: wipes the test data
 // directory, lets the real bootstrap create the notebook layout and migrate the
-// database, adds an empty second notebook, and seeds the first.
+// database, adds an empty second notebook, and seeds the first (three people
+// and the work starter page kinds, as notebook.create gives a work notebook).
 
 import { rmSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -9,6 +10,7 @@ import { settings } from '../../src/shared/settings/server/index.server';
 import { ensureDatabase } from '../../src/shared/db/bootstrap.server';
 import { getNotebookStore } from '../../src/shared/notebooks/current.server';
 import { closeRegistries, getRegistry } from '../../src/shared/registry.server';
+import { addStarterKinds } from '../../src/api/page-kind/operations';
 import { OTHER_NOTEBOOK, TEST_NOTEBOOK } from './test-notebooks';
 
 beforeAll(async () => {
@@ -27,6 +29,7 @@ beforeAll(async () => {
       { id: 'person_carol', name: 'Carol Lee' }
     ]
   });
+  await addStarterKinds(getRegistry(TEST_NOTEBOOK));
 });
 
 afterAll(async () => {

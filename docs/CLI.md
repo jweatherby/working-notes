@@ -240,12 +240,27 @@ title. The toolbar picks the branding and turns the letterhead on or off. **Down
 the file in the browser, as page images; **Print…** uses the browser's dialog, for a PDF with
 selectable text. A line of just `<!-- pagebreak -->` starts a new page.
 
+## Working Notes Pro
+
+Full-text search (`search.query`, `search.recall`), branding changes and PDF export need a yearly
+license. Without one, those procedures fail with a message saying so; everything else works.
+
+```bash
+wnotes license.status                     # none, active (with the expiry date), expired or invalid
+wnotes license.activate --key WN1.…       # checked on this computer; refuses an invalid or expired key
+wnotes license.remove
+```
+
+The license is stored in the data folder's `settings.json`, beside the default notebook, and
+covers every notebook. Keys are
+checked offline against a public key built into the app.
+
 ## Backups
 
 ```bash
 wnotes backup --force --reason "before the reorg"   # snapshot now, regardless
 wnotes backup list                                  # snapshots with counts, per notebook
-wnotes backup install                               # hourly LaunchAgent (macOS)
+wnotes backup install                               # hourly LaunchAgent (macOS; Claude and the app back up hourly anyway)
 wnotes backup restore latest --notebook <id>        # app must be closed
 ```
 

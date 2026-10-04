@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import ProBadge from '$lib/ui/ProBadge.svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
   import EntityDetailPage from '$lib/common/EntityDetailPage.svelte';
@@ -160,7 +161,7 @@
           <h4>Content</h4>
           <span class="content-actions">
             {#if wikiPage.content.trim()}
-              <a class="btn ghost sm" href={wikiPrintUrl(wikiPage.id)} target="_blank" rel="noopener">Export PDF</a>
+              <a class="btn ghost sm" href={wikiPrintUrl(wikiPage.id)} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
             {/if}
             <button type="button" class="btn icon sm" aria-label="Edit the content of {wikiPage.title}" title="Edit content" onclick={() => { editing = true; }}><PencilIcon /></button>
           </span>

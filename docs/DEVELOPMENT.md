@@ -54,6 +54,7 @@ The install and uninstall logic is the pure `planInstall`/`planUninstall` in
 | `bun run db:migrate --name <change>` | Author a migration against the default notebook |
 | `bun run db:studio` | Prisma Studio, on the same notebook |
 | `bun run setup [uninstall]` | PATH, plugin zip, Claude Code plugin |
+| `bun run desktop:prepare` then `desktop:dev` / `desktop:build` | The Tauri desktop app in `desktop/` (after `release:build`) |
 
 You author migrations against a real notebook, so run `bun run backup --force` first. Every other
 notebook migrates forward the next time a process opens it. If a migration reports "database is
@@ -110,14 +111,21 @@ A release includes the app, so a Mac that installs the plugin needs no clone and
 `scripts/release/plan.ts` skips a version that's already released, and fails if `plugin/` changed
 since the last release without a new version.
 
-- **CI** (`.github/workflows/ci.yml`): `check`, unit and integration tests on every push and PR.
-- **Build** (`bun run release:build`): builds the UI, then compiles `cli/standalone.ts` and the
-  built SvelteKit server into one `wnotes` binary with Bun embedded (`darwin-arm64`). Writes
-  `dist/plugin/` and `dist/working-notes-<version>-darwin-arm64.zip`.
-- **Smoke test** (`bun run release:smoke`): installs through the shim into an empty home folder,
-  then checks a procedure, the MCP tool list and the app (page, asset, API, guard).
-- **Publish:** force-pushes `dist/plugin` to the root of the `dist` branch — Cowork's sync needs
-  `.claude-plugin/plugin.json` at the root — then creates GitHub release `v<version>` with the zip.
+- **CI** (`.github/workflows/ci.yml`): `check`, unit and integration tests on every push and PR,
+  on Linux, plus the unit tests on macOS and Windows (not blocking).
+- **Build** (`bun run release:build [--target <t>]`): builds the UI, then compiles
+  `cli/standalone.ts` and the built SvelteKit server into one `wnotes-<target>` binary with Bun
+  embedded. Build each target on its own OS: the binary embeds the host's SQLite native module.
+  Writes `dist/plugin/`.
+- **Package** (`bun run release:package [<built plugin dirs>]`): merges several builds' binaries
+  into `dist/plugin` and writes one `dist/working-notes-<version>-<target>.zip` per platform.
+- **Smoke test** (`bun run release:smoke`): installs this machine's binary through the shim
+  (`wnotes.cmd` on Windows) into an empty home folder, then checks a procedure, the MCP tool list
+  and the app (page, asset, API, guard).
+- **Publish:** the workflow builds and smoke-tests `darwin-arm64` (required), `windows-x64` and
+  `linux-x64` on their own runners, packages them on Linux, force-pushes `dist/plugin` to the root
+  of the `dist` branch — Cowork's sync needs `.claude-plugin/plugin.json` at the root — then
+  creates GitHub release `v<version>` with the zips.
 
 `marketplace.json` points at that branch, so Claude Code, Cowork and `bun run setup` all install the
 released plugin; a development machine's MCP server still runs its clone.

@@ -128,7 +128,7 @@ describe('notebooks', () => {
     mkdirSync(join(dataDir, 'Backups', '2026-09-12T19-00-00Z'), { recursive: true });
     writeFileSync(join(dataDir, 'Backups', '2026-09-12T19-00-00Z', 'manifest.json'), '{}');
 
-    const steps = await migrateLayout({ dataDir });
+    const steps = await migrateLayout({ dataDir, licensePublicKey: "" });
     expect(steps.map((s) => s.kind)).toEqual(['create-notebook', 'move-database', 'move-files', 'move-snapshot', 'set-default']);
 
     const moved = join(dataDir, 'Notebooks', 'work-work');
@@ -144,6 +144,6 @@ describe('notebooks', () => {
     expect(JSON.parse(readFileSync(join(moved, 'notebook.json'), 'utf8'))).toMatchObject({ name: 'work-work' });
     expect(JSON.parse(readFileSync(join(dataDir, 'settings.json'), 'utf8'))).toEqual({ defaultNotebook: 'work-work' });
 
-    expect(await migrateLayout({ dataDir })).toEqual([]);
+    expect(await migrateLayout({ dataDir, licensePublicKey: "" })).toEqual([]);
   });
 });

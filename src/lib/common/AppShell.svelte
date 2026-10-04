@@ -88,6 +88,9 @@
         <li class="nav-end">
           <a href="/app/branding" class="nav-link secondary" aria-current={isActive({ href: '/app/branding', label: '' }, $page.url.pathname) ? 'page' : undefined} onclick={closeMenu}>Branding</a>
         </li>
+        <li>
+          <a href="/app/license" class="nav-link secondary" aria-current={isActive({ href: '/app/license', label: '' }, $page.url.pathname) ? 'page' : undefined} onclick={closeMenu}>License</a>
+        </li>
         <li class="nav-search">
           <button type="button" class="btn ghost sm" onclick={() => quickFinderOpen.set(true)}>
             Search <kbd>⌘K</kbd>

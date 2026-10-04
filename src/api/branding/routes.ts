@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, procedure } from '$shared/trpc/init';
+import { gated } from '$api/_license';
 import {
   listBrandings,
   getBranding,
@@ -25,6 +26,7 @@ const brandingInput = z.object({
 // Images are resized client-side (icon 256px, logo 800x200) before upload.
 const MAX_IMAGE_BASE64_CHARS = 4_000_000;
 
+// Creating and changing brandings is Working Notes Pro (src/api/_license.ts); listing them isn't.
 export const brandingRouter = router({
   list: procedure.query(({ ctx }) => listBrandings(ctx.reg)),
 
@@ -34,15 +36,15 @@ export const brandingRouter = router({
 
   create: procedure
     .input(brandingInput)
-    .mutation(({ ctx, input }) => createBranding(ctx.reg, input)),
+    .mutation(({ ctx, input }) => gated(ctx, 'branding', () => createBranding(ctx.reg, input))),
 
   update: procedure
     .input(z.object({ id: z.string() }).merge(brandingInput.partial()))
-    .mutation(({ ctx, input: { id, ...data } }) => updateBranding(ctx.reg, id, data)),
+    .mutation(({ ctx, input: { id, ...data } }) => gated(ctx, 'branding', () => updateBranding(ctx.reg, id, data))),
 
   delete: procedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ ctx, input }) => deleteBranding(ctx.reg, input.id)),
+    .mutation(({ ctx, input }) => gated(ctx, 'branding', () => deleteBranding(ctx.reg, input.id))),
 
   uploadImage: procedure
     .input(z.object({
@@ -51,5 +53,5 @@ export const brandingRouter = router({
       contentType: z.enum(['image/png', 'image/jpeg']),
       dataBase64: z.string().max(MAX_IMAGE_BASE64_CHARS)
     }))
-    .mutation(({ ctx, input }) => uploadImage(ctx.reg, input))
+    .mutation(({ ctx, input }) => gated(ctx, 'branding', () => uploadImage(ctx.reg, input)))
 });
