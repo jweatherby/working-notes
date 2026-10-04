@@ -41,6 +41,15 @@ describe('verifyLicenseKey', () => {
     expect(verifyLicenseKey(odd, keys.publicKey, now).state).toBe('invalid');
   });
 
+  it('refuses a revoked license, renewals included, whatever its dates', () => {
+    const key = signLicenseKey(payload, keys.privateKey);
+    const status = verifyLicenseKey(key, keys.publicKey, now, new Set(['l1']));
+    expect(status).toMatchObject({ state: 'invalid', licensee: null, problem: 'this license was refunded or revoked' });
+    const renewal = signLicenseKey({ ...payload, issued: '2027-10-04', expires: '2028-10-03' }, keys.privateKey);
+    expect(verifyLicenseKey(renewal, keys.publicKey, now, new Set(['l1'])).state).toBe('invalid');
+    expect(verifyLicenseKey(key, keys.publicKey, now, new Set(['other'])).state).toBe('active');
+  });
+
   it('ignores surrounding whitespace from a paste', () => {
     expect(verifyLicenseKey(`  ${signLicenseKey(payload, keys.privateKey)}\n`, keys.publicKey, now).state).toBe('active');
   });

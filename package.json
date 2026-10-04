@@ -23,6 +23,7 @@
     "release:version": "bun scripts/release/version.ts",
     "license:keygen": "bun scripts/license/keygen.ts",
     "license:issue": "bun scripts/license/issue.ts",
+    "license:revoke": "bun scripts/license/revoke.ts",
     "release:build": "bun scripts/release/build.ts",
     "release:package": "bun scripts/release/package.ts",
     "release:smoke": "bun scripts/release/smoke.ts",

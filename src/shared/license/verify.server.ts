@@ -6,6 +6,7 @@
 
 import { createPrivateKey, createPublicKey, sign, verify } from 'node:crypto';
 import { NO_LICENSE, type LicensePayload, type LicenseStatus } from '../types/license';
+import { REVOKED_LICENSE_IDS } from './revoked';
 
 const PREFIX = 'WN1';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -28,8 +29,30 @@ export const daysLeft = (expires: string, now: Date): number => {
   return Math.round((Date.parse(`${expires}T00:00:00Z`) - today) / DAY_MS) + 1;
 };
 
-/** Checks a key's signature and dates. Deterministic for a given key, public key and time. */
-export const verifyLicenseKey = (key: string, publicKeyPem: string, now: Date): LicenseStatus => {
+/** A key's payload, only if its signature checks out against the public key. */
+export const readLicensePayload = (key: string, publicKeyPem: string): LicensePayload | null => {
+  const parts = key.trim().split('.');
+  if (parts.length !== 3 || parts[0] !== PREFIX) return null;
+  const [, body, signature] = parts as [string, string, string];
+  try {
+    if (!verify(null, Buffer.from(body), createPublicKey(publicKeyPem), Buffer.from(signature, 'base64url'))) return null;
+    const payload: unknown = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    return isPayload(payload) ? payload : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Checks a key's signature, its dates, and that its id hasn't been revoked.
+ * Deterministic for a given key, public key, time and revocation list.
+ */
+export const verifyLicenseKey = (
+  key: string,
+  publicKeyPem: string,
+  now: Date,
+  revoked: ReadonlySet<string> = REVOKED_LICENSE_IDS
+): LicenseStatus => {
   const parts = key.trim().split('.');
   if (parts.length !== 3 || parts[0] !== PREFIX) return invalid("it isn't a Working Notes license key");
   const [, body, signature] = parts as [string, string, string];
@@ -49,6 +72,7 @@ export const verifyLicenseKey = (key: string, publicKeyPem: string, now: Date): 
     return invalid("its contents can't be read");
   }
   if (!isPayload(payload)) return invalid("its contents aren't a Working Notes Pro license");
+  if (revoked.has(payload.id)) return invalid('this license was refunded or revoked');
 
   const left = daysLeft(payload.expires, now);
   return {
