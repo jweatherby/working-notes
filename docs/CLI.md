@@ -251,7 +251,8 @@ wnotes license.activate --key WN1.…       # checked on this computer; refuses 
 wnotes license.remove
 ```
 
-The license is stored in the data folder (`license.json`) and covers every notebook. Keys are
+The license is stored in the data folder's `settings.json`, beside the default notebook, and
+covers every notebook. Keys are
 checked offline against a public key built into the app.
 
 ## Backups

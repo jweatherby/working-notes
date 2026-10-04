@@ -1,7 +1,7 @@
 // Working Notes Pro: the license file, and the procedures it gates, through the real router.
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { appRouter } from '../../src/shared/trpc/router';
 import { createCallerFactory } from '../../src/shared/trpc/init';
@@ -11,7 +11,10 @@ import { activateLicense, currentLicense } from '../../src/shared/license/store.
 import { testLicenseKey } from '../license-test-key';
 import { TEST_NOTEBOOK } from './test-notebooks';
 
-const licenseFile = resolve('data/test/license.json');
+const settingsFile = resolve('data/test/settings.json');
+const settingsJson = (): Record<string, unknown> => JSON.parse(readFileSync(settingsFile, 'utf8')) as Record<string, unknown>;
+/** Stores a key the way the app does, keeping the default notebook. */
+const storeKey = (key: string): void => writeFileSync(settingsFile, JSON.stringify({ ...settingsJson(), licenseKey: key }));
 
 const caller = async () => {
   const notebook = await resolveCurrentNotebook({ explicit: TEST_NOTEBOOK });
@@ -39,14 +42,15 @@ describe('license', () => {
     expect(!garbage.ok && garbage.error.message).toContain("isn't valid");
     const expired = await api.license.activate({ key: testLicenseKey('2020-01-01') });
     expect(!expired.ok && expired.error.message).toContain('expired on 2020-01-01');
-    expect(existsSync(licenseFile)).toBe(false);
+    expect(settingsJson()['licenseKey']).toBeUndefined();
   });
 
   it('unlocks Pro with a valid key, for every notebook and process', async () => {
     const api = await caller();
     const activated = await api.license.activate({ key: testLicenseKey() });
     expect(activated).toMatchObject({ ok: true, value: { state: 'active', licensee: { name: 'Test Buyer' } } });
-    expect(JSON.parse(readFileSync(licenseFile, 'utf8')).key).toMatch(/^WN1\./);
+    // Beside the default notebook in settings.json, which it keeps.
+    expect(settingsJson()).toMatchObject({ defaultNotebook: TEST_NOTEBOOK, licenseKey: expect.stringMatching(/^WN1\./) });
 
     expect((await api.search.query({ q: 'alice' })).ok).toBe(true);
     const created = await api.branding.create({ name: 'Acme' });
@@ -55,7 +59,7 @@ describe('license', () => {
   });
 
   it('locks again when the stored key has expired, and unlocks with the renewal', async () => {
-    writeFileSync(licenseFile, JSON.stringify({ key: testLicenseKey('2021-06-30') }));
+    storeKey(testLicenseKey('2021-06-30'));
     const api = await caller();
     expect(await currentLicense()).toMatchObject({ state: 'expired', expires: '2021-06-30' });
     const search = await api.search.query({ q: 'alice' });
@@ -66,13 +70,13 @@ describe('license', () => {
   });
 
   it('says a tampered stored key is invalid', async () => {
-    writeFileSync(licenseFile, JSON.stringify({ key: 'WN1.abc.def' }));
+    storeKey('WN1.abc.def');
     expect(await currentLicense()).toMatchObject({ state: 'invalid' });
   });
 
   it('removes the license', async () => {
     const api = await caller();
     expect(await api.license.remove()).toMatchObject({ ok: true, value: { state: 'none' } });
-    expect(existsSync(licenseFile)).toBe(false);
+    expect(settingsJson()).toEqual({ defaultNotebook: TEST_NOTEBOOK });
   });
 });

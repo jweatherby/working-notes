@@ -1,10 +1,9 @@
 // Filesystem locations derived from settings.dataDir.
 // Relative imports only — prisma.config.ts loads this outside SvelteKit.
 //
-// <data dir>/settings.json                the default notebook for the CLI and MCP
+// <data dir>/settings.json                the default notebook for the CLI and MCP, and the license key
 // <data dir>/Notebooks/<id>/              one notebook: notebook.json, working-notes.db, files/
 // <data dir>/Backups/<id>/<snapshot>/     that notebook's snapshots
-// <data dir>/license.json                 the Working Notes Pro license key, for every notebook
 
 import { resolve } from 'node:path';
 import { isNotebookId } from '../../notebooks/id';
@@ -19,8 +18,6 @@ const checked = (id: string): string => {
 };
 
 export const rootSettingsPath = (s: ServerSettings): string => resolve(s.dataDir, 'settings.json');
-
-export const licensePath = (s: ServerSettings): string => resolve(s.dataDir, 'license.json');
 
 export const notebooksDir = (s: ServerSettings): string => resolve(s.dataDir, 'Notebooks');
 

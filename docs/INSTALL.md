@@ -145,7 +145,7 @@ Windows, and `$XDG_DATA_HOME/working-notes` (usually `~/.local/share/working-not
 | `Notebooks/<id>/working-notes.db` | the notebook's SQLite database |
 | `Notebooks/<id>/files/` | uploaded PDFs and branding images |
 | `Backups/<id>/` | that notebook's snapshots, kept outside its folder so they outlive it |
-| `settings.json` | which notebook is the default |
+| `settings.json` | which notebook is the default, and your Pro license key |
 
 ## Troubleshooting
 

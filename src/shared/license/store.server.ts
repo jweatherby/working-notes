@@ -1,28 +1,18 @@
-// The license key on this computer: <data dir>/license.json, shared by every notebook,
-// the app, the CLI and the MCP server. Read on each check, so a key added in one
-// process counts in the others straight away.
+// The license key on this computer: `licenseKey` in <data dir>/settings.json, beside the
+// default notebook, so it covers every notebook, the app, the CLI and the MCP server.
+// Read on each check, so a key added in one process counts in the others straight away.
 
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import { settings } from '../settings/server/index.server';
-import { licensePath } from '../settings/server/paths';
+import { readRootSettings, updateRootSettings } from '../settings/server/root-settings.server';
 import { NO_LICENSE, type LicenseStatus } from '../types/license';
 import { ok, err, type Result } from '../utils/result';
 import { verifyLicenseKey } from './verify.server';
 
-interface LicenseFile {
-  readonly key: string;
-}
-
 const readKey = async (): Promise<string | null> => {
-  const text = await readFile(licensePath(settings), 'utf8').catch(() => null);
-  if (!text) return null;
-  try {
-    const parsed = JSON.parse(text) as Partial<LicenseFile>;
-    return typeof parsed.key === 'string' ? parsed.key : '';
-  } catch {
-    return '';
-  }
+  const key = (await readRootSettings(settings))['licenseKey'];
+  if (key === undefined) return null;
+  // Anything else stored there reads as an invalid key, not as no license.
+  return typeof key === 'string' ? key : '';
 };
 
 /** The license on this computer, checked now. */
@@ -37,13 +27,11 @@ export const activateLicense = async (key: string, now: Date = new Date(), publi
   const status = verifyLicenseKey(key, publicKey, now);
   if (status.state === 'invalid') return err(new Error(`That license key isn't valid: ${status.problem}.`));
   if (status.state === 'expired') return err(new Error(`That license key expired on ${status.expires}. Use the renewed key.`));
-  const path = licensePath(settings);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify({ key: key.trim() } satisfies LicenseFile, null, 2)}\n`, { mode: 0o600 });
+  await updateRootSettings(settings, { licenseKey: key.trim() });
   return ok(status);
 };
 
 export const removeLicense = async (): Promise<Result<LicenseStatus>> => {
-  await rm(licensePath(settings), { force: true });
+  await updateRootSettings(settings, { licenseKey: undefined });
   return ok(NO_LICENSE);
 };

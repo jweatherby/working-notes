@@ -6,7 +6,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { settings as appSettings, type ServerSettings } from '$shared/settings/server/index.server';
-import { notebookDir, notebooksDir, rootSettingsPath } from '$shared/settings/server/paths';
+import { notebookDir, notebooksDir } from '$shared/settings/server/paths';
+import { readRootSettings, updateRootSettings } from '$shared/settings/server/root-settings.server';
 import type { NotebookInfo } from '$shared/types/notebook';
 import { isNotebookId } from './id';
 
@@ -67,14 +68,11 @@ export const createNotebookStore = (s: ServerSettings = appSettings): NotebookSt
   },
 
   getDefault: async () => {
-    const data = await readJson(rootSettingsPath(s));
-    const id = isRecord(data) ? data['defaultNotebook'] : null;
+    const id = (await readRootSettings(s))['defaultNotebook'];
     return isNotebookId(id) ? id : null;
   },
 
   setDefault: async (id) => {
-    const data = await readJson(rootSettingsPath(s));
-    await mkdir(s.dataDir, { recursive: true });
-    await writeJson(rootSettingsPath(s), { ...(isRecord(data) ? data : {}), defaultNotebook: id });
+    await updateRootSettings(s, { defaultNotebook: id });
   }
 });
