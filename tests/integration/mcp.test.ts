@@ -4,6 +4,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
+import { testLicenseKey } from '../license-test-key';
 
 type Message = Record<string, unknown> & { result?: Record<string, unknown>; error?: { code: number; message: string } };
 
@@ -85,6 +86,13 @@ describe('wnotes mcp', () => {
 
     const person = JSON.parse((await callTool('person_get', { id })).text) as { name: string; title: string };
     expect(person).toMatchObject({ name: 'Mika Tanaka', title: '2024' });
+
+    // Full-text search is Working Notes Pro: refused, with the way out, until a license is added.
+    const locked = await callTool('search_query', { q: 'tanaka' });
+    expect(locked.isError).toBe(true);
+    expect(locked.text).toContain('Working Notes Pro');
+    expect(locked.text).toContain('license.activate');
+    expect((await callTool('license_activate', { key: testLicenseKey() })).isError).toBe(false);
 
     const found = JSON.parse((await callTool('search_query', { q: 'tanaka' })).text) as { results: Array<{ entityId: string }> };
     expect(found.results.map((r) => r.entityId)).toContain(id);

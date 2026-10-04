@@ -2,6 +2,7 @@
   import type { PageData } from './$types';
   import PrintView from '$lib/doc/PrintView.svelte';
   import { wikiPrintUrl } from '$lib/doc/print-options';
+  import ProLock from '$lib/ui/ProLock.svelte';
   import { PAGE_KIND_FIELDS } from '$shared/types/pages';
   import { formatPropertyValue } from '$lib/page/utils';
 
@@ -26,13 +27,19 @@
   </dl>
 {/snippet}
 
-<PrintView
-  title={wikiPage.title}
-  content={wikiPage.content}
-  backHref={wikiPage.path}
-  brandings={data.brandings}
-  options={data.options}
-  branding={data.branding}
-  urlFor={(choice, header) => wikiPrintUrl(wikiPage.id, choice, header)}
-  details={properties.length > 0 ? details : undefined}
-/>
+{#if data.locked}
+  <ProLock title="PDF export" message={data.locked}>
+    <a class="btn sm" href={wikiPage.path}>Back to {wikiPage.title}</a>
+  </ProLock>
+{:else}
+  <PrintView
+    title={wikiPage.title}
+    content={wikiPage.content}
+    backHref={wikiPage.path}
+    brandings={data.brandings}
+    options={data.options}
+    branding={data.branding}
+    urlFor={(choice, header) => wikiPrintUrl(wikiPage.id, choice, header)}
+    details={properties.length > 0 ? details : undefined}
+  />
+{/if}

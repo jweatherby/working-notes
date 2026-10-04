@@ -29,3 +29,6 @@ generated/
 
 # Local database and uploaded files
 data/
+
+# License signing keys (scripts/license/keygen.ts). Never commit a private key.
+*.pem

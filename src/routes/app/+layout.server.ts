@@ -1,21 +1,28 @@
 // App-wide chrome data: the current notebook and the others (for the switcher),
-// and the default branding icon shown in the nav.
+// the default branding icon shown in the nav, and the Working Notes Pro license.
+// A notebook's branding colours the app only while the license is active (Pro);
+// without one the brandings stay stored but the app uses its own look.
 
 import { getDefaultBranding } from '$api/branding/operations';
 import { listNotebooks } from '$api/notebook/operations';
 import { getReadyRegistry } from '$shared/db/bootstrap.server';
+import { currentLicense } from '$shared/license/store.server';
+import { isProActive } from '$shared/types/license';
 import { getNotebookStore } from '$shared/notebooks/current.server';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-  const [branding, notebooks] = await Promise.all([
+  const [defaultBranding, notebooks, license] = await Promise.all([
     getReadyRegistry(locals.notebook.id).then((reg) => getDefaultBranding(reg)),
-    listNotebooks({ notebooks: getNotebookStore() }, locals.notebook.id)
+    listNotebooks({ notebooks: getNotebookStore() }, locals.notebook.id),
+    currentLicense()
   ]);
+  const branding = isProActive(license) ? defaultBranding : null;
   return {
-    defaultBrandingIconUrl: branding.ok ? branding.value?.iconUrl ?? null : null,
+    license,
+    defaultBrandingIconUrl: branding?.ok ? branding.value?.iconUrl ?? null : null,
     // The notebook's default branding colours the app (see `.branded` in styles/_tokens.scss).
-    brandTheme: branding.ok && branding.value
+    brandTheme: branding?.ok && branding.value
       ? {
           primary: branding.value.primaryColor,
           primaryText: branding.value.primaryFontColor,
@@ -24,7 +31,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
         }
       : null,
     // Chart colours for doc previews, matching the default branding of an exported PDF.
-    chartBranding: branding.ok && branding.value
+    chartBranding: branding?.ok && branding.value
       ? {
           primaryColor: branding.value.primaryColor,
           primaryFontColor: branding.value.primaryFontColor,

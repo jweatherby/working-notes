@@ -94,6 +94,8 @@ Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PRO
 
 ## Searching
 
+**Full-text search is part of Working Notes Pro.** Without an active license, `search.query` and `search.recall` return an error saying so. Then don't retry: answer with the list and get procedures instead (`person.get`, `note.list`, `todo.forEntity`, `doc.list`, `relation.forEntity`, and `<type>.list` to find ids by name), and mention once that full-text search comes with Pro. `license.status` says whether this computer has a license; if the user gives you a key (it starts `WN1.`), add it with `license.activate --key <key>`.
+
 `search.query --q "<words>"` searches the text of everything in the notebook: names and titles, notes, docs, wiki pages (content and property values), todos, comments, links and goal check-in comments. Matches in names and titles rank first.
 
 - **Words:** every word must match, and each also matches as a prefix (`migr` finds "migration"). Word endings are ignored (`leaving` finds "leave"), and so are case and accents.
@@ -115,7 +117,7 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
 3. `wnotes doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wnotes doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding (Working Notes Pro).
 
 ## Importing from other tools
 
@@ -140,6 +142,10 @@ The app stores PDFs but can't read them; you do the reading.
 1. Read the PDF and convert it to clean markdown, keeping headings, lists and tables.
 2. `wnotes doc.add --entityType PERSON --entityId <id> --title "<title>"`, then `wnotes doc.update --id <doc> --content-file /tmp/doc.md`
 3. To keep the original attached, when you have a shell: `base64 -i file.pdf > /tmp/pdf.b64`, then `wnotes doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64`
+
+## Working Notes Pro
+
+A yearly license unlocks three things: full-text search (`search.*`), branding (creating or changing brandings, and the app wearing them), and PDF export of docs and wiki pages. Everything else is free. Without a license, those procedures return an error that says so, and the app shows a Pro notice; nothing stored is lost, and it all comes back with the license. The license belongs to the computer, so it covers every notebook. Never look for, edit or work around the license file.
 
 ## Backups
 

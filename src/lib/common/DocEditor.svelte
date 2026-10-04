@@ -1,5 +1,6 @@
 <script lang="ts">
   import MarkdownEditor from '$lib/common/MarkdownEditor.svelte';
+  import ProBadge from '$lib/ui/ProBadge.svelte';
   import MarkdownRenderer from '$lib/common/MarkdownRenderer.svelte';
   import type { ChartBranding } from '$shared/types/branding';
 
@@ -187,7 +188,7 @@
       <button type="button" class="btn ghost sm" onclick={onConvertPdf}>Convert with Claude</button>
     {/if}
     {#if exportHref && content.trim()}
-      <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF</a>
+      <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
     {/if}
     {#if onClose}
       <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>

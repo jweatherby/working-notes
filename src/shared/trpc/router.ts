@@ -24,12 +24,14 @@ import { homeRouter } from '$api/home/routes';
 import { notebookRouter } from '$api/notebook/routes';
 import { chatRouter } from '$api/assist/routes';
 import { searchRouter } from '$api/search/routes';
+import { licenseRouter } from '$api/license/routes';
 
 export const appRouter = router({
   notebook: notebookRouter,
   health: healthRouter,
   home: homeRouter,
   search: searchRouter,
+  license: licenseRouter,
   branding: brandingRouter,
   project: projectRouter,
   goal: goalRouter,

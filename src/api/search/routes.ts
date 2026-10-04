@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { router, procedure } from '$shared/trpc/init';
+import { gated } from '$api/_license';
 import { ENTITY_TYPES, RELATABLE_TYPES } from '$shared/types/enums';
 import { SEARCH_TYPES } from '$shared/types/search';
 import { searchNotebook, SEARCH_LIMITS } from './operations';
 import { recallEntity, RECALL_LIMITS } from './recall';
 
+// Full-text search and recall are Working Notes Pro (src/api/_license.ts).
 export const searchRouter = router({
   query: procedure
     .input(z.object({
@@ -16,7 +18,7 @@ export const searchRouter = router({
       includeArchived: z.boolean().optional().describe('Also search archived entities and what is attached to them'),
       limit: z.number().int().min(1).max(SEARCH_LIMITS.results).optional()
     }))
-    .query(({ ctx, input }) => searchNotebook(ctx.reg, input)),
+    .query(({ ctx, input }) => gated(ctx, 'search', () => searchNotebook(ctx.reg, input))),
 
   recall: procedure
     .input(z.object({
@@ -24,5 +26,5 @@ export const searchRouter = router({
       entityId: z.string().min(1),
       limit: z.number().int().min(1).max(RECALL_LIMITS.maxItems).optional()
     }))
-    .query(({ ctx, input }) => recallEntity(ctx.reg, input.entityType, input.entityId, input.limit))
+    .query(({ ctx, input }) => gated(ctx, 'search', () => recallEntity(ctx.reg, input.entityType, input.entityId, input.limit)))
 });
