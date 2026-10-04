@@ -25,6 +25,8 @@ The one app-wide context is the open notebook. The `/app` layout provides `data.
 
 ## Stores
 
+`stores/profile.ts` gives the open notebook's `profile`, `profileFlags` (`profileFeatures`) and `labels` (`navLabels`: Team/Group, Wiki/Library…). Use them for the few things a home notebook changes; pass `$profile` to `entityTypeLabel` where a team's type is shown. Load functions read `locals.notebook.profile` instead.
+
 Use classic Svelte stores (`writable`, `readable`, `derived`), not rune modules. Entity caches use a normalized `{ [entityType]: { [id]: entity } }` shape, and lists hold ids.
 
 ## Svelte
@@ -133,7 +135,9 @@ A goal's `period` (`2026`, `2026-H2`, `2026-Q3`) is a calendar year, half or qua
 | `link/components/SourceIcon` | `source` (`LinkSource \| null` from `linkSource` in `link/source.ts`) | A 16px letter mark for a known tool (Linear, Notion, GitHub, Jira, Confluence, Google Docs, Figma, Slack and a few more, matched by host and path in `link/source.ts`), or a chain icon. No logos or favicons: nothing is fetched |
 | `{person,team,department,project}/components/*Form` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` (`PersonForm` also `leadOptions?`, `ProjectForm` also `ownerOptions?`) | Create/edit forms, used in list popups, detail edit popups and Org Map |
 | `goal/components/GoalForm` | `initial?`, `ownerOptions`, `onSuccess`, `onCancel?`, `onDelete?` | Goal create/edit: title, description, owner, period (a select from `periodOptions`: last, this and next year's years, halves and quarters; no free text), status, unit, baseline, target. Get `ownerOptions` (grouped by type, for this form and `ProjectForm`) from `loadOwnerOptions(client)` in `$shared/trpc/load-owner-options` |
-| `page/components/PageForm` | `initial?`, `onSuccess`, `onCancel?`, `onDelete?` | Page create/edit: title, kind, and property fields from `PAGE_KIND_FIELDS`. Content is edited on the page itself |
+| `page/components/PageForm` | `initial?`, `kinds` (the notebook's `pageKind.list`, from the page's load), `onSuccess`, `onCancel?`, `onDelete?` | Page create/edit: title, kind, and an input per field of the kind (multiselect as a multiple `<select>`, checkbox as a checkbox). Content is edited on the page itself |
+| `page/components/PageKindForm` | `initial?`, `onSuccess`, `onCancel?` | Page kind create/edit at `/app/wiki/kinds`: name, key (made from the name until typed), description, and field rows (label, type, key, options or money format; reorder and remove). Pure parts in `page/kind-form.ts` |
+| `page/components/DatasetTable` | `kind`, `pages`, `count`, `totals`, `groups` (a `page.query` result) | `/app/wiki?kind=<key>`: a column per field, sortable headers, filter chips and an add-filter row, group-by select, and a totals row where each number column picks Sum/Average/Min/Max. Every choice lives in the URL (`page/dataset-url.ts`), and the load runs `page.query` with it |
 | `goal/components/ProgressLineChart` | `checkIns`, `baseline?`, `target?`, `unit?`, `period?` | Check-in values over time with the target line and, with a period, the pace line, drawn with `renderChart` |
 | `goal/components/GoalRows` | `goals`, `showOwner?`, `removeLabel?`, `onRemove?` | Goals as `.list-row`s with period, status badge, time flag and progress; used for sub-goals and a project's goals |
 | `project/components/DependencyMap` | `projects` (`ProjectListItem[]`), `dependencies` (`project.dependencies`), `team`, `tableHref` | The projects page's Map view: `DEPENDS_ON` links between projects and goal–project links, left to right, with hover lighting a node's whole upstream and downstream chain |

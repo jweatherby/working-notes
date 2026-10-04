@@ -9,6 +9,8 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submitOrThrow } from '$lib/ui/submit';
   import OwnedWork from '$lib/goal/components/OwnedWork.svelte';
+  import { labels, profileFlags } from '$lib/stores/profile';
+  import { formatBirthday } from '$shared/utils/birthday';
 
   const { data } = $props<{ data: PageData }>();
   const person = $derived(data.person);
@@ -80,6 +82,13 @@
         <dt>Email</dt>
         <dd>{#if person.email}<a href="mailto:{person.email}">{person.email}</a>{:else}<span class="muted">—</span>{/if}</dd>
       </div>
+      {#if person.birthday}
+        <div>
+          <dt>Birthday</dt>
+          <dd>{formatBirthday(person.birthday)}</dd>
+        </div>
+      {/if}
+      {#if $profileFlags.orgLead}
       <div>
         <dt>Lead</dt>
         <dd>
@@ -91,6 +100,8 @@
           {/if}
         </dd>
       </div>
+      {/if}
+      {#if $profileFlags.departments}
       <div>
         <dt>Department</dt>
         <dd>
@@ -102,10 +113,12 @@
           {/if}
         </dd>
       </div>
+      {/if}
     </dl>
   {/snippet}
 
   {#snippet renderOverview()}
+    {#if $profileFlags.orgLead}
     <section class="section">
       <div class="section-header">
         <h4>Direct reports <span class="count">{person.reports.length}</span></h4>
@@ -123,10 +136,11 @@
         <EmptyState message="No direct reports." />
       {/if}
     </section>
+    {/if}
 
     <section class="section">
       <div class="section-header">
-        <h4>Teams <span class="count">{person.teamMemberships.length}</span></h4>
+        <h4>{$labels.teams} <span class="count">{person.teamMemberships.length}</span></h4>
       </div>
       {#if person.teamMemberships.length > 0}
         <ul class="list">
@@ -134,16 +148,16 @@
             <li class="list-row">
               <a class="grow truncate" href="/app/teams/{m.teamId}">{m.teamName}</a>
               <span class="row-actions">
-                <ConfirmButton label="Remove from team" variant="icon" onConfirm={() => handleRemoveTeam(m.teamId)} />
+                <ConfirmButton label="Remove from {$labels.team.toLowerCase()}" variant="icon" onConfirm={() => handleRemoveTeam(m.teamId)} />
               </span>
             </li>
           {/each}
         </ul>
       {:else}
-        <EmptyState message="Not on any team." />
+        <EmptyState message="Not in any {$labels.team.toLowerCase()}." />
       {/if}
       <div class="section-footer">
-        <InlinePicker label="Add to team" options={availableTeams} placeholder="Select a team…" onPick={handleAddTeam} />
+        <InlinePicker label="Add to {$labels.team.toLowerCase()}" options={availableTeams} placeholder="Select a {$labels.team.toLowerCase()}…" onPick={handleAddTeam} />
       </div>
     </section>
 

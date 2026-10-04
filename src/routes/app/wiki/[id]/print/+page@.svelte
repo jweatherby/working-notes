@@ -2,14 +2,13 @@
   import type { PageData } from './$types';
   import PrintView from '$lib/doc/PrintView.svelte';
   import { wikiPrintUrl } from '$lib/doc/print-options';
-  import { PAGE_KIND_FIELDS } from '$shared/types/pages';
   import { formatPropertyValue } from '$lib/page/utils';
 
   const { data }: { data: PageData } = $props();
   const wikiPage = $derived(data.page);
   // The kind's details that are filled in, in the kind's order.
   const properties = $derived(
-    PAGE_KIND_FIELDS[wikiPage.kind]
+    data.fields
       .filter((field) => wikiPage.properties[field.key] !== undefined)
       .map((field) => ({ label: field.label, value: formatPropertyValue(field, wikiPage.properties[field.key]!) })),
   );

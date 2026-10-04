@@ -11,6 +11,7 @@
   import type { FocusGraph, FocusNode } from '$shared/types/home';
   import type { RelatableType } from '$shared/types/enums';
   import { ENTITY_SEARCH_SCOPES, entityTypeLabel, typedIdValue } from '$shared/utils/entity';
+  import { profile } from '$lib/stores/profile';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { errorMessage } from '$lib/ui/submit';
@@ -46,8 +47,8 @@
     project: 'Projects',
     person: 'People',
     goal: 'Goals',
-    org: 'Teams and departments',
-    other: 'Wiki and other'
+    org: $profile === 'home' ? 'Groups' : 'Teams and departments',
+    other: $profile === 'home' ? 'Library and other' : 'Wiki and other'
   };
 
   const pillCount = $derived(graph.groups.reduce((n, g) => n + g.nodes.length + (g.more > 0 ? 1 : 0), 0));
@@ -98,7 +99,7 @@
   <header class="section-header">
     <h2>
       Around <a href={graph.focus.href}>{graph.focus.label}</a>
-      <span class="muted text-sm">{entityTypeLabel(graph.focus.type)}</span>
+      <span class="muted text-sm">{entityTypeLabel(graph.focus.type, $profile)}</span>
     </h2>
     <div class="actions">
       {#if picking}
@@ -164,13 +165,13 @@
                 class="pill"
                 data-colour={colourOf(n.type)}
                 class:dim={hovered !== null && hovered !== `${gi}:${ni}` && hovered !== `group:${gi}`}
-                aria-label="{n.label} ({entityTypeLabel(n.type)}, {group.label.toLowerCase()})"
+                aria-label="{n.label} ({entityTypeLabel(n.type, $profile)}, {group.label.toLowerCase()})"
                 onpointerenter={() => (hovered = `${gi}:${ni}`)}
                 onpointerleave={() => (hovered = null)}
                 onfocus={() => (hovered = `${gi}:${ni}`)}
                 onblur={() => (hovered = null)}
               >
-                <title>{n.label} · {entityTypeLabel(n.type)}{n.focusable ? '' : ' (opens)'}</title>
+                <title>{n.label} · {entityTypeLabel(n.type, $profile)}{n.focusable ? '' : ' (opens)'}</title>
                 <rect x={p.x - w / 2} y={p.y - PILL_H / 2} width={w} height={PILL_H} rx={PILL_H / 2} />
                 <circle cx={p.x - w / 2 + 13} cy={p.y} r="4" />
                 <text x={p.x - w / 2 + 23} y={p.y + 4}>{text}</text>

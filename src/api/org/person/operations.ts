@@ -13,6 +13,8 @@ export interface PersonSummary {
   readonly title: string | null;
   readonly leadId: string | null;
   readonly leadName: string | null;
+  /** `YYYY-MM-DD`, or `--MM-DD` when the year isn't known. */
+  readonly birthday: string | null;
   readonly archivedAt: Date | null;
   readonly createdAt: Date;
 }
@@ -58,6 +60,7 @@ export const listPersons = async (
       email: p.email,
       title: p.title,
       leadId: p.leadId,
+      birthday: p.birthday,
       leadName: p.lead?.name ?? null,
       archivedAt: p.archivedAt,
       createdAt: p.createdAt
@@ -89,6 +92,7 @@ export const getPerson = async (
     title: person.title,
     leadId: person.leadId,
     leadName: person.lead?.name ?? null,
+    birthday: person.birthday,
     archivedAt: person.archivedAt,
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
@@ -108,6 +112,7 @@ export const createPerson = async (
     readonly email?: string;
     readonly title?: string;
     readonly leadId?: string | null;
+    readonly birthday?: string | null;
   }
 ): Promise<Result<{ readonly id: string }>> => {
   if (input.leadId) {
@@ -120,7 +125,8 @@ export const createPerson = async (
       name: input.name,
       email: input.email,
       title: input.title,
-      leadId: input.leadId ?? null
+      leadId: input.leadId ?? null,
+      birthday: input.birthday ?? null
     }
   });
   return ok({ id: person.id });
@@ -134,6 +140,7 @@ export const updatePerson = async (
     readonly email?: string | null;
     readonly title?: string | null;
     readonly leadId?: string | null;
+    readonly birthday?: string | null;
   }
 ): Promise<Result<{ readonly id: string }>> => {
   const existing = await reg.prisma.person.findFirst({ where: { id } });
@@ -153,7 +160,8 @@ export const updatePerson = async (
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
       ...(input.title !== undefined && { title: input.title }),
-      ...(input.leadId !== undefined && { leadId: input.leadId })
+      ...(input.leadId !== undefined && { leadId: input.leadId }),
+      ...(input.birthday !== undefined && { birthday: input.birthday })
     }
   });
   return ok({ id });

@@ -12,6 +12,7 @@
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
   import { ENTITY_SEARCH_SCOPES, entityPath, parseTypedIdValue } from '$shared/utils/entity';
   import { features } from '$shared/settings/base/features';
+  import { labels, profileFlags } from '$lib/stores/profile';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import { switchNotebook } from '$lib/notebook/switch';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -23,27 +24,28 @@
   // One cache per notebook, so another notebook's entities never show up.
   const cacheKey = $derived(`quick-finder-cache:${$page.data.notebook?.id ?? ''}`);
 
-  const ROUTES: readonly { readonly name: string; readonly href: string }[] = [
+  const ROUTES: readonly { readonly name: string; readonly href: string }[] = $derived([
     { name: 'Home', href: '/app' },
     { name: 'People', href: '/app/people' },
-    { name: 'Teams', href: '/app/teams' },
-    { name: 'Departments', href: '/app/departments' },
+    { name: $labels.teams, href: '/app/teams' },
+    ...($profileFlags.departments ? [{ name: 'Departments', href: '/app/departments' }] : []),
     { name: 'Projects', href: '/app/projects' },
     { name: 'Goals', href: '/app/goals' },
-    { name: 'Wiki', href: '/app/wiki' },
-    { name: 'Org Map', href: '/app/orgmap' },
+    { name: $labels.wiki, href: '/app/wiki' },
+    { name: 'Page kinds', href: '/app/wiki/kinds' },
+    ...($profileFlags.orgMap ? [{ name: 'Org Map', href: '/app/orgmap' }] : []),
     { name: 'Todos', href: '/app/todos' },
     ...(features.reports ? [{ name: 'Reports', href: '/app/reports' }] : []),
     { name: 'Branding', href: '/app/branding' },
     { name: 'Notebooks', href: '/app/notebooks' }
-  ];
+  ]);
 
   const COMMANDS = [
     { id: 'todo', label: 'New todo', slash: 'todo', run: () => openPopup('todo') },
     { id: 'notebook', label: 'New notebook', slash: 'notebook', run: () => openPopup('new-notebook') }
   ];
 
-  const routeEntries: readonly FinderEntry[] = ROUTES.map((r) => ({ id: `route:${r.href}`, name: r.name, meta: 'Go to' }));
+  const routeEntries: readonly FinderEntry[] = $derived(ROUTES.map((r) => ({ id: `route:${r.href}`, name: r.name, meta: 'Go to' })));
 
   // From the /app layout. A page's own data can shadow the key, so check it's the list.
   const notebookEntries = $derived.by((): readonly FinderEntry[] => {

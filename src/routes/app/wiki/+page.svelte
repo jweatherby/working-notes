@@ -6,16 +6,23 @@
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import PageForm from '$lib/page/components/PageForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
-  import { PAGE_KINDS, type PageKind } from '$shared/types/enums';
-  import { PAGE_KIND_FIELDS, type PageSummary } from '$shared/types/pages';
+  import type { PageKindSummary, PageSummary } from '$shared/types/pages';
   import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
+  import ParamSelect from '$lib/ui/ParamSelect.svelte';
+  import DatasetTable from '$lib/page/components/DatasetTable.svelte';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
-  import { PAGE_KIND_LABELS, formatPropertyValue } from '$lib/page/utils';
+  import { formatPropertyValue, kindName } from '$lib/page/utils';
+  import { labels, profile } from '$lib/stores/profile';
 
   const { data } = $props<{ data: PageData }>();
   const pages = $derived(data.pages as readonly PageSummary[]);
-
-  let kindFilter = $state<PageKind | 'ALL'>('ALL');
+  const kinds = $derived(data.kinds as readonly PageKindSummary[]);
+  // ?kind= shows that kind's pages as a dataset table instead of the tree.
+  const currentKind = $derived(kinds.find((k) => k.key === data.kind) ?? null);
+  const kindOptions = $derived([
+    { id: '', name: 'All kinds' },
+    ...kinds.filter((k) => k.pageCount > 0 || k.key === data.kind).map((k) => ({ id: k.key, name: `${k.name} (${k.pageCount})` }))
+  ]);
   // Pages start expanded; this holds the ones collapsed.
   let collapsed = $state<ReadonlySet<string>>(new Set());
 
@@ -29,13 +36,13 @@
   // Sub-pages whose parent is filtered out show at the top level.
   const rows = $derived(
     flattenTree(
-      buildTree(pages.filter((p) => kindFilter === 'ALL' || p.kind === kindFilter), (p) => p.parentId),
+      buildTree(pages, (p) => p.parentId),
       (node) => collapsed.has(node.item.id),
     ),
   );
 
   const details = (page: PageSummary): string =>
-    PAGE_KIND_FIELDS[page.kind]
+    (kinds.find((k) => k.key === page.kind)?.fields ?? [])
       .flatMap((field) => {
         const value = page.properties[field.key];
         return value === undefined ? [] : [`${field.label}: ${formatPropertyValue(field, value)}`];
@@ -48,26 +55,42 @@
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
-<svelte:head><title>Wiki</title></svelte:head>
+<svelte:head><title>{currentKind ? `${currentKind.name} · ${$labels.wiki}` : $labels.wiki}</title></svelte:head>
 
 <div class="page">
-  <PageHeader title="Wiki" description="Policies, products, software, decisions and anything else worth writing down.">
-    <button type="button" class="btn primary" onclick={() => openPopup('new-page')}>Add page</button>
+  <PageHeader
+    title={currentKind ? currentKind.name : $labels.wiki}
+    description={currentKind?.description ?? ($profile === 'home'
+      ? 'Recipes, places, bills, home things and anything else worth keeping. Each kind of page has its own fields.'
+      : 'Policies, products, software, decisions and anything else worth writing down.')}
+  >
+    <a class="btn" href="/app/wiki/kinds">Page kinds</a>
+    <button type="button" class="btn primary" onclick={() => openPopup('new-page')}>Add {currentKind && currentKind.key !== 'GENERAL' ? currentKind.name.toLowerCase() : 'page'}</button>
   </PageHeader>
 
   <div class="toolbar filters">
     <ArchiveFilter />
-    {#if data.pages.length > 0}
-      <select class="sm" bind:value={kindFilter} aria-label="Filter by kind">
-        <option value="ALL">All kinds</option>
-        {#each PAGE_KINDS as kind (kind)}
-          <option value={kind}>{PAGE_KIND_LABELS[kind]}</option>
-        {/each}
-      </select>
-    {/if}
+    <ParamSelect param="kind" options={kindOptions} defaultValue="" ariaLabel="Show one kind as a table" />
   </div>
 
-  {#if data.pages.length > 0}
+  {#if data.kind && !currentKind}
+    <EmptyState message="This notebook has no page kind {data.kind}." boxed>
+      <a class="btn sm" href="/app/wiki/kinds">See page kinds</a>
+    </EmptyState>
+  {:else if currentKind && data.dataset}
+    {#if data.dataset.ok}
+      <DatasetTable
+        kind={currentKind}
+        pages={data.dataset.value.pages}
+        count={data.dataset.value.count}
+        totals={data.dataset.value.totals}
+        groups={data.dataset.value.groups}
+      />
+    {:else}
+      <p class="form-error">{data.dataset.error}</p>
+      <a class="btn sm" href="/app/wiki?kind={currentKind.key}">Reset the view</a>
+    {/if}
+  {:else if data.pages.length > 0}
     {#if rows.length > 0}
       <div class="table-wrap">
         <table>
@@ -93,7 +116,7 @@
                     <a href={page.path}>{page.title}</a>{#if page.archivedAt} <span class="badge muted">Archived</span>{/if}
                   </span>
                 </td>
-                <td><span class="badge">{PAGE_KIND_LABELS[page.kind]}</span></td>
+                <td><a class="badge" href="/app/wiki?kind={page.kind}">{kindName(kinds, page.kind)}</a></td>
                 <td class="text-2">{details(page)}</td>
                 <td class="text-2">{formatDate(page.updatedAt)}</td>
               </tr>
@@ -112,7 +135,7 @@
 </div>
 
 <Popup id="new-page" title="Add page">
-  <PageForm onSuccess={handleCreated} onCancel={() => closePopup()} />
+  <PageForm initial={{ kind: currentKind?.key ?? 'GENERAL' }} {kinds} onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>
 
 <style lang="scss">

@@ -6,12 +6,13 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 | Entity | Fields | Relationships |
 |---|---|---|
-| **Person** | `name`, `email?`, `title?` | `leadId` → Person (their manager; reports are the inverse). `departmentId` → one Department. Many Teams through membership. |
+| **Person** | `name`, `email?`, `title?`, `birthday?` (`1990-05-03`, or `--05-03` without the year) | `leadId` → Person (their manager; reports are the inverse). `departmentId` → one Department. Many Teams through membership. |
 | **Team** | `name`, `description?` | Members are People (many-to-many): `team.addMember` / `team.removeMember` / `team.listMembers` |
 | **Department** | `name`, `description?` | Members are People (each person has at most one): `department.addMember` sets it, `department.removeMember` clears it |
 
 - `person.get` returns `leadName`, `reports`, `teamMemberships` and `department`.
 - Deleting a person clears their reports' `leadId` and their department link, and removes their team memberships.
+- In a `home` notebook the UI calls teams **groups** and hides departments, leads and the org map; the procedures are the same, and the home page lists birthdays in the next 30 days.
 
 ## Projects
 
@@ -39,17 +40,21 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 ## Wiki pages
 
-**Page**: `title`, `kind` (default `GENERAL`), `parentId?` (the page tree), `content` (markdown), and `properties` (a JSON object whose keys depend on the kind). Procedures: `page.list` (filters `kind`, `parentId`), `page.get`, `page.create` (returns `{ id, path }`), `page.update`, `page.delete`.
+**Page**: `title`, `kind` (default `GENERAL`), `parentId?` (the page tree), `content` (markdown), and `properties` (a JSON object whose keys are the kind's fields). Procedures: `page.list` (filters `kind`, `parentId`), `page.get`, `page.create` (returns `{ id, path }`), `page.update`, `page.delete`, and `page.query` (below).
 
-| Kind | Properties |
+**Page kind**: each notebook defines its own. `key` (`EXPENSE`: capitals, digits and `_`), `name`, `description?`, `fields`. `GENERAL` (no fields) always exists and can't be changed. A work notebook starts with these, a home notebook with none:
+
+| Kind | Fields |
 |---|---|
-| `GENERAL` | none |
 | `POLICY` | `status` (`DRAFT ACTIVE RETIRED`), `version`, `effectiveDate`, `reviewDate` |
 | `PRODUCT` | `status` (`IDEA BUILDING LIVE SUNSET`), `url` |
 | `SOFTWARE` | `vendor`, `url`, `annualCost`, `currency`, `renewalDate`, `seats` |
 | `DECISION` | `status` (`PROPOSED ACCEPTED SUPERSEDED REJECTED`), `decidedOn` |
 
-- Every property is optional. Dates are `YYYY-MM-DD`, `annualCost` and `seats` are numbers of 0 or more, and `url` is a full URL. Other keys are rejected, and the error lists the allowed ones.
+A field is `{ "key": "amount", "label": "Amount", "input": "number" }` (key camelCase, up to 30 fields), where `input` is `text`, `number`, `date`, `url`, `select` or `multiselect` (both need `options`), or `checkbox`. A number can add `"format": "money", "currency": "USD"`. Procedures: `pageKind.list` (with `pageCount`), `pageKind.get --key`, `pageKind.create`, `pageKind.update --key` (the whole new `fields` list; removing a field clears its values; dropping an option or changing a type that pages use is refused, naming them), `pageKind.delete --key [--moveTo <kind>]` (refused while pages use the kind unless `moveTo` is given).
+
+- Every property is optional. Dates are `YYYY-MM-DD`, numbers may be negative, a `url` is a full URL, a `multiselect` value is a list of its options, and a `checkbox` is `true` or `false`. Other keys are rejected, and the error lists the allowed ones. An unknown kind is an error listing the notebook's kinds.
+- `page.query --kind <key>`: the kind's pages as a dataset. `--filters` (a list, all must match) of `field:op[:value]`, ops `is not anyOf contains gte lte empty set` (`anyOf` values are split by `|`; `gte` and `lte` compare numbers and dates); `title` and `updatedAt` work too. `--sort field[:asc|desc]` (empty values last). `--groupBy` a select, multiselect, checkbox or text field (a multiselect page counts in each of its groups). `--aggregates` a list of `field:sum|avg|min|max` on number fields. Returns `{ kind, pages, count, totals, groups }`, totals keyed `field:fn`. The same view in the app is `/app/wiki?kind=<key>&f=<filter>&sort=…&group=…&agg=…`.
 - `page.update` merges `properties` into the current values: keys you pass are set, `null` removes a key, and the rest stay. Changing `kind` drops keys the new kind doesn't have.
 - Chart blocks in page content are validated like reports.
 - Deleting a page moves its sub-pages up to its parent. A parent that would make a loop is rejected.
@@ -62,9 +67,13 @@ A relation links two entities, with a `kind` and an optional `note` (up to 1000 
 |---|---|---|
 | `RELATED` (default, no direction) | Related to | Related to |
 | `DEPENDS_ON` | Depends on | Needed by |
+| `PARTNER_OF` (people only, no direction) | Partner of | Partner of |
+| `PARENT_OF` (people only) | Parent of | Child of |
+| `SIBLING_OF` (people only, no direction) | Sibling of | Sibling of |
+| `FRIEND_OF` (people only, no direction) | Friend of | Friend of |
 | `MENTIONS` (derived) | Mentions | Mentioned in |
 
-- Only one relation of each kind can exist between the same two entities (for `RELATED`, in either direction), and an entity can't relate to itself.
+- Only one relation of each kind can exist between the same two entities (for a kind with no direction, in either direction), and an entity can't relate to itself.
 - For a link that's neither ("uses", "replaces"), use `RELATED` with a `note`.
 - `relation.forEntity` returns both directions, grouped by the label from that entity's side, and each item has the other entity's name and `path`.
 - `project.dependencies` (`--archived`) lists every project-to-project `DEPENDS_ON` link (`fromId` depends on `toId`), every goal–project link, and those goals' status and progress in one call. It feeds the projects page's dependency map (`/app/projects?view=map`).
@@ -80,7 +89,7 @@ Deleting a person, team, department, project, goal, page or report also deletes 
 |---|---|---|
 | **Note** | `content` (markdown), `parentId?` for a reply | `note.list`, `note.add`, `note.update`, `note.remove` |
 | **Doc** | `title`, `content` (markdown), `sortOrder`, `sourceUrl?` (attached PDF) | `doc.list`, `doc.get`, `doc.add`, `doc.update`, `doc.reorder`, `doc.attachSource`, `doc.getReadUrl`, `doc.remove` |
-| **Todo** | `title`, `description?`, `status`, `priority` 0–3 (3 is highest), `targetDate?`, `completedAt` (set automatically) | `todo.list` (filter `--status`, `--entityType`), `todo.forEntity`, `todo.create`, `todo.update`, `todo.delete` |
+| **Todo** | `title`, `description?`, `status`, `priority` 0–3 (3 is highest), `targetDate?`, `recurrence?` (`WEEKLY MONTHLY QUARTERLY YEARLY`: completing it creates the next one, due one interval after `targetDate`, and returns its id as `nextId`), `completedAt` (set automatically) | `todo.list` (filter `--status`, `--entityType`), `todo.forEntity`, `todo.create`, `todo.update`, `todo.delete` |
 | **Link** | `url`, `title?`, `syncedAt?` (set by `--synced true` on add, or `link.markSynced`) | `link.list`, `link.find` (`--url`, or `--contains` text; returns the entity each match is attached to, with `label` and `path`), `link.add`, `link.markSynced` (`--id`), `link.remove` |
 | **Tag** | `name` (unique), `color` | `tag.list`, `tag.create`, `tag.delete`; `tag.forEntity`, `tag.attach`, `tag.detach` |
 | **Comment** | `content` | `comment.list`, `comment.add`, `comment.remove` |

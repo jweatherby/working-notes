@@ -78,7 +78,7 @@ const applyStep = async (s: ServerSettings, store: NotebookStore, step: LayoutSt
   const id = LEGACY_NOTEBOOK.id;
   switch (step.kind) {
     case 'create-notebook':
-      await store.create({ id: step.id, name: step.name, createdAt: now().toISOString() });
+      await store.create({ id: step.id, name: step.name, profile: 'work', createdAt: now().toISOString() });
       return;
     case 'move-database': {
       const from = legacyDatabasePath(s);

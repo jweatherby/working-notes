@@ -42,6 +42,7 @@ model Person {
   title        String?
   leadId       String?  @map("lead_id")
   departmentId String?  @map("department_id")
+  birthday     String?
   archivedAt   DateTime? @map("archived_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -237,7 +238,7 @@ model GoalProject {
   @@map("goal_project")
 }
 
-// ----- Wiki pages (properties is JSON, validated per kind in src/shared/types/pages.ts) -----
+// ----- Wiki pages (properties is JSON, validated against the page_kind row's fields) -----
 
 model Page {
   id         String   @id @default(cuid())
@@ -258,6 +259,20 @@ model Page {
   @@index([parentId])
   @@index([archivedAt])
   @@map("page")
+}
+
+// ----- Page kinds: user-defined per notebook; fields is JSON, validated in src/shared/types/pages.ts -----
+
+model PageKind {
+  key         String   @id
+  name        String
+  description String?
+  fields      String   @default("[]")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("page_kind")
 }
 
 // ----- Relations: typed links between any two entities (polymorphic at both ends, no FK) -----
@@ -290,6 +305,7 @@ model Todo {
   entityType  String    @map("entity_type")
   entityId    String    @map("entity_id")
   targetDate  DateTime? @map("target_date")
+  recurrence  String?
   completedAt DateTime? @map("completed_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

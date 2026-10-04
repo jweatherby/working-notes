@@ -1,6 +1,6 @@
 import type { Registry } from '$shared/registry';
 import { ok, type Result } from '$shared/utils';
-import type { EntityType, TodoStatus } from '$shared/types/enums';
+import type { EntityType, TodoRecurrence, TodoStatus } from '$shared/types/enums';
 import type { RecentUpdate, UpdateKind } from '$shared/types/home';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
@@ -89,6 +89,7 @@ export const listOpenTodos = async (
       entityLabel: labels[i] ?? null,
       entityPath: entityPath(t.entityType as EntityType, t.entityId),
       targetDate: t.targetDate,
+      recurrence: t.recurrence as TodoRecurrence | null,
       completedAt: t.completedAt,
       createdAt: t.createdAt
     }))

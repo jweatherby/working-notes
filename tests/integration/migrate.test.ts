@@ -54,4 +54,28 @@ describe('applyMigrations', () => {
     if (!result.ok) expect(result.error.message).toContain('modified after it was applied');
     client.close();
   });
+
+  it('gives a notebook with data the four starter page kinds, and a new one none', async () => {
+    const kinds = async (client: ReturnType<typeof createClient>) =>
+      (await client.execute('SELECT key FROM page_kind ORDER BY sort_order')).rows.map((r) => r[0]);
+
+    const fresh = freshDb();
+    await applyMigrations(fresh.client, 'prisma/migrations', quiet);
+    expect(await kinds(fresh.client)).toEqual([]);
+    fresh.client.close();
+
+    const { dir, client } = freshDb();
+    const migrations = join(dir, 'migrations');
+    const kindsMigration = onDisk.find((name) => name.endsWith('_add_page_kinds'))!;
+    cpSync('prisma/migrations', migrations, {
+      recursive: true,
+      filter: (src) => !onDisk.slice(onDisk.indexOf(kindsMigration)).some((name) => src.includes(name))
+    });
+    await applyMigrations(client, migrations, quiet);
+    await client.execute("INSERT INTO page (id, title, kind, updated_at) VALUES ('p1', 'Datadog', 'SOFTWARE', CURRENT_TIMESTAMP)");
+    cpSync('prisma/migrations', migrations, { recursive: true });
+    await applyMigrations(client, migrations, quiet);
+    expect(await kinds(client)).toEqual(['POLICY', 'PRODUCT', 'SOFTWARE', 'DECISION']);
+    client.close();
+  });
 });

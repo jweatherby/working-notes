@@ -7,6 +7,7 @@
   import { trpc } from '$shared/trpc/client';
   import type { RelationGroup } from '$shared/types/relations';
   import { entityTypeLabel } from '$shared/utils/entity';
+  import { profile } from '$lib/stores/profile';
   import { relationEnd } from '$shared/utils/relations';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -62,7 +63,7 @@
         {#each group.items as item (item.id)}
           <li class="list-row">
             <a class="grow truncate" href={item.other.path}>{item.other.label}</a>
-            <span class="meta truncate" title={item.note ?? undefined}>{item.note ?? entityTypeLabel(item.other.entityType)}</span>
+            <span class="meta truncate" title={item.note ?? undefined}>{item.note ?? entityTypeLabel(item.other.entityType, $profile)}</span>
             {#if item.kind !== 'MENTIONS' && !item.goalProject}
               <span class="row-actions">
                 <ConfirmButton label="Remove link to {item.other.label}" variant="icon" onConfirm={() => handleRemove(item.id)} />

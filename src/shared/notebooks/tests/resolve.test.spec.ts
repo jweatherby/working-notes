@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { resolveNotebook, type NotebookChoices } from '../resolve';
 
 const notebooks = [
-  { id: 'work-work', name: 'Work', createdAt: '' },
-  { id: 'garden', name: 'Garden', createdAt: '' },
-  { id: 'side', name: 'Side project', createdAt: '' }
+  { id: 'work-work', name: 'Work', profile: 'work' as const, createdAt: '' },
+  { id: 'garden', name: 'Garden', profile: 'home' as const, createdAt: '' },
+  { id: 'side', name: 'Side project', profile: 'work' as const, createdAt: '' }
 ];
 
 const pick = (choices: Partial<NotebookChoices>): string => {

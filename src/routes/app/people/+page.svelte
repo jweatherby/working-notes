@@ -6,6 +6,8 @@
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import PersonForm from '$lib/person/components/PersonForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
+  import { profileFlags } from '$lib/stores/profile';
+  import { formatBirthday } from '$shared/utils/birthday';
 
   const { data } = $props<{ data: PageData }>();
   const persons = $derived(data.persons.ok ? data.persons.value : []);
@@ -16,7 +18,7 @@
 <svelte:head><title>People</title></svelte:head>
 
 <div class="page">
-  <PageHeader title="People" description="Everyone in the org, their titles, and reporting lines.">
+  <PageHeader title="People" description={$profileFlags.orgLead ? 'Everyone in the org, their titles, and reporting lines.' : 'Family, friends and everyone else worth remembering.'}>
     <button type="button" class="btn primary" onclick={() => openPopup('new-person')}>Add person</button>
   </PageHeader>
 
@@ -32,7 +34,7 @@
             <th>Name</th>
             <th>Title</th>
             <th>Email</th>
-            <th>Lead</th>
+            {#if $profileFlags.orgLead}<th>Lead</th>{:else}<th>Birthday</th>{/if}
           </tr>
         </thead>
         <tbody>
@@ -41,7 +43,11 @@
               <td><a href="/app/people/{person.id}">{person.name}</a>{#if person.archivedAt} <span class="badge muted">Archived</span>{/if}</td>
               <td class="text-2">{person.title ?? ''}</td>
               <td class="text-2">{person.email ?? ''}</td>
-              <td class="text-2">{person.leadName ?? ''}</td>
+              {#if $profileFlags.orgLead}
+                <td class="text-2">{person.leadName ?? ''}</td>
+              {:else}
+                <td class="text-2">{person.birthday ? formatBirthday(person.birthday) : ''}</td>
+              {/if}
             </tr>
           {/each}
         </tbody>

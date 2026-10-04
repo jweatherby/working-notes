@@ -17,7 +17,7 @@ Current domains, grouped into folders:
 
 - `org/`: `person`, `team`, `department`
 - `aux/` (attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
-- flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `relation`, `branding`, `home`, `health`, `trpc-meta`
+- flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `page-kind` (each notebook's page kinds), `relation`, `branding`, `home`, `health`, `trpc-meta`
 - `notebook`: lists, creates and renames notebooks and sets the default. It works on the notebook store (`ctx.notebooks`), not on a database. See § Notebooks.
 
 Loose backend helpers that aren't domains use an underscore prefix:
@@ -101,7 +101,7 @@ Archiving is not a status. `Project.status` is free text and separate; don't der
 
 ## Relations and mentions
 
-A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` and an optional `note`, unique per pair and kind. The kinds are `RELATED`, which has no direction (so `findDuplicate` in `relation/operations.ts` also checks the reverse pair), `DEPENDS_ON`, and the derived `MENTIONS`. Keep the list short: a new kind needs a real reason, and anything else is `RELATED` with a note. `RELATION_LABELS` (`$shared/types/relations`) gives the forward and inverse label for each kind, and `relation.forEntity` groups by the label from the asking entity's side ("Depends on", "Needed by").
+A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` and an optional `note`, unique per pair and kind. The kinds are `RELATED`, which has no direction (so `findDuplicate` in `relation/operations.ts` also checks the reverse pair for every `SYMMETRIC_RELATION_KINDS`), `DEPENDS_ON`, the personal kinds `PARTNER_OF`, `PARENT_OF`, `SIBLING_OF` and `FRIEND_OF` (`PERSONAL_RELATION_KINDS`: both ends must be people; the UI offers them on a person's page in a home notebook), and the derived `MENTIONS`. Keep the list short: a new kind needs a real reason, and anything else is `RELATED` with a note. `RELATION_LABELS` (`$shared/types/relations`) gives the forward and inverse label for each kind, and `relation.forEntity` groups by the label from the asking entity's side ("Depends on", "Needed by").
 
 - `MENTIONS` relations are derived. `syncMentions` (`relation/mentions.ts`) runs whenever page, doc, note or report content is saved. It reads app links with `extractEntityLinks` (`$shared/utils/mentions`, which skips code blocks and uses `parseEntityPath`), keeps the ones whose entity exists, and replaces that source's `MENTIONS` rows. Nothing matches by title, so a rename needs no rescan.
 - `relation.add`, `update` and `remove` refuse `MENTIONS`; only the sync writes them.
@@ -109,7 +109,7 @@ A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` a
 
 ## Notebooks
 
-A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (name, createdAt), `working-notes.db` and `files/`. The default notebook is in `<data dir>/settings.json`. The code lives in `src/shared/notebooks/`:
+A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (name, profile, createdAt), `working-notes.db` and `files/`. The default notebook is in `<data dir>/settings.json`. The code lives in `src/shared/notebooks/`:
 
 - `id.ts`: `isNotebookId` (1–40 lowercase letters, digits and dashes) and `notebookIdFromName`. Client-safe.
 - `resolve.ts`: `resolveNotebook`, pure. Named on the call (id, or a name matching exactly one notebook), then `WNOTES_NOTEBOOK`, then the UI cookie, then the default. An unknown named notebook is an error listing the ones that exist.
@@ -119,6 +119,19 @@ A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (n
 - `handle.server.ts`: `notebookHandle`, which sets `event.locals.notebook` for each request.
 
 There is no `notebook.delete`, on purpose: Claude should never be one tool call away from removing a whole notebook.
+
+`profile` (`work` or `home`; missing reads as `work`) is set by `notebook.create --profile` and `notebook.setProfile`. Operations never read it: it only steers the UI (`profileFeatures`, `navLabels`). `notebook.create` adds the work starter page kinds to a new work notebook through the `addStarterKinds` dep.
+
+## Page kinds and datasets
+
+A page's `kind` is a key into the notebook's `page_kind` table (`key`, `name`, `description`, `fields` as JSON). `GENERAL` is built in (`GENERAL_KIND`, no fields) and never stored. Field definitions and their Zod schemas are in `$shared/types/pages` (`pageKindFieldSchema`, `parsePageProperties(kind, input)`); `page/operations.ts` loads the kind with `getPageKind` before every create, update or kind change. The `add_page_kinds` migration gave notebooks that already had data the four kinds that used to be constants (`STARTER_KINDS`).
+
+- `page-kind/operations.ts` keeps pages valid when a kind changes: `planFieldChange` (pure) refuses to drop an option or change an input while pages have values, naming them; removed fields are stripped from pages in the same transaction (`fitProperties`). `pageKind.delete` refuses while pages use the kind, unless `moveTo` names a kind to move them to.
+- `page.query` runs the pure `$shared/utils/dataset` (`filterRows`, `sortRows`, `groupRows`, `totalsFor`) over one kind's pages. Its filters, sort and aggregates are strings (`field:op:value`, `field:desc`, `field:sum`) so the CLI, MCP and the wiki's URL share one form; the parsers return errors that list the kind's fields.
+
+## Recurring todos
+
+`todo.recurrence` is `WEEKLY | MONTHLY | QUARTERLY | YEARLY` or null. Completing a recurring todo creates the next one (`nextOccurrence` in `$shared/utils/recurrence`, from its `targetDate`, else now) in the same transaction, and moves the recurrence to it, so reopening the old one doesn't make a second.
 
 ## Files
 

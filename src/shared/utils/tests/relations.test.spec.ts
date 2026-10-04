@@ -12,6 +12,13 @@ describe('relationChoices', () => {
       { id: 'DEPENDS_ON:in', name: 'Needed by' }
     ]);
   });
+
+  it('adds the personal kinds when asked: parent from both sides, the rest once', () => {
+    expect(relationChoices({ personal: true }).map((c) => c.id)).toEqual([
+      'RELATED:out', 'DEPENDS_ON:out', 'DEPENDS_ON:in',
+      'PARTNER_OF:out', 'PARENT_OF:out', 'PARENT_OF:in', 'SIBLING_OF:out', 'FRIEND_OF:out'
+    ]);
+  });
 });
 
 describe('toRelationInput', () => {
@@ -31,6 +38,7 @@ describe('toRelationInput', () => {
     expect(toRelationInput('MENTIONS:out', team, project)).toBeNull();
     expect(toRelationInput('USES:out', team, project)).toBeNull();
     expect(toRelationInput('RELATED:in', team, project)).toBeNull();
+    expect(toRelationInput('SIBLING_OF:in', team, project)).toBeNull();
     expect(toRelationInput('DEPENDS_ON', team, project)).toBeNull();
   });
 });

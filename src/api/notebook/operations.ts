@@ -5,11 +5,13 @@
 import { ok, err, type Result } from '$shared/utils/result';
 import { isNotebookId, notebookIdFromName, NOTEBOOK_ID_RULE } from '$shared/notebooks/id';
 import type { NotebookStore } from '$shared/notebooks/store.server';
-import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
+import type { NotebookInfo, NotebookProfile, NotebookSummary } from '$shared/types/notebook';
 
 export interface NotebookDeps {
   readonly notebooks: NotebookStore;
   readonly now: () => Date;
+  /** Adds the work starter page kinds to a new notebook's database. */
+  readonly addStarterKinds?: (notebookId: string) => Promise<void>;
 }
 
 const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -27,7 +29,7 @@ export const listNotebooks = async (
 
 export const createNotebook = async (
   deps: NotebookDeps,
-  input: { readonly name: string; readonly id?: string }
+  input: { readonly name: string; readonly id?: string; readonly profile?: NotebookProfile }
 ): Promise<Result<NotebookInfo>> => {
   const name = input.name.trim();
   if (!name) return err(new Error('Give the notebook a name'));
@@ -45,8 +47,9 @@ export const createNotebook = async (
   const named = existing.find((n) => sameName(n.name, name));
   if (named) return err(new Error(`There is already a notebook named "${named.name}" (id ${named.id}).`));
 
-  const notebook: NotebookInfo = { id, name, createdAt: deps.now().toISOString() };
+  const notebook: NotebookInfo = { id, name, profile: input.profile ?? 'work', createdAt: deps.now().toISOString() };
   await deps.notebooks.create(notebook);
+  if (notebook.profile === 'work') await deps.addStarterKinds?.(notebook.id);
   return ok(notebook);
 };
 
@@ -65,6 +68,18 @@ export const renameNotebook = async (
 
   await deps.notebooks.rename(id, trimmed);
   return ok({ ...notebook, name: trimmed });
+};
+
+export const setNotebookProfile = async (
+  deps: Pick<NotebookDeps, 'notebooks'>,
+  id: string,
+  profile: NotebookProfile
+): Promise<Result<NotebookInfo>> => {
+  const existing = await deps.notebooks.list();
+  const notebook = existing.find((n) => n.id === id);
+  if (!notebook) return err(notFound(id, existing));
+  await deps.notebooks.setProfile(id, profile);
+  return ok({ ...notebook, profile });
 };
 
 export const setDefaultNotebook = async (

@@ -2,7 +2,9 @@
 
 A local-only, single-user structured notebook: an org chart (people, teams, departments), projects, notes, docs, todos, tags, and branded reports with charts. A more opinionated Obsidian, backed by SQLite.
 
-The user keeps several **notebooks** (work, a side project), each with its own database and files. The app, the CLI and the MCP server work on one notebook at a time.
+The user keeps several **notebooks** (work, home life, a side project), each with its own database and files. The app, the CLI and the MCP server work on one notebook at a time.
+
+A notebook's **profile** (`work` or `home`, in its `notebook.json`) changes only what the UI shows: a home notebook hides departments, leads and the org map, and calls teams Groups and the wiki the Library (`src/shared/settings/base/profile.ts`). The API is the same for both. Wiki **page kinds** are data, defined per notebook (`page_kind`), and a kind's pages work as a dataset (`page.query`, `/app/wiki?kind=<key>`): that is how a notebook keeps expenses, recipes, places and the like without new tables.
 
 **Claude is the primary way data gets in**, through the CLI, which calls the app's tRPC API. The web UI is mainly for looking at the data (usually in the Claude desktop browser pane) and for printing reports to PDF.
 
@@ -62,7 +64,9 @@ wnotes todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> 
 wnotes report.create --entityType PERSON --entityId <personId> --title "Q3 review" --content-file q3.md
 wnotes goal.create --title "99.9% uptime" --ownerType TEAM --ownerId <teamId> --period 2026-H2 --target 99.9
 wnotes goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK
+wnotes pageKind.create --input '{"key":"EXPENSE","name":"Expense","fields":[{"key":"amount","label":"Amount","input":"number","format":"money","currency":"USD"}]}'
 wnotes page.create --title "Datadog" --kind SOFTWARE --properties '{"vendor":"Datadog","seats":40}'
+wnotes page.query --kind EXPENSE --filters '["amount:gte:100"]' --groupBy category --aggregates '["amount:sum"]'
 wnotes relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
 wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --toId <otherProjectId> --kind DEPENDS_ON
 ```
@@ -131,7 +135,7 @@ Releases include the app, so a Mac that installs the plugin needs no clone and n
 
 - **Where it lives:** `~/Library/Application Support/Working Notes/` (`$XDG_DATA_HOME/working-notes` on Linux):
   - `settings.json` — `defaultNotebook`, the notebook the CLI and MCP use when none is named
-  - `Notebooks/<id>/notebook.json` — the notebook's name
+  - `Notebooks/<id>/notebook.json` — the notebook's name and profile
   - `Notebooks/<id>/working-notes.db` — SQLite, WAL mode, so the app, CLI and backups can use it at the same time
   - `Notebooks/<id>/files/` — uploaded PDFs and branding images
   - `Backups/<id>/` — that notebook's snapshots, outside its folder so they outlive it

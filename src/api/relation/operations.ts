@@ -2,7 +2,7 @@ import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
 import { RELATION_KINDS, type EntityType, type RelatableType, type RelationKind } from '$shared/types/enums';
-import { RELATION_LABELS, type RelationGroup, type RelationItem } from '$shared/types/relations';
+import { RELATION_LABELS, isPersonalKind, isSymmetricKind, type RelationGroup, type RelationItem } from '$shared/types/relations';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
 
@@ -115,7 +115,7 @@ interface RelationEnds {
   readonly toId: string;
 }
 
-/** A relation of `kind` between the same two entities. RELATED has no direction, so it also matches the reverse. */
+/** A relation of `kind` between the same two entities. A kind with no direction also matches the reverse. */
 const findDuplicate = async (
   reg: Pick<Registry, 'prisma'>,
   ends: RelationEnds,
@@ -127,7 +127,7 @@ const findDuplicate = async (
       select: { id: true }
     });
   return (await find(ends.fromType, ends.fromId, ends.toType, ends.toId))
-    ?? (kind === 'RELATED' ? await find(ends.toType, ends.toId, ends.fromType, ends.fromId) : null);
+    ?? (isSymmetricKind(kind) ? await find(ends.toType, ends.toId, ends.fromType, ends.fromId) : null);
 };
 
 export interface AddRelationInput {
@@ -139,6 +139,14 @@ export interface AddRelationInput {
   readonly note?: string | null;
 }
 
+const checkPersonalEnds = (
+  kind: string,
+  ends: { readonly fromType: string; readonly toType: string }
+): Result<void> =>
+  isPersonalKind(kind) && (ends.fromType !== 'PERSON' || ends.toType !== 'PERSON')
+    ? err(new Error(`${kind} links two people; use RELATED with a note for anything else`))
+    : ok(undefined);
+
 export const addRelation = async (
   reg: Pick<Registry, 'prisma'>,
   input: AddRelationInput
@@ -149,6 +157,8 @@ export const addRelation = async (
   if (input.fromType === input.toType && input.fromId === input.toId) {
     return err(new Error('A relation needs two different entities'));
   }
+  const ends = checkPersonalEnds(input.kind, input);
+  if (!ends.ok) return err(ends.error);
 
   // Relations *to* an archived entity are allowed ("supersedes" an archived project); from one, not.
   const writable = await ensureWritable(reg, input.fromType, input.fromId);
@@ -187,6 +197,8 @@ export const updateRelation = async (
   }
 
   if (input.kind !== undefined && input.kind !== existing.kind) {
+    const ends = checkPersonalEnds(input.kind, existing);
+    if (!ends.ok) return err(ends.error);
     const clash = await findDuplicate(reg, existing, input.kind);
     if (clash) return err(new Error(`A ${input.kind} relation between these entities already exists (relation ${clash.id})`));
   }

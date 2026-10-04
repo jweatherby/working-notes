@@ -1,4 +1,6 @@
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { profileFeatures } from '$shared/settings/base/profile';
 import { getReadyRegistry } from '$shared/db/bootstrap.server';
 import { listDepartmentsWithMembers } from '$api/org/department/operations';
 import { listTeamsWithMembers } from '$api/org/team/operations';
@@ -8,6 +10,8 @@ import { listGoals } from '$api/goal/operations';
 import { listProjectDependencies } from '$api/project/dependencies';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
+  // A home notebook has no org map; its people are listed on their own.
+  if (!profileFeatures(locals.notebook.profile).orgMap) redirect(307, '/app/people');
   const reg = await getReadyRegistry(locals.notebook.id);
   const isWork = url.searchParams.get('view') === 'work';
 

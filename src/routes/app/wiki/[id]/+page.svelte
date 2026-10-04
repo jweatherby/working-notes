@@ -11,11 +11,11 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { submit, submitOrThrow } from '$lib/ui/submit';
-  import { PAGE_KIND_FIELDS } from '$shared/types/pages';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
-  import { PAGE_KIND_LABELS, formatPropertyValue } from '$lib/page/utils';
+  import { formatPropertyValue, kindName } from '$lib/page/utils';
+  import { labels } from '$lib/stores/profile';
   import { wikiPrintUrl } from '$lib/doc/print-options';
-  import type { PageDetail, PageSummary } from '$shared/types/pages';
+  import type { PageDetail, PageKindSummary, PageSummary } from '$shared/types/pages';
 
   const { data } = $props<{ data: PageData }>();
   const wikiPage = $derived(data.page as PageDetail);
@@ -26,7 +26,8 @@
   const relations = $derived(data.relations);
   const allPages = $derived(data.allPages as readonly PageSummary[]);
 
-  const fields = $derived(PAGE_KIND_FIELDS[wikiPage.kind]);
+  const kinds = $derived(data.kinds as readonly PageKindSummary[]);
+  const fields = $derived(kinds.find((k) => k.key === wikiPage.kind)?.fields ?? []);
 
   // Any page except this one and its sub-pages can be its parent.
   const parentOptions = $derived.by(() => {
@@ -122,7 +123,7 @@
     </div>
   </dl>
   {#if fields.length > 0 && Object.keys(wikiPage.properties).length === 0}
-    <button type="button" class="btn link text-sm" onclick={openEdit}>+ Fill in the {PAGE_KIND_LABELS[wikiPage.kind].toLowerCase()} details</button>
+    <button type="button" class="btn link text-sm" onclick={openEdit}>+ Fill in the {kindName(kinds, wikiPage.kind).toLowerCase()} details</button>
   {/if}
 {/snippet}
 
@@ -131,7 +132,7 @@
   entityId={wikiPage.id}
   archivedAt={wikiPage.archivedAt}
   entityName={wikiPage.title}
-  breadcrumbLabel="Wiki"
+  breadcrumbLabel={$labels.wiki}
   breadcrumbHref="/app/wiki"
   {breadcrumbTrail}
   editPopupTitle="Edit page"
@@ -182,7 +183,7 @@
             {#each wikiPage.children as child (child.id)}
               <li class="list-row">
                 <a class="grow truncate" href={child.path}>{child.title}</a>
-                <span class="badge">{PAGE_KIND_LABELS[child.kind]}</span>
+                <span class="badge">{kindName(kinds, child.kind)}</span>
                 <span class="row-actions">
                   <ConfirmButton label="Unlink sub-page" variant="icon" onConfirm={() => handleUnlinkChild(child.id)} />
                 </span>
@@ -203,11 +204,11 @@
 
   {#snippet renderAssetHeader()}
     <span class="asset-h-name">{wikiPage.title}</span>
-    <span class="badge">{PAGE_KIND_LABELS[wikiPage.kind]}</span>
+    <a class="badge" href="/app/wiki?kind={wikiPage.kind}">{kindName(kinds, wikiPage.kind)}</a>
   {/snippet}
 
   {#snippet renderEditForm({ onSuccess, onCancel })}
-    <PageForm initial={wikiPage} {onSuccess} {onCancel} onDelete={handleDelete} />
+    <PageForm initial={wikiPage} {kinds} {onSuccess} {onCancel} onDelete={handleDelete} />
   {/snippet}
 </EntityDetailPage>
 

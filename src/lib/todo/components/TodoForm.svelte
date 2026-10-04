@@ -10,6 +10,9 @@
   import TodoLinks from './TodoLinks.svelte';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { entityTypeLabel } from '$shared/utils/entity';
+  import { profile } from '$lib/stores/profile';
+  import { TODO_RECURRENCES, type TodoRecurrence } from '$shared/types/enums';
+  import { RECURRENCE_LABELS } from '$shared/utils/recurrence';
 
   interface Props {
     /** Omit both entity props to let the form ask which entity the todo belongs to. */
@@ -32,6 +35,7 @@
   let description = $state('');
   let priority = $state(0);
   let targetDate = $state('');
+  let recurrence = $state<TodoRecurrence | ''>('');
   let status = $state<TodoStatus>('PENDING');
   let pickedEntityType = $state<EntityType>(entityType ?? 'PROJECT');
   let pickedEntityId = $state(entityId ?? '');
@@ -62,6 +66,7 @@
         entityLabel: string | null;
         entityPath: string;
         targetDate: Date | null;
+        recurrence: TodoRecurrence | null;
       }[]).find((t) => t.id === id);
       if (!todo) {
         error = 'Todo not found.';
@@ -74,8 +79,9 @@
       status = todo.status;
       pickedEntityType = todo.entityType;
       pickedEntityId = todo.entityId;
-      owner = { label: todo.entityLabel ?? `Missing ${entityTypeLabel(todo.entityType).toLowerCase()}`, path: todo.entityPath };
+      owner = { label: todo.entityLabel ?? `Missing ${entityTypeLabel(todo.entityType, $profile).toLowerCase()}`, path: todo.entityPath };
       targetDate = todo.targetDate ? new Date(todo.targetDate).toISOString().slice(0, 10) : '';
+      recurrence = todo.recurrence ?? '';
       error = '';
       loaded = true;
     } catch {
@@ -106,6 +112,7 @@
           priority,
           status,
           targetDate: targetDate ? new Date(targetDate) : null,
+          recurrence: recurrence || null,
         }))
       : await submit(() => trpc().todo.create.mutate({
           title: title.trim(),
@@ -114,6 +121,7 @@
           entityType: targetType,
           entityId: targetId,
           targetDate: targetDate ? new Date(targetDate) : undefined,
+          recurrence: recurrence || undefined,
         }));
     if (!outcome.ok) {
       submitting = false;
@@ -162,7 +170,7 @@
     {#if owner}
       <dl class="meta-list">
         <div>
-          <dt>{entityTypeLabel(pickedEntityType)}</dt>
+          <dt>{entityTypeLabel(pickedEntityType, $profile)}</dt>
           <dd><a href={owner.path}>{owner.label}</a></dd>
         </div>
       </dl>
@@ -201,6 +209,14 @@
       <Field label="Target date">
         {#snippet children({ id })}
           <input {id} type="date" bind:value={targetDate} />
+        {/snippet}
+      </Field>
+      <Field label="Repeats" hint={recurrence ? 'Completing it adds the next one.' : undefined}>
+        {#snippet children({ id })}
+          <select {id} bind:value={recurrence}>
+            <option value="">Doesn't repeat</option>
+            {#each TODO_RECURRENCES as r (r)}<option value={r}>{RECURRENCE_LABELS[r]}</option>{/each}
+          </select>
         {/snippet}
       </Field>
       {#if isEdit}

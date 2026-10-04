@@ -5,6 +5,7 @@
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
   import { features } from '$shared/settings/base/features';
+  import { navLabels, profileFeatures } from '$shared/settings/base/profile';
 
   interface Props {
     readonly children: any;
@@ -25,15 +26,20 @@
     readonly exact?: boolean;
   }
 
-  const LINKS: readonly NavLink[] = [
+  // A home notebook has no org map: People and Groups take its place.
+  const profile = $derived(notebook?.profile ?? 'work');
+  const names = $derived(navLabels(profile));
+  const LINKS: readonly NavLink[] = $derived([
     { href: '/app', label: 'Home', exact: true },
-    { href: '/app/orgmap', label: 'Org Map' },
+    ...(profileFeatures(profile).orgMap
+      ? [{ href: '/app/orgmap', label: names.people }]
+      : [{ href: '/app/people', label: names.people }, { href: '/app/teams', label: names.teams }]),
     { href: '/app/projects', label: 'Projects' },
     { href: '/app/goals', label: 'Goals' },
-    { href: '/app/wiki', label: 'Wiki' },
+    { href: '/app/wiki', label: names.wiki },
     ...(features.reports ? [{ href: '/app/reports', label: 'Reports' }] : []),
     { href: '/app/todos', label: 'Todos' },
-  ];
+  ]);
 
   const isActive = (link: NavLink, pathname: string): boolean =>
     link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);

@@ -9,6 +9,7 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submitOrThrow } from '$lib/ui/submit';
   import OwnedWork from '$lib/goal/components/OwnedWork.svelte';
+  import { labels } from '$lib/stores/profile';
 
   const { data } = $props<{ data: PageData }>();
   const team = $derived(data.team);
@@ -42,9 +43,9 @@
   archivedAt={team.archivedAt}
   entityName={team.name}
   description={team.description}
-  breadcrumbLabel="Teams"
+  breadcrumbLabel={$labels.teams}
   breadcrumbHref="/app/teams"
-  editPopupTitle="Edit team"
+  editPopupTitle="Edit {$labels.team.toLowerCase()}"
   {docs}
   {notes}
   {todos}

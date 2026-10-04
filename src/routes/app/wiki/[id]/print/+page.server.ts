@@ -10,11 +10,13 @@ export const load: PageServerLoad = async ({ params, url, fetch }) => {
     client.branding.list.query()
   ]);
   if (!page.ok) error(404, 'Page not found');
+  const kind = await client.pageKind.get.query({ key: page.value.kind });
   const brandingList = brandings.ok ? brandings.value : [];
   const options = resolvePrintOptions(url.searchParams, brandingList);
   const branding = options.brandingId ? await client.branding.get.query({ id: options.brandingId }) : null;
   return {
     page: page.value,
+    fields: kind.ok ? kind.value.fields : [],
     brandings: brandingList,
     options,
     branding: branding?.ok ? branding.value : null

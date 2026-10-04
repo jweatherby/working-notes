@@ -3,6 +3,7 @@
   import Field from '$lib/ui/Field.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
+  import { profileFlags } from '$lib/stores/profile';
 
   interface PersonData {
     readonly id?: string;
@@ -10,6 +11,7 @@
     readonly email?: string | null;
     readonly title?: string | null;
     readonly leadId?: string | null;
+    readonly birthday?: string | null;
   }
 
   interface LeadOption {
@@ -25,7 +27,10 @@
     readonly onDelete?: () => Promise<void> | void;
   }
 
-  const { initial = {}, leadOptions, onSuccess, onCancel, onDelete }: Props = $props();
+  const { initial = {}, leadOptions: allLeadOptions, onSuccess, onCancel, onDelete }: Props = $props();
+
+  // A home notebook has no reporting lines.
+  const leadOptions = $derived($profileFlags.orgLead ? allLeadOptions : undefined);
 
   const isEdit = $derived(!!initial.id);
 
@@ -33,6 +38,7 @@
   let email = $state(initial.email ?? '');
   let title = $state(initial.title ?? '');
   let leadId = $state(initial.leadId ?? '');
+  let birthday = $state(initial.birthday ?? '');
   let submitting = $state(false);
   let error = $state('');
 
@@ -41,6 +47,7 @@
     email = initial.email ?? '';
     title = initial.title ?? '';
     leadId = initial.leadId ?? '';
+    birthday = initial.birthday ?? '';
   });
 
   const handleSubmit = async () => {
@@ -53,12 +60,14 @@
           name: name.trim(),
           email: email.trim() || null,
           title: title.trim() || null,
+          birthday: birthday.trim() || null,
           ...lead,
         }))
       : await submit(() => trpc().person.create.mutate({
           name: name.trim(),
           email: email.trim() || undefined,
           title: title.trim() || undefined,
+          birthday: birthday.trim() || undefined,
           ...(leadOptions && leadId ? { leadId } : {}),
         }));
     submitting = false;
@@ -71,6 +80,7 @@
       email = '';
       title = '';
       leadId = '';
+      birthday = '';
     }
     onSuccess(outcome.value);
   };
@@ -94,6 +104,11 @@
       {/snippet}
     </Field>
   </div>
+  <Field label="Birthday">
+    {#snippet children({ id })}
+      <input {id} type="text" bind:value={birthday} pattern={'(\\d{4}-|--)\\d{2}-\\d{2}'} placeholder="1990-05-03, or --05-03 without the year" />
+    {/snippet}
+  </Field>
   {#if leadOptions}
     <Field label="Lead">
       {#snippet children({ id })}

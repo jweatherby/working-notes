@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { NotebookStore } from '$shared/notebooks/store.server';
 import type { NotebookInfo } from '$shared/types/notebook';
-import { createNotebook, listNotebooks, renameNotebook, setDefaultNotebook } from '../operations';
+import { createNotebook, listNotebooks, renameNotebook, setDefaultNotebook, setNotebookProfile } from '../operations';
 
 const memoryStore = (initial: readonly NotebookInfo[], defaultId: string | null): NotebookStore => {
   const notebooks = [...initial];
@@ -15,6 +15,10 @@ const memoryStore = (initial: readonly NotebookInfo[], defaultId: string | null)
       const i = notebooks.findIndex((n) => n.id === id);
       notebooks[i] = { ...notebooks[i]!, name };
     },
+    setProfile: async (id, profile) => {
+      const i = notebooks.findIndex((n) => n.id === id);
+      notebooks[i] = { ...notebooks[i]!, profile };
+    },
     getDefault: async () => currentDefault,
     setDefault: async (id) => {
       currentDefault = id;
@@ -22,8 +26,8 @@ const memoryStore = (initial: readonly NotebookInfo[], defaultId: string | null)
   };
 };
 
-const WORK: NotebookInfo = { id: 'work-work', name: 'Work', createdAt: '2026-01-01T00:00:00.000Z' };
-const GARDEN: NotebookInfo = { id: 'garden', name: 'Garden', createdAt: '2026-02-01T00:00:00.000Z' };
+const WORK: NotebookInfo = { id: 'work-work', name: 'Work', profile: 'work', createdAt: '2026-01-01T00:00:00.000Z' };
+const GARDEN: NotebookInfo = { id: 'garden', name: 'Garden', profile: 'home', createdAt: '2026-02-01T00:00:00.000Z' };
 
 const deps = () => ({ notebooks: memoryStore([WORK, GARDEN], 'work-work'), now: () => new Date('2026-09-13T12:00:00Z') });
 
@@ -39,7 +43,7 @@ describe('notebook operations', () => {
   it('creates a notebook with an id made from its name, or the id given', async () => {
     const d = deps();
     const made = await createNotebook(d, { name: '  Side Project ' });
-    expect(made.ok && made.value).toEqual({ id: 'side-project', name: 'Side Project', createdAt: '2026-09-13T12:00:00.000Z' });
+    expect(made.ok && made.value).toEqual({ id: 'side-project', name: 'Side Project', profile: 'work', createdAt: '2026-09-13T12:00:00.000Z' });
     const given = await createNotebook(d, { name: 'Allotment', id: 'plot' });
     expect(given.ok && given.value.id).toBe('plot');
     expect((await d.notebooks.list()).map((n) => n.id)).toEqual(['work-work', 'garden', 'side-project', 'plot']);
@@ -72,5 +76,21 @@ describe('notebook operations', () => {
     expect(await d.notebooks.getDefault()).toBe('garden');
     expect((await setDefaultNotebook(d, 'nope')).ok).toBe(false);
     expect(await d.notebooks.getDefault()).toBe('garden');
+  });
+
+  it('adds the starter page kinds to a new work notebook, not to a home one', async () => {
+    const seeded: string[] = [];
+    const d = { ...deps(), addStarterKinds: async (id: string) => { seeded.push(id); } };
+    await createNotebook(d, { name: 'Office' });
+    const home = await createNotebook(d, { name: 'Home', profile: 'home' });
+    expect(home.ok && home.value.profile).toBe('home');
+    expect(seeded).toEqual(['office']);
+  });
+
+  it('changes a notebook\'s profile', async () => {
+    const d = deps();
+    expect(await setNotebookProfile(d, 'work-work', 'home')).toEqual({ ok: true, value: { ...WORK, profile: 'home' } });
+    expect((await d.notebooks.list()).find((n) => n.id === 'work-work')?.profile).toBe('home');
+    expect((await setNotebookProfile(d, 'nope', 'home')).ok).toBe(false);
   });
 });

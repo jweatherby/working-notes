@@ -12,6 +12,8 @@
   import { relationChoices, toRelationInput, type PickedLink, type RelationEnd } from '$shared/utils/relations';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import { errorMessage, submitOrThrow } from '$lib/ui/submit';
+  import { profileFlags } from '$lib/stores/profile';
+  import { isPersonalKind } from '$shared/types/relations';
 
   interface Props {
     /** The entity the link is on; null while it's still being created (pass `onPickLink`). */
@@ -25,7 +27,8 @@
 
   const { self, onPickLink, onChange, onDone }: Props = $props();
 
-  const choices = relationChoices();
+  // Partner, parent, sibling and friend: on a person's page in a home notebook, and only to other people.
+  const choices = $derived(relationChoices({ personal: $profileFlags.personalRelations && self?.entityType === 'PERSON' }));
 
   let choice = $state('RELATED:out');
   let options = $state<readonly EntityOption[]>([]);
@@ -64,7 +67,7 @@
   <select class="sm" bind:value={choice} aria-label="How it's linked">
     {#each choices as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
   </select>
-  <SearchPicker label="Link to" {options} scopes={ENTITY_SEARCH_SCOPES} {loading} onPick={handlePick} onCancel={onDone} />
+  <SearchPicker label="Link to" options={isPersonalKind(choice.split(':')[0] ?? '') ? options.filter((o) => o.id.startsWith('PERSON:')) : options} scopes={ENTITY_SEARCH_SCOPES} {loading} onPick={handlePick} onCancel={onDone} />
   {#if loadError}<span class="inline-error" role="alert">{loadError}</span>{/if}
 </div>
 

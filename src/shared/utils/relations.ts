@@ -2,7 +2,7 @@
 // from that side ("Depends on" or "Needed by"), so an inverse choice swaps the ends.
 
 import { MANUAL_RELATION_KINDS, RELATABLE_TYPES, type RelatableType } from '$shared/types/enums';
-import { RELATION_LABELS } from '$shared/types/relations';
+import { RELATION_LABELS, isPersonalKind, isSymmetricKind } from '$shared/types/relations';
 
 type ManualRelationKind = (typeof MANUAL_RELATION_KINDS)[number];
 
@@ -38,10 +38,14 @@ export const relationEnd = (entityType: string, entityId: string): RelationEnd |
     ? { entityType: entityType as RelatableType, entityId }
     : null;
 
-/** Kind options from this entity's side: RELATED once (it has no direction), other kinds forward (`KIND:out`) and inverse (`KIND:in`). */
-export const relationChoices = (): readonly RelationChoice[] =>
-  MANUAL_RELATION_KINDS.flatMap((kind) =>
-    kind === 'RELATED'
+/**
+ * Kind options from this entity's side: kinds with no direction once, other kinds
+ * forward (`KIND:out`) and inverse (`KIND:in`). The personal kinds are offered
+ * only with `personal` (a person's page in a home notebook); they link two people.
+ */
+export const relationChoices = (options: { readonly personal?: boolean } = {}): readonly RelationChoice[] =>
+  MANUAL_RELATION_KINDS.filter((kind) => options.personal || !isPersonalKind(kind)).flatMap((kind) =>
+    isSymmetricKind(kind)
       ? [{ id: `${kind}:out`, name: RELATION_LABELS[kind].forward }]
       : [
           { id: `${kind}:out`, name: RELATION_LABELS[kind].forward },
@@ -52,7 +56,7 @@ export const relationChoices = (): readonly RelationChoice[] =>
 /** The `relation.add` input for a choice between this entity and a target, or null for a choice it can't read. */
 export const toRelationInput = (choice: string, self: RelationEnd, target: RelationEnd): RelationAddInput | null => {
   const [kind, direction] = choice.split(':') as [ManualRelationKind, string | undefined];
-  const known = MANUAL_RELATION_KINDS.includes(kind) && (direction === 'out' || (direction === 'in' && kind !== 'RELATED'));
+  const known = MANUAL_RELATION_KINDS.includes(kind) && (direction === 'out' || (direction === 'in' && !isSymmetricKind(kind)));
   if (!known) return null;
   const [from, to] = direction === 'out' ? [self, target] : [target, self];
   return { fromType: from.entityType, fromId: from.entityId, toType: to.entityType, toId: to.entityId, kind };

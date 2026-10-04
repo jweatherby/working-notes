@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ARCHIVE_FILTERS, ENTITY_TYPES, TODO_STATUSES } from '$shared/types/enums';
+import { ARCHIVE_FILTERS, ENTITY_TYPES, TODO_RECURRENCES, TODO_STATUSES } from '$shared/types/enums';
 import { router, procedure } from '$shared/trpc/init';
 import { listTodos, listTodosForEntity, createTodo, updateTodo, deleteTodo } from './operations';
 
@@ -29,7 +29,9 @@ export const todoRouter = router({
       priority: z.number().int().min(0).max(3).optional(),
       entityType: entityTypeEnum,
       entityId: z.string(),
-      targetDate: z.coerce.date().optional()
+      targetDate: z.coerce.date().optional(),
+      // Completing the todo creates the next one, due one interval after targetDate.
+      recurrence: z.enum(TODO_RECURRENCES).nullable().optional()
     }))
     .mutation(({ ctx, input }) => createTodo(ctx.reg, input)),
 
@@ -40,7 +42,8 @@ export const todoRouter = router({
       description: z.string().max(5000).nullable().optional(),
       status: todoStatusEnum.optional(),
       priority: z.number().int().min(0).max(3).optional(),
-      targetDate: z.coerce.date().nullable().optional()
+      targetDate: z.coerce.date().nullable().optional(),
+      recurrence: z.enum(TODO_RECURRENCES).nullable().optional()
     }))
     .mutation(({ ctx, input }) => updateTodo(ctx.reg, input.id, input)),
 

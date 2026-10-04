@@ -18,7 +18,7 @@ beforeAll(async () => {
   }
   rmSync(settings.dataDir, { recursive: true, force: true });
   await ensureDatabase(TEST_NOTEBOOK);
-  await getNotebookStore().create({ id: OTHER_NOTEBOOK, name: 'Other', createdAt: new Date().toISOString() });
+  await getNotebookStore().create({ id: OTHER_NOTEBOOK, name: 'Other', profile: 'work', createdAt: new Date().toISOString() });
 
   await getRegistry(TEST_NOTEBOOK).prisma.person.createMany({
     data: [

@@ -2,6 +2,7 @@
   import HomeTodos from '$lib/home/components/HomeTodos.svelte';
   import RecentUpdates from '$lib/home/components/RecentUpdates.svelte';
   import FocusGraph from '$lib/home/components/FocusGraph.svelte';
+  import UpcomingBirthdays from '$lib/home/components/UpcomingBirthdays.svelte';
   import type { PageData } from './$types';
 
   const { data } = $props<{ data: PageData }>();
@@ -13,6 +14,7 @@
   <div class="home-grid">
     <HomeTodos todos={data.todos} />
     <RecentUpdates updates={data.updates} />
+    {#if data.birthdays}<UpcomingBirthdays birthdays={data.birthdays} />{/if}
   </div>
   {#if data.graph.focus}
     <FocusGraph graph={{ ...data.graph, focus: data.graph.focus }} />

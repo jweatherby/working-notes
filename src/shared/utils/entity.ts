@@ -1,4 +1,6 @@
 import type { EntityType, RelatableType } from '$shared/types/enums';
+import type { NotebookProfile } from '$shared/types/notebook';
+import { navLabels } from '$shared/settings/base/profile';
 
 export interface EntityRef {
   readonly entityType: EntityType;
@@ -48,7 +50,9 @@ export const entityPath = (entityType: EntityType, entityId: string): string => 
 export const docPath = (entityType: EntityType, entityId: string, docId: string): string =>
   `${entityPath(entityType, entityId)}?doc=${encodeURIComponent(docId)}`;
 
-export const entityTypeLabel = (entityType: EntityType): string => TYPE_LABELS[entityType];
+/** A home notebook calls a team a group (`navLabels`). */
+export const entityTypeLabel = (entityType: EntityType, profile: NotebookProfile = 'work'): string =>
+  entityType === 'TEAM' ? navLabels(profile).team : TYPE_LABELS[entityType];
 
 /** Whether docs can attach to this entity type. A wiki page is its own content, so it takes none. */
 export const acceptsDocs = (entityType: string): boolean => entityType !== 'PAGE';

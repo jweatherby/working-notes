@@ -7,6 +7,7 @@ import { brandingRouter } from '$api/branding/routes';
 import { projectRouter } from '$api/project/routes';
 import { goalRouter } from '$api/goal/routes';
 import { pageRouter } from '$api/page/routes';
+import { pageKindRouter } from '$api/page-kind/routes';
 import { relationRouter } from '$api/relation/routes';
 import { todoRouter } from '$api/aux/todo/routes';
 import { personRouter } from '$api/org/person/routes';
@@ -32,6 +33,7 @@ export const appRouter = router({
   project: projectRouter,
   goal: goalRouter,
   page: pageRouter,
+  pageKind: pageKindRouter,
   relation: relationRouter,
   todo: todoRouter,
   person: personRouter,

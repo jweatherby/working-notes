@@ -105,6 +105,8 @@
   &.warning { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
   &.danger { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
   &.muted { color: var(--text-3); background: transparent; }
+  // A removable value (an active filter), with its × button inside.
+  &.chip { gap: var(--sp-1); height: auto; padding-right: 0; }
 }
 
 .empty {

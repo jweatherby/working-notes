@@ -6,6 +6,7 @@
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import TeamForm from '$lib/team/components/TeamForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
+  import { labels, profile } from '$lib/stores/profile';
 
   const { data } = $props<{ data: PageData }>();
   const teams = $derived(data.teams.ok ? data.teams.value : []);
@@ -13,11 +14,11 @@
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
-<svelte:head><title>Teams</title></svelte:head>
+<svelte:head><title>{$labels.teams}</title></svelte:head>
 
 <div class="page">
-  <PageHeader title="Teams" description="Groups organized around shared work.">
-    <button type="button" class="btn primary" onclick={() => openPopup('new-team')}>Add team</button>
+  <PageHeader title={$labels.teams} description={$profile === 'home' ? 'Family, friends and other circles.' : 'Groups organized around shared work.'}>
+    <button type="button" class="btn primary" onclick={() => openPopup('new-team')}>Add {$labels.team.toLowerCase()}</button>
   </PageHeader>
 
   <div class="toolbar filters">
@@ -44,12 +45,12 @@
       </table>
     </div>
   {:else}
-    <EmptyState message="No teams yet." boxed>
-      <button type="button" class="btn sm" onclick={() => openPopup('new-team')}>Add team</button>
+    <EmptyState message="No {$labels.teams.toLowerCase()} yet." boxed>
+      <button type="button" class="btn sm" onclick={() => openPopup('new-team')}>Add {$labels.team.toLowerCase()}</button>
     </EmptyState>
   {/if}
 </div>
 
-<Popup id="new-team" title="Add team">
+<Popup id="new-team" title="Add {$labels.team.toLowerCase()}">
   <TeamForm onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>
