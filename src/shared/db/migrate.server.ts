@@ -50,6 +50,29 @@ export const readMigrations = async (dir: string): Promise<readonly MigrationFil
   return migrations.sort((a, b) => a.name.localeCompare(b.name));
 };
 
+/**
+ * Migrations renamed after some databases had applied them, old name → new name.
+ * add_page_kinds was renamed to sort after add_search_index when the two branches
+ * merged; databases that ran it under its first name keep it, under the new name.
+ */
+export const RENAMED_MIGRATIONS: Readonly<Record<string, string>> = {
+  '20261004120000_add_page_kinds': '20261004200000_add_page_kinds'
+};
+
+/** Applied rows recorded under a renamed migration's old name, whose new file has the same checksum. */
+export const planRenames = (
+  onDisk: readonly MigrationFile[],
+  applied: readonly AppliedMigration[],
+  renamed: Readonly<Record<string, string>> = RENAMED_MIGRATIONS
+): readonly { readonly from: string; readonly to: string }[] => {
+  const names = new Set(applied.map((a) => a.migrationName));
+  return applied.flatMap((a) => {
+    const to = renamed[a.migrationName];
+    const file = to ? onDisk.find((m) => m.name === to) : undefined;
+    return to && file && file.checksum === a.checksum && !names.has(to) ? [{ from: a.migrationName, to }] : [];
+  });
+};
+
 /** Pending migrations, or an error if the database and the migration files disagree. */
 export const planMigrations = (
   onDisk: readonly MigrationFile[],
@@ -90,7 +113,12 @@ export const applyMigrations = async (
   logger: Logger
 ): Promise<Result<{ readonly applied: readonly string[] }>> => {
   await client.execute(MIGRATIONS_TABLE);
-  const plan = planMigrations(await readMigrations(dir), await readApplied(client));
+  const onDisk = await readMigrations(dir);
+  for (const rename of planRenames(onDisk, await readApplied(client))) {
+    await client.execute({ sql: 'UPDATE _prisma_migrations SET migration_name = ? WHERE migration_name = ?', args: [rename.to, rename.from] });
+    logger.info({ migration: rename.to, was: rename.from }, 'recorded renamed migration');
+  }
+  const plan = planMigrations(onDisk, await readApplied(client));
   if (!plan.ok) return err(plan.error);
 
   const applied: string[] = [];

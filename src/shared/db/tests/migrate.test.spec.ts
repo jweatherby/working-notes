@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checksum, planMigrations, type AppliedMigration, type MigrationFile } from '../migrate.server';
+import { checksum, planMigrations, planRenames, type AppliedMigration, type MigrationFile } from '../migrate.server';
 
 const file = (name: string, sql = `-- ${name}`): MigrationFile => ({ name, sql, checksum: checksum(sql) });
 const applied = (m: MigrationFile, overrides: Partial<AppliedMigration> = {}): AppliedMigration => ({
@@ -51,5 +51,22 @@ describe('planMigrations', () => {
   it('ignores rolled-back rows', () => {
     const result = planMigrations([a], [applied(a, { finishedAt: null, rolledBackAt: '2026-01-02T00:00:00Z' })]);
     expect(result.ok && result.value.pending.map((m) => m.name)).toEqual([a.name]);
+  });
+});
+
+describe('planRenames', () => {
+  const renamed = { '20260101000000_kinds': '20260102000000_kinds' };
+  const moved = file('20260102000000_kinds', '-- same sql');
+
+  it('renames a row recorded under the old name when the new file has the same SQL', () => {
+    const row = applied({ ...moved, name: '20260101000000_kinds' });
+    expect(planRenames([moved], [row], renamed)).toEqual([{ from: '20260101000000_kinds', to: '20260102000000_kinds' }]);
+  });
+
+  it('leaves it alone when the SQL differs or the new name is already recorded', () => {
+    const changed = applied({ ...file('20260101000000_kinds', '-- other sql') });
+    expect(planRenames([moved], [changed], renamed)).toEqual([]);
+    const both = [applied({ ...moved, name: '20260101000000_kinds' }), applied(moved)];
+    expect(planRenames([moved], both, renamed)).toEqual([]);
   });
 });
