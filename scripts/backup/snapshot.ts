@@ -82,8 +82,9 @@ const fingerprintData = async (
   const hash = createHash('sha256');
   const counts: Record<string, number> = {};
 
+  // The full-text index (search_index and its FTS5 shadow tables) is derived from the other tables.
   const tables = await client.execute(
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> '_prisma_migrations' ORDER BY name"
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> '_prisma_migrations' AND name NOT GLOB 'search_index*' ORDER BY name"
   );
   for (const row of tables.rows) {
     const table = String(row[0]);

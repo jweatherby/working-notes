@@ -48,7 +48,7 @@ Every call works on one notebook: the default, unless you name another.
 
 ## Rules
 
-1. **Look before you write**, in the notebook you're writing to. Find ids with `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list`. Match names and titles case-insensitively. Never create a second person, team or project with a name that already exists, or a second goal or page with a title that already exists.
+1. **Look before you write**, in the notebook you're writing to. Find ids with `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list`, or `search.query` when you only know roughly what it's called. Match names and titles case-insensitively. Never create a second person, team or project with a name that already exists, or a second goal or page with a title that already exists.
 2. **Ask when it's ambiguous.** For example, two people match "Sam", or it's unclear which project a note belongs to.
 3. **Confirm before deleting anything**, and say exactly what will be removed. When someone leaves, or a team, project, goal or page is finished, offer to **archive** it instead: archiving keeps its history, and deleting removes everything attached to it.
 4. **Snapshot before bulk or destructive changes.** That means any delete, or more than about five writes in one go:
@@ -77,7 +77,9 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "That's done" | `todo.update --id <todo> --status COMPLETE` |
 | "Start a project for the Q4 migration" | `project.create --name "Q4 migration" --status active` (optional `--parentId`, `--startDate`, `--daysLikely`) |
 | "Tag Dana as high-potential" | `tag.list`, then `tag.create --name high-potential` if it's missing, then `tag.attach --tagId <tag> --entityType PERSON --entityId <dana>` |
-| "What do I know about Dana?" | `person.get`, then `note.list`, `todo.forEntity`, `doc.list` and `relation.forEntity` for `PERSON <dana>`, and `goal.list --ownerType PERSON --ownerId <dana>` |
+| "What do I know about Dana?" / "Catch me up on the Q4 migration" | `search.recall --entityType PERSON --entityId <dana>`: the entity, its notes, open todos, docs (with excerpts), links, tags, relations, owned goals and projects, and `unlinkedMentions` (notes and docs elsewhere that name Dana without linking her). Lists are capped at 10 (`--limit` up to 50) and flagged `truncated`; `doc.get` reads a whole doc |
+| "Where did I write about the vendor renewal?" / "Did anyone mention SSO?" | `search.query --q "vendor renewal"`. Each result has a `snippet` with the match in bold, and `on`: the entity a note, doc or todo is attached to |
+| "Anything about hiring on the Platform team?" | `search.query --q hiring --within '{"entityType":"TEAM","entityId":"<platform>"}'` (the team and what's attached to it) |
 | "Platform owns the Q4 migration" | `project.update --id <project> --ownerType TEAM --ownerId <platform>` (set both together; `--ownerType null --ownerId null` clears the owner) |
 | "Engineering's H2 goal is 99.9% uptime, and Platform has a sub-goal for it" | `goal.list`, then `goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> --period 2026-H2 --unit % --baseline 99.5 --target 99.9`, then `goal.create --title "..." --ownerType TEAM --ownerId <platform> --parentId <eng goal>` |
 | "Uptime is at 99.7%, and it's at risk" | `goal.checkIn --goalId <goal> --value 99.7 --status AT_RISK --comment "..."` (optional `--date`; the status also becomes the goal's status) |
@@ -89,6 +91,16 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 | "Checkout can't ship until the payments API is done" | `relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <payments api> --kind DEPENDS_ON` |
 
 Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE`, except that docs don't attach to a `PAGE` (put the material in the page's content, or a sub-page). They also accept `DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Archived entities are left out of every `list` unless you pass `--archived only` or `--archived include`, and writes to them (or to anything attached to them) fail with an error saying to unarchive first. `get` still works. The full data model is in [references/schema.md](references/schema.md).
+
+## Searching
+
+`search.query --q "<words>"` searches the text of everything in the notebook: names and titles, notes, docs, wiki pages (content and property values), todos, comments, links and goal check-in comments. Matches in names and titles rank first.
+
+- **Words:** every word must match, and each also matches as a prefix (`migr` finds "migration"). Word endings are ignored (`leaving` finds "leave"), and so are case and accents.
+- **`"exact phrase"`**, **`a OR b`** (either), **`-word`** (leave out matches containing it).
+- **Narrow it:** `--types '["NOTE","DOC"]'` (also `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE TODO COMMENT LINK GOAL_CHECKIN`), `--within` one entity, `--limit` up to 50 (default 20).
+- Archived entities and what's attached to them are left out unless `--includeArchived true`, or you search `--within` them.
+- Search before saying the notebook has nothing on a topic, and before creating something that might exist under another name.
 
 ## Linking things
 

@@ -23,11 +23,13 @@ import { trpcMetaRouter } from '$api/trpc-meta/routes';
 import { homeRouter } from '$api/home/routes';
 import { notebookRouter } from '$api/notebook/routes';
 import { chatRouter } from '$api/assist/routes';
+import { searchRouter } from '$api/search/routes';
 
 export const appRouter = router({
   notebook: notebookRouter,
   health: healthRouter,
   home: homeRouter,
+  search: searchRouter,
   branding: brandingRouter,
   project: projectRouter,
   goal: goalRouter,
