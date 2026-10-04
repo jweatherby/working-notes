@@ -5,7 +5,7 @@ export interface ChartBranding {
   readonly accentFontColor?: string;
 }
 
-const DEFAULT_COLOR = '#4f46e5';
+const DEFAULT_COLOR = '#52525b';
 
 const hexToRgb = (hex: string): string => {
   const h = hex.replace('#', '');
