@@ -2,14 +2,11 @@
 # artifact. It isn't part of the release yet. The app is ad-hoc signed, not notarized,
 # so macOS asks before opening a downloaded copy. Windows (.msi) and Linux (.deb) builds
 # come back once the macOS app is settled: add their rows to the matrix and bundles.
-# Runs by hand from the Actions tab, and on pushes to the desktop branch while it's in
-# review (remove that trigger when it merges).
+# Runs by hand from the Actions tab.
 name: Desktop
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ccr-d83e80cc-ac2pbc]
 
 permissions:
   contents: read
