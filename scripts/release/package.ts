@@ -4,13 +4,15 @@
 //      the `dist` branch publishes runs on every platform built
 //   2. zips the plugin once per platform, with only that platform's binary, for
 //      Claude desktop Chat uploads: dist/working-notes-<version>-<target>.zip
+//   3. leaves off dist/plugin any binary too big for git (GitHub refuses files over
+//      100 MB), so the `dist` branch push succeeds; its zip still has it
 //   bun scripts/release/package.ts [<built plugin dir> ...]     (default: dist/plugin)
 
 import { spawnSync } from 'node:child_process';
 import { cp, mkdtemp, readdir, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { binaryTarget, mergePlan } from './package-plan';
+import { binaryTarget, branchBinaries, mergePlan } from './package-plan';
 
 const REPO = resolve(import.meta.dir, '..', '..');
 const DIST = join(REPO, 'dist');
@@ -58,4 +60,11 @@ for (const name of binaries) {
   console.log(`${zip} (${mb(size)})`);
   if (size > CHAT_UPLOAD_LIMIT) console.warn(`  over Claude desktop's ${mb(CHAT_UPLOAD_LIMIT)} upload limit`);
 }
-console.log(`\n${PLUGIN} carries ${binaries.join(', ')}`);
+// 3. The dist branch is git: drop binaries GitHub would refuse.
+const sized = await Promise.all(binaries.map(async (name) => ({ name, bytes: (await stat(join(PLUGIN, 'server', name))).size })));
+const branch = branchBinaries(sized);
+for (const name of branch.omit) {
+  await rm(join(PLUGIN, 'server', name));
+  console.warn(`Left ${name} off the dist branch: over GitHub's file size limit. Its zip has it.`);
+}
+console.log(`\n${PLUGIN} carries ${branch.keep.join(', ') || 'no binaries'}`);

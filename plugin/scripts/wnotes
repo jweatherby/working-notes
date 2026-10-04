@@ -67,7 +67,7 @@ fi
 app=${app:-$recorded}
 if [ -z "$app" ]; then
   if [ -d "$plugin/server" ]; then
-    echo "This Working Notes release has no build for $os-$arch. $setup" >&2
+    echo "This Working Notes plugin has no build for $os-$arch. Download working-notes-<version>-$os-$arch.zip from https://github.com/jweatherby/working-notes/releases/latest and add it as a plugin." >&2
   else
     echo "Working Notes isn't set up on this computer. $setup" >&2
   fi

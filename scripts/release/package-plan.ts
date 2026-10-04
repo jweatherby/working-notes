@@ -39,3 +39,19 @@ export const mergePlan = (builds: readonly BuiltPlugin[]): Result<MergePlan> => 
   if (copies.length === 0) return err(new Error('The built plugins have no wnotes binaries'));
   return ok({ version: first.version, base: first.dir, copies });
 };
+
+/** GitHub refuses a file over 100 MB in git; the dist branch keeps a margin under that. */
+export const BRANCH_FILE_LIMIT_BYTES = 95 * 1024 * 1024;
+
+/**
+ * Which binaries the `dist` branch can carry. A binary over the limit is left off the
+ * branch, so the marketplace plugin has no build for that platform; its release zip
+ * still carries it, for a Claude desktop upload or the desktop app.
+ */
+export const branchBinaries = (
+  binaries: readonly { readonly name: string; readonly bytes: number }[],
+  limit = BRANCH_FILE_LIMIT_BYTES
+): { readonly keep: readonly string[]; readonly omit: readonly string[] } => ({
+  keep: binaries.filter((b) => b.bytes <= limit).map((b) => b.name),
+  omit: binaries.filter((b) => b.bytes > limit).map((b) => b.name)
+});

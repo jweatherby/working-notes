@@ -9,8 +9,8 @@ import { createTeam } from '../../src/api/org/team/operations';
 import { createProject, getProject, listProjects, updateProject } from '../../src/api/project/operations';
 import { addCheckIn, addGoalProject, createGoal, getGoal, listGoals, updateGoal } from '../../src/api/goal/operations';
 import { createPage, deletePage, getPage, updatePage } from '../../src/api/page/operations';
-import { addDoc, getDoc, updateDoc } from '../../src/api/aux/doc/operations';
-import { addNote, listNotes } from '../../src/api/aux/note/operations';
+import { addDoc, getDoc, updateDoc } from '../../src/api/attached/doc/operations';
+import { addNote, listNotes } from '../../src/api/attached/note/operations';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
 import { TEST_NOTEBOOK } from './test-notebooks';
 

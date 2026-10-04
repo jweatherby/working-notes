@@ -51,7 +51,7 @@ exit /b %ERRORLEVEL%
 
 :missing
 if exist "%plugin%\server\" (
-  echo This Working Notes release has no build for Windows. %setup% 1>&2
+  echo This Working Notes plugin has no build for Windows. Download working-notes-^<version^>-windows-x64.zip from https://github.com/jweatherby/working-notes/releases/latest and add it as a plugin, or install the desktop app. 1>&2
 ) else (
   echo Working Notes isn't set up on this computer. %setup% 1>&2
 )

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { binaryTarget, mergePlan } from '../package-plan';
+import { binaryTarget, branchBinaries, mergePlan } from '../package-plan';
 
 describe('binaryTarget', () => {
   it('reads the target from a release binary name', () => {
@@ -30,5 +30,16 @@ describe('mergePlan', () => {
     const twice = mergePlan([build('/a', '1.0.0', 'wnotes-linux-x64'), build('/b', '1.0.0', 'wnotes-linux-x64')]);
     expect(!twice.ok && twice.error.message).toContain('Two builds for linux-x64');
     expect(mergePlan([]).ok).toBe(false);
+  });
+});
+
+describe('branchBinaries', () => {
+  it('keeps binaries git accepts and leaves off the rest', () => {
+    const MB = 1024 * 1024;
+    expect(branchBinaries([
+      { name: 'wnotes-darwin-arm64', bytes: 81 * MB },
+      { name: 'wnotes-linux-x64', bytes: 120 * MB },
+      { name: 'wnotes-windows-x64.exe', bytes: 95 * MB }
+    ])).toEqual({ keep: ['wnotes-darwin-arm64', 'wnotes-windows-x64.exe'], omit: ['wnotes-linux-x64'] });
   });
 });

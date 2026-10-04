@@ -4,9 +4,9 @@ import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { getPerson } from '../../src/api/org/person/operations';
 import { createTeam, addTeamMember, getTeam } from '../../src/api/org/team/operations';
-import { addNote, listNotes } from '../../src/api/aux/note/operations';
-import { createTodo, listTodosForEntity } from '../../src/api/aux/todo/operations';
-import { createTag, attachTag, listTagsForEntity } from '../../src/api/aux/tag/operations';
+import { addNote, listNotes } from '../../src/api/attached/note/operations';
+import { createTodo, listTodosForEntity } from '../../src/api/attached/todo/operations';
+import { createTag, attachTag, listTagsForEntity } from '../../src/api/attached/tag/operations';
 import { TEST_NOTEBOOK } from './test-notebooks';
 
 describe('notebook smoke', () => {

@@ -7,7 +7,7 @@ import { getRegistry } from '../../src/shared/registry.server';
 import { ensureDatabase } from '../../src/shared/db/bootstrap.server';
 import { createPageKind, deletePageKind, listPageKinds, updatePageKind } from '../../src/api/page-kind/operations';
 import { createPage, getPage, queryPages, updatePage } from '../../src/api/page/operations';
-import { createTodo, listTodosForEntity, updateTodo } from '../../src/api/aux/todo/operations';
+import { createTodo, listTodosForEntity, updateTodo } from '../../src/api/attached/todo/operations';
 import { createPerson, getPerson } from '../../src/api/org/person/operations';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
 import { createProject } from '../../src/api/project/operations';

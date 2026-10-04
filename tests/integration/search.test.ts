@@ -8,12 +8,12 @@ import { createPerson, deletePerson, updatePerson } from '../../src/api/org/pers
 import { createTeam } from '../../src/api/org/team/operations';
 import { addCheckIn, createGoal } from '../../src/api/goal/operations';
 import { createPage } from '../../src/api/page/operations';
-import { addDoc, updateDoc } from '../../src/api/aux/doc/operations';
-import { addNote } from '../../src/api/aux/note/operations';
-import { addComment } from '../../src/api/aux/comment/operations';
-import { addLink } from '../../src/api/aux/link/operations';
-import { createTodo } from '../../src/api/aux/todo/operations';
-import { attachTag, createTag } from '../../src/api/aux/tag/operations';
+import { addDoc, updateDoc } from '../../src/api/attached/doc/operations';
+import { addNote } from '../../src/api/attached/note/operations';
+import { addComment } from '../../src/api/attached/comment/operations';
+import { addLink } from '../../src/api/attached/link/operations';
+import { createTodo } from '../../src/api/attached/todo/operations';
+import { attachTag, createTag } from '../../src/api/attached/tag/operations';
 import { setArchived } from '../../src/api/_archive';
 import { searchNotebook, type SearchInput } from '../../src/api/search/operations';
 import { recallEntity } from '../../src/api/search/recall';

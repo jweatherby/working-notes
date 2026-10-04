@@ -3,8 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { createTeam } from '../../src/api/org/team/operations';
-import { createTodo } from '../../src/api/aux/todo/operations';
-import { addNote } from '../../src/api/aux/note/operations';
+import { createTodo } from '../../src/api/attached/todo/operations';
+import { addNote } from '../../src/api/attached/note/operations';
 import { listOpenTodos, listRecentUpdates } from '../../src/api/home/operations';
 import { getFocusGraph } from '../../src/api/home/focus-graph';
 import { TEST_NOTEBOOK } from './test-notebooks';
