@@ -65,6 +65,8 @@ wnotes goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK
 wnotes page.create --title "Datadog" --kind SOFTWARE --properties '{"vendor":"Datadog","seats":40}'
 wnotes relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
 wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --toId <otherProjectId> --kind DEPENDS_ON
+wnotes search.query --q "vendor renewal -draft"             # full-text search over everything
+wnotes search.recall --entityType PERSON --entityId <personId>  # everything about one entity, in one call
 ```
 
 - **Output:** stdout is JSON (logs go to stderr). Operations return `{ "ok": true, "value": ... }` or `{ "ok": false, "error": { "message": ... } }`, and the CLI exits 1 on `ok: false`, invalid input or an unknown procedure. The error text is written to be actionable.
@@ -72,6 +74,7 @@ wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --t
 - **Typing:** values are coerced by each procedure's JSON Schema. `--title 2024` stays a string, `--priority 2` becomes a number, and `--leadId null` clears a field.
 - **Input:** `--<field>-file <path>` reads a value from a file (use it for markdown), and `--input '<json>'` passes the whole input.
 - **Entity types:** `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
+- **Search and recall:** `search.query` is full-text search (SQLite FTS5, kept current by triggers) over names, notes, docs, pages, todos, comments, links and check-ins; `search.recall` returns an entity with everything attached to it and the text elsewhere that names it without linking it. See `src/api/CLAUDE.md` § Search.
 - **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities as `RELATED` (no direction) or `DEPENDS_ON`, with an optional note; in the UI, "+" in an entity's Related section adds one. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
 - **The Claude skill** in `plugin/skills/working-notes/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).
 

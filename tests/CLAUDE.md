@@ -19,10 +19,11 @@
   - `reports`: branding resolution, chart validation
   - `goals-wiki`: project owner, goal cascade, check-ins and progress, project links, page properties, mentions from content, relation and attachment cleanup on delete
   - `page-chat`: the Chat tab's saved conversation per entity, Clear, and cleanup when the entity is deleted
-  - `migrate`: fresh, idempotent, edited-migration refusal
+  - `migrate`: fresh, idempotent, edited-migration refusal, search index backfill of existing rows
+  - `search`: every trigger present, each kind of text found, stemming, phrases/OR/exclusions, type and `within` filters, re-indexing on update and delete (including cleanup), archived rows hidden, `search.recall` with unlinked mentions and caps
   - `backup`: change detection, hard links, restore round trip, snapshots kept per notebook, refusal while the app runs
   - `cli`: `bin/wnotes` from another directory with no server, including `--notebook`
-  - `mcp`: `wnotes mcp` over stdio: tool list, calls, the `notebook` argument, errors as tool results, stdout kept to protocol messages
+  - `mcp`: `wnotes mcp` over stdio: tool list, calls (including `search_query` and `search_recall`), the `notebook` argument, errors as tool results, stdout kept to protocol messages
 - Run: `bun run test:integration`
 
 ## Manual verification

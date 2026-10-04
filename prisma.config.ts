@@ -28,6 +28,13 @@ export default defineConfig({
   migrations: {
     path: 'prisma/migrations'
   },
+  // The full-text index is an FTS5 table plus its shadow tables, created by a
+  // hand-written migration. Prisma can't model them; without this it would
+  // generate DROP TABLE for them in every new migration.
+  experimental: { externalTables: true },
+  tables: {
+    external: ['search_index', 'search_index_data', 'search_index_idx', 'search_index_content', 'search_index_docsize', 'search_index_config']
+  },
   datasource: {
     url: databaseUrl(settings, notebook)
   }

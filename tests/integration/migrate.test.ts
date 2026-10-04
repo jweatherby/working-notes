@@ -1,7 +1,7 @@
 // The in-process migrator against real SQLite files, independent of the app database.
 
 import { describe, it, expect } from 'vitest';
-import { appendFileSync, cpSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, cpSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
@@ -52,6 +52,31 @@ describe('applyMigrations', () => {
     const result = await applyMigrations(client, migrations, quiet);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.message).toContain('modified after it was applied');
+    client.close();
+  });
+
+  it('indexes rows that existed before the search index was added', async () => {
+    const { dir, client } = freshDb();
+    const migrations = join(dir, 'migrations');
+    cpSync('prisma/migrations', migrations, { recursive: true });
+    const indexMigration = onDisk.find((name) => name.endsWith('_add_search_index'))!;
+    const later = onDisk.slice(onDisk.indexOf(indexMigration));
+    for (const name of later) rmSync(join(migrations, name), { recursive: true });
+    await applyMigrations(client, migrations, quiet);
+
+    await client.execute("INSERT INTO person (id, name, updated_at) VALUES ('p1', 'Ada Lovelace', CURRENT_TIMESTAMP)");
+    await client.execute("INSERT INTO note (id, entity_type, entity_id, content, updated_at) VALUES ('n1', 'PERSON', 'p1', 'Analytical engine notes', CURRENT_TIMESTAMP)");
+    await client.execute(`INSERT INTO page (id, title, kind, properties, updated_at) VALUES ('w1', 'Babbage', 'SOFTWARE', '{"vendor":"Difference Ltd"}', CURRENT_TIMESTAMP)`);
+    for (const name of later) cpSync(join('prisma/migrations', name), join(migrations, name), { recursive: true });
+    const result = await applyMigrations(client, migrations, quiet);
+    expect(result.ok && result.value.applied).toEqual(later);
+
+    const hits = async (match: string) =>
+      (await client.execute({ sql: 'SELECT entity_type, entity_id, parent_id FROM search_index WHERE search_index MATCH ? ORDER BY entity_id', args: [match] })).rows
+        .map((r) => [r[0], r[1], r[2]]);
+    expect(await hits('lovelace')).toEqual([['PERSON', 'p1', null]]);
+    expect(await hits('engine')).toEqual([['NOTE', 'n1', 'p1']]);
+    expect(await hits('difference')).toEqual([['PAGE', 'w1', null]]);
     client.close();
   });
 });
