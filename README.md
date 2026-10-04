@@ -145,6 +145,25 @@ wnotes backup install
 Copies stay on this disk, so they will not save you from losing the disk. Time Machine will, and it
 covers them for you.
 
+## How is this different from…
+
+**…your assistant's own memory?** It decides for itself what to keep, and summarises it. Working
+Notes keeps exactly what you said, where you can see it, and your assistant looks it up instead of
+recalling it.
+
+**…a memory server, like the reference knowledge-graph server or Basic Memory?** Those store free
+text and links: anything can be anything. Working Notes knows what a person, a team, a project and
+a goal are. A goal has a period and dated check-ins, a todo has a status and a due date, and it
+turns away input that doesn't fit. That is what lets it answer "which goals are behind pace?"
+instead of searching for the word "goal". It also comes with an app to read it in.
+
+**…Obsidian, Notion or Apple Notes, with an assistant connected?** Those are pages you organise
+yourself. Here you don't organise anything: you say what happened, and it is filed in the right
+place.
+
+**…Linear, Notion or Lattice for the team?** Those hold the team's version of things, and others
+can see them. Working Notes holds yours, privately, and can link back to them.
+
 ## Getting started
 
 - **[docs/INSTALL.md](docs/INSTALL.md)** — install it for Claude Code, Cowork or the Claude desktop
