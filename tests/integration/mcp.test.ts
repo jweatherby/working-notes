@@ -1,4 +1,4 @@
-// The MCP server as Claude desktop runs it: `wnotes mcp` over stdio, no server running.
+// The MCP server as Claude desktop runs it: `wono mcp` over stdio, no server running.
 
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
@@ -8,7 +8,7 @@ import { testLicenseKey } from '../license-test-key';
 
 type Message = Record<string, unknown> & { result?: Record<string, unknown>; error?: { code: number; message: string } };
 
-const server = spawn(resolve('bin/wnotes'), ['mcp'], { env: { ...process.env, APP_ENV: 'test' }, stdio: ['pipe', 'pipe', 'pipe'] });
+const server = spawn(resolve('bin/wono'), ['mcp'], { env: { ...process.env, APP_ENV: 'test' }, stdio: ['pipe', 'pipe', 'pipe'] });
 const exited = new Promise<number | null>((done) => server.on('exit', done));
 
 const nonProtocolLines: string[] = [];
@@ -41,11 +41,11 @@ afterAll(() => {
   if (server.exitCode === null) server.kill();
 });
 
-describe('wnotes mcp', () => {
+describe('wono mcp', () => {
   it('initializes and lists every procedure as a tool, plus snapshots', async () => {
     const init = await request('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
     expect(init.result?.['protocolVersion']).toBe('2025-06-18');
-    expect(init.result?.['serverInfo']).toMatchObject({ name: 'working-notes' });
+    expect(init.result?.['serverInfo']).toMatchObject({ name: 'wonos' });
     server.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
 
     const tools = (await request('tools/list')).result?.['tools'] as Array<{ name: string; inputSchema: { properties?: Record<string, unknown> }; annotations: { destructiveHint: boolean; readOnlyHint: boolean } }>;
@@ -87,10 +87,10 @@ describe('wnotes mcp', () => {
     const person = JSON.parse((await callTool('person_get', { id })).text) as { name: string; title: string };
     expect(person).toMatchObject({ name: 'Mika Tanaka', title: '2024' });
 
-    // Full-text search is Working Notes Pro: refused, with the way out, until a license is added.
+    // Full-text search is Wonos Pro: refused, with the way out, until a license is added.
     const locked = await callTool('search_query', { q: 'tanaka' });
     expect(locked.isError).toBe(true);
-    expect(locked.text).toContain('Working Notes Pro');
+    expect(locked.text).toContain('Wonos Pro');
     expect(locked.text).toContain('license.activate');
     expect((await callTool('license_activate', { key: testLicenseKey() })).isError).toBe(false);
 

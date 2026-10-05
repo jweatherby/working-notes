@@ -3,8 +3,8 @@
 import { join } from 'node:path';
 import { ok, err, type Result } from '$shared/utils/result';
 
-/** The target of a release binary's file name (`wnotes-linux-x64`, `wnotes-windows-x64.exe`), or null. */
-export const binaryTarget = (name: string): string | null => name.match(/^wnotes-([a-z]+-[a-z0-9]+)(\.exe)?$/)?.[1] ?? null;
+/** The target of a release binary's file name (`wono-linux-x64`, `wono-windows-x64.exe`), or null. */
+export const binaryTarget = (name: string): string | null => name.match(/^wono-([a-z]+-[a-z0-9]+)(\.exe)?$/)?.[1] ?? null;
 
 export interface BuiltPlugin {
   readonly dir: string;
@@ -36,7 +36,7 @@ export const mergePlan = (builds: readonly BuiltPlugin[]): Result<MergePlan> => 
       copies.push({ from: join(build.dir, 'server', name), name });
     }
   }
-  if (copies.length === 0) return err(new Error('The built plugins have no wnotes binaries'));
+  if (copies.length === 0) return err(new Error('The built plugins have no wono binaries'));
   return ok({ version: first.version, base: first.dir, copies });
 };
 

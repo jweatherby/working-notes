@@ -1,4 +1,4 @@
-# Working Notes data model
+# Wonos data model
 
 Everything belongs to one user; there are no accounts, orgs or permissions. Ids are opaque strings. Always look them up; never guess.
 

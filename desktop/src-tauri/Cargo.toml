@@ -1,12 +1,12 @@
 [package]
-name = "working-notes-desktop"
+name = "wonos-desktop"
 version = "0.0.0"
-description = "Working Notes desktop app: a window on the local Working Notes server"
+description = "Wonos desktop app: a window on the local Wonos server"
 edition = "2021"
 publish = false
 
 [[bin]]
-name = "working-notes"
+name = "wonos"
 path = "src/main.rs"
 
 [build-dependencies]

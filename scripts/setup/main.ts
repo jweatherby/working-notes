@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// Working Notes setup. Safe to re-run; do so after `git pull`.
-//   bun run setup              point the plugin at this clone, put `wnotes` on PATH, build
-//                              dist/working-notes.zip for Claude desktop, and install or update
+// Wonos setup. Safe to re-run; do so after `git pull`.
+//   bun run setup              point the plugin at this clone, put `wono` on PATH, build
+//                              dist/wonos.zip for Claude desktop, and install or update
 //                              the Claude Code plugin
 //   bun run setup uninstall    undo that (your notebook data is untouched)
 
@@ -57,8 +57,8 @@ const readState = async (): Promise<SetupState> => {
     repoDir: REPO,
     pointerFile,
     pointer: await readFile(pointerFile, 'utf8').then((s) => s.trim()).catch(() => null),
-    binLinkPath: join(binDir, 'wnotes'),
-    binLink: await readLink(join(binDir, 'wnotes')),
+    binLinkPath: join(binDir, 'wono'),
+    binLink: await readLink(join(binDir, 'wono')),
     binDirOnPath: (process.env.PATH ?? '').split(delimiter).includes(binDir),
     legacySkillPath,
     legacySkillTarget: legacy.kind === 'symlink' ? legacy.target : null,
@@ -116,7 +116,7 @@ const main = async (): Promise<number> => {
     }
   }
   if (command === 'install') {
-    console.log(`\nWorking Notes is set up for ${REPO}.`);
+    console.log(`\nWonos is set up for ${REPO}.`);
     console.log('- Claude Code: start a new session to use the skill and MCP tools.');
     console.log(`- Claude desktop (Chat and Cowork): add ${repoPaths(REPO).pluginZip} as a plugin.`);
   }

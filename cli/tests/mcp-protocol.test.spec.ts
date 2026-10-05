@@ -9,7 +9,7 @@ const personCreate = toolFromProcedure({
 
 const calls: Array<{ name: string; args: unknown }> = [];
 const ctx: McpContext = {
-  info: { name: 'working-notes', version: '1.2.3', instructions: 'Be careful.' },
+  info: { name: 'wonos', version: '1.2.3', instructions: 'Be careful.' },
   tools: [personCreate, toolFromProcedure({ name: 'boom.now', type: 'mutation', inputSchema: { type: 'object' } })],
   callTool: async (name, args) => {
     if (name === 'boom_now') throw new Error('database is locked');
@@ -29,7 +29,7 @@ describe('toolFromProcedure', () => {
       required: ['name'],
       additionalProperties: false
     });
-    expect(personCreate.description).toContain('`wnotes person.create`');
+    expect(personCreate.description).toContain('`wono person.create`');
   });
 
   it('adds the notebook argument to procedures without inputs, but not to the notebook procedures', () => {
@@ -70,7 +70,7 @@ describe('handleMessage', () => {
     expect(response?.result).toEqual({
       protocolVersion: '2025-06-18',
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: 'working-notes', version: '1.2.3' },
+      serverInfo: { name: 'wonos', version: '1.2.3' },
       instructions: 'Be careful.'
     });
     const unknown = await request('initialize', { protocolVersion: '1999-01-01' });

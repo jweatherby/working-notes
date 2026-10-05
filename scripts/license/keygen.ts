@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// Makes the signing keypair for Working Notes Pro licenses. Run once, by the seller:
+// Makes the signing keypair for Wonos Pro licenses. Run once, by the seller:
 //   bun run license:keygen [--out <private key path>]
-// The private key goes outside the repo (default ~/.working-notes-license/private.pem,
+// The private key goes outside the repo (default ~/.wonos-license/private.pem,
 // readable only by you) and must never be committed: anyone with it can issue keys.
 // The public key replaces src/shared/license/public-key.ts, so commit that file and
 // release; keys issued with an older private key stop working in the new release.
@@ -11,14 +11,14 @@ import { existsSync } from 'node:fs';
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { publicKeyModule } from './key-file';
+import { defaultPrivateKeyPath, publicKeyModule } from './key-file';
 
 const option = (name: string): string | undefined => {
   const i = process.argv.indexOf(`--${name}`);
   return i > -1 ? process.argv[i + 1] : undefined;
 };
 
-const out = resolve(option('out') ?? join(homedir(), '.working-notes-license', 'private.pem'));
+const out = resolve(option('out') ?? defaultPrivateKeyPath(homedir(), existsSync));
 if (existsSync(out)) {
   console.error(`${out} already exists. Keep it: it signs every license you've issued. To start over, move it away first.`);
   process.exit(1);

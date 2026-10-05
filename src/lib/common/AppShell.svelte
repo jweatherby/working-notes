@@ -59,7 +59,7 @@
             {#if brandIconUrl}
               <img src={brandIconUrl} alt="" class="brand-icon" />
             {/if}
-            <span class="truncate">{notebook?.name ?? 'Working Notes'}</span>
+            <span class="truncate">{notebook?.name ?? 'Wonos'}</span>
           </a>
           {#if notebook}
             <NotebookSwitcher current={notebook} {notebooks} />

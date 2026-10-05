@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveNotebook, type NotebookChoices } from '../resolve';
+import { notebookFromEnv, resolveNotebook, type NotebookChoices } from '../resolve';
 
 const notebooks = [
   { id: 'work-work', name: 'Work', profile: 'work' as const, createdAt: '' },
@@ -13,7 +13,7 @@ const pick = (choices: Partial<NotebookChoices>): string => {
 };
 
 describe('resolveNotebook', () => {
-  it('uses the named notebook first, then WNOTES_NOTEBOOK, then the remembered one, then the default', () => {
+  it('uses the named notebook first, then WONO_NOTEBOOK, then the remembered one, then the default', () => {
     expect(pick({ explicit: 'garden', env: 'side', remembered: 'side' })).toBe('garden');
     expect(pick({ env: 'side', remembered: 'garden' })).toBe('side');
     expect(pick({ remembered: 'garden' })).toBe('garden');
@@ -27,7 +27,7 @@ describe('resolveNotebook', () => {
 
   it('refuses a named notebook that does not exist, listing the ones that do', () => {
     expect(pick({ explicit: 'nope' })).toBe('error: There is no notebook "nope". Notebooks: work-work, garden, side. Use notebook.list to see them, or notebook.create to add one.');
-    expect(pick({ env: 'nope' })).toContain('WNOTES_NOTEBOOK is "nope"');
+    expect(pick({ env: 'nope' })).toContain('WONO_NOTEBOOK is "nope"');
   });
 
   it('ignores a remembered notebook that is gone, and a default that is gone', () => {
@@ -38,5 +38,13 @@ describe('resolveNotebook', () => {
 
   it('fails when there are no notebooks', () => {
     expect(resolveNotebook({ notebooks: [], defaultId: null }).ok).toBe(false);
+  });
+});
+
+describe('notebookFromEnv', () => {
+  it('reads WONO_NOTEBOOK, then its name before the rename', () => {
+    expect(notebookFromEnv({ WONO_NOTEBOOK: 'home', WNOTES_NOTEBOOK: 'work' })).toBe('home');
+    expect(notebookFromEnv({ WNOTES_NOTEBOOK: 'work' })).toBe('work');
+    expect(notebookFromEnv({ WONO_NOTEBOOK: '' })).toBeUndefined();
   });
 });

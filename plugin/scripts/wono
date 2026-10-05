@@ -1,37 +1,43 @@
 #!/bin/sh
-# Working Notes plugin shim, started by .mcp.json as `sh <plugin>/scripts/wnotes mcp`.
+# Wonos plugin shim, started by .mcp.json as `sh <plugin>/scripts/wono mcp`.
 # It runs, in order of preference:
-#   1. the clone named by $WORKING_NOTES_HOME
+#   1. the clone named by $WONO_HOME (or $WORKING_NOTES_HOME, from before the rename)
 #   2. the clone `bun run setup` recorded in <data dir>/app-path, so a development
 #      machine always runs its own code
 #   3. the standalone binary a release carries in <plugin>/server. It's installed into
 #      <data dir>/App/<version>, with App/current pointing at it (for the backup
 #      LaunchAgent and terminals), so no clone or Bun is needed.
 # It isn't in bin/: claude.ai-hosted plugins (Cowork) reject bin/ executables.
-# On Windows, scripts/wnotes.cmd does the same.
+# On Windows, scripts/wono.cmd does the same.
 set -e
 
 # Under Git Bash, MSYS or Cygwin on Windows, the Windows launcher does the work.
 case $(uname -s) in
   MINGW* | MSYS* | CYGWIN*)
     # //d //c: Git Bash would otherwise rewrite /d and /c as paths.
-    exec cmd.exe //d //c "$(cygpath -w "$(dirname "$0")/wnotes.cmd")" "$@"
+    exec cmd.exe //d //c "$(cygpath -w "$(dirname "$0")/wono.cmd")" "$@"
     ;;
 esac
 
 if [ "$(uname -s)" = Darwin ]; then
-  data="$HOME/Library/Application Support/Working Notes"
+  data="$HOME/Library/Application Support/Wonos"
+  # Before the rename to Wonos. The app moves its data from there on first run.
+  legacy="$HOME/Library/Application Support/Working Notes"
 else
-  data="${XDG_DATA_HOME:-$HOME/.local/share}/working-notes"
+  data="${XDG_DATA_HOME:-$HOME/.local/share}/wonos"
+  legacy="${XDG_DATA_HOME:-$HOME/.local/share}/working-notes"
 fi
-setup='Install the Working Notes plugin from a release, which includes the app, or clone the Working Notes repo and run `bun install` and `bun run setup` in the clone.'
+setup='Install the Wonos plugin from a release, which includes the app, or clone the Wonos repo and run `bun install` and `bun run setup` in the clone.'
 
-app=${WORKING_NOTES_HOME:-}
+# WORKING_NOTES_HOME: the name before the rename to Wonos.
+app=${WONO_HOME:-${WORKING_NOTES_HOME:-}}
 recorded=
-if [ -z "$app" ] && [ -r "$data/app-path" ]; then
-  recorded=$(cat "$data/app-path")
+pointer="$data/app-path"
+[ -r "$pointer" ] || pointer="$legacy/app-path"
+if [ -z "$app" ] && [ -r "$pointer" ]; then
+  recorded=$(cat "$pointer")
   # A recorded clone that has moved or lost its dependencies gives way to a release binary.
-  if [ -x "$recorded/bin/wnotes" ] && [ -d "$recorded/node_modules" ]; then
+  if [ -x "$recorded/bin/wono" ] && [ -d "$recorded/node_modules" ]; then
     app=$recorded
   fi
 fi
@@ -43,7 +49,7 @@ case $(uname -m) in
   *) arch=$(uname -m) ;;
 esac
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
-bundled="$plugin/server/wnotes-$os-$arch"
+bundled="$plugin/server/wono-$os-$arch"
 
 if [ -z "$app" ] && [ -f "$bundled" ]; then
   version=$(cat "$plugin/server/VERSION")
@@ -54,31 +60,31 @@ if [ -z "$app" ] && [ -f "$bundled" ]; then
     mkdir -p "$tmp"
     # cat, not cp: the copy doesn't inherit a download's quarantine flag, and chmod
     # restores the execute bit that an unzipped or cloned plugin may have lost.
-    cat "$bundled" > "$tmp/wnotes"
-    chmod 755 "$tmp/wnotes"
+    cat "$bundled" > "$tmp/wono"
+    chmod 755 "$tmp/wono"
     cp -R "$plugin/server/migrations" "$plugin/server/VERSION" "$tmp/"
     # Another start may have installed this version meanwhile.
     if [ -e "$dest" ]; then rm -rf "$tmp"; else mv "$tmp" "$dest"; fi
   fi
   ln -sfn "$version" "$data/App/current"
-  exec "$dest/wnotes" "$@"
+  exec "$dest/wono" "$@"
 fi
 
 app=${app:-$recorded}
 if [ -z "$app" ]; then
   if [ -d "$plugin/server" ]; then
-    echo "This Working Notes plugin has no build for $os-$arch. Download working-notes-<version>-$os-$arch.zip from https://github.com/jweatherby/working-notes/releases/latest and add it as a plugin." >&2
+    echo "This Wonos plugin has no build for $os-$arch. Download wonos-<version>-$os-$arch.zip from https://github.com/jweatherby/working-notes/releases/latest and add it as a plugin." >&2
   else
-    echo "Working Notes isn't set up on this computer. $setup" >&2
+    echo "Wonos isn't set up on this computer. $setup" >&2
   fi
   exit 1
 fi
-if [ ! -x "$app/bin/wnotes" ]; then
-  echo "Working Notes isn't at $app any more (no bin/wnotes there). $setup" >&2
+if [ ! -x "$app/bin/wono" ]; then
+  echo "Wonos isn't at $app any more (no bin/wono there). $setup" >&2
   exit 1
 fi
 if [ ! -d "$app/node_modules" ]; then
-  echo "Working Notes at $app has no dependencies installed. Run \`bun install\` in $app." >&2
+  echo "Wonos at $app has no dependencies installed. Run \`bun install\` in $app." >&2
   exit 1
 fi
-exec "$app/bin/wnotes" "$@"
+exec "$app/bin/wono" "$@"

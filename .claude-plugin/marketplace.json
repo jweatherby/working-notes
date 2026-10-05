@@ -1,17 +1,17 @@
 {
-  "name": "working-notes",
+  "name": "wonos",
   "owner": {
     "name": "jweatherby"
   },
   "metadata": {
-    "description": "Working Notes: a local notebook that Claude keeps for you",
+    "description": "Wonos: a local notebook that Claude keeps for you",
     "version": "0.10.2"
   },
   "plugins": [
     {
-      "name": "working-notes",
+      "name": "wonos",
       "source": { "source": "github", "repo": "jweatherby/working-notes", "ref": "dist" },
-      "description": "Lets Claude read and write your local Working Notes notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
+      "description": "Lets Claude read and write your local Wonos notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
       "version": "0.10.2",
       "category": "productivity",
       "keywords": ["notes", "org-chart", "todos", "reports", "local-first"]

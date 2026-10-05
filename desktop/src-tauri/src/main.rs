@@ -1,16 +1,16 @@
-// Working Notes desktop app: a window on the local Working Notes server.
+// Wonos desktop app: a window on the local Wonos server.
 //
-// All the logic lives in the `wnotes` binary this app bundles (its sidecar); this
+// All the logic lives in the `wono` binary this app bundles (its sidecar); this
 // shell only runs it and shows the result:
-//   1. `wnotes install` copies the bundled binary into <data dir>/App/<version> and
+//   1. `wono install` copies the bundled binary into <data dir>/App/<version> and
 //      points App/current at it, as the Claude plugin does. Everything after runs that
 //      installed copy, so an app update never has to replace a running binary.
-//   2. `wnotes app ensure` starts the server on 127.0.0.1:5173, or reuses (or, for a
+//   2. `wono app ensure` starts the server on 127.0.0.1:5173, or reuses (or, for a
 //      different version, replaces) one that's running, and prints its address.
 //   3. The window leaves its splash page for that address. The page gets no access to
 //      Tauri's IPC: it's the same web app a browser shows.
 // The Claude menu registers the installed binary as an MCP server with Claude desktop
-// or Claude Code (`wnotes connect …`), after asking. The server keeps running when the
+// or Claude Code (`wono connect …`), after asking. The server keeps running when the
 // window closes, as it does when Claude starts it.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -30,11 +30,11 @@ const CONNECT_DESKTOP: &str = "connect-claude-desktop";
 const CONNECT_CODE: &str = "connect-claude-code";
 
 fn binary_name() -> &'static str {
-    if cfg!(windows) { "wnotes.exe" } else { "wnotes" }
+    if cfg!(windows) { "wono.exe" } else { "wono" }
 }
 
-/// Runs a `wnotes` command that prints one JSON result, and returns its value or its error message.
-fn run_wnotes(binary: &Path, args: &[&str], envs: &[(&str, String)]) -> Result<Value, String> {
+/// Runs a `wono` command that prints one JSON result, and returns its value or its error message.
+fn run_wono(binary: &Path, args: &[&str], envs: &[(&str, String)]) -> Result<Value, String> {
     let mut command = Command::new(binary);
     command.args(args);
     for (key, value) in envs {
@@ -56,7 +56,7 @@ fn run_wnotes(binary: &Path, args: &[&str], envs: &[(&str, String)]) -> Result<V
         .find_map(|line| serde_json::from_str(line).ok())
         .ok_or_else(|| {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            format!("`wnotes {}` gave no result.\n{}", args.join(" "), stderr.trim())
+            format!("`wono {}` gave no result.\n{}", args.join(" "), stderr.trim())
         })?;
     if result["ok"].as_bool() == Some(true) {
         Ok(result["value"].clone())
@@ -77,20 +77,20 @@ fn install(app: &AppHandle) -> Result<PathBuf, String> {
     let version = std::fs::read_to_string(resources.join("VERSION"))
         .map_err(|error| format!("This app is missing its VERSION file: {error}"))?;
     let envs = [
-        ("WNOTES_VERSION", version.trim().to_string()),
-        ("WNOTES_MIGRATIONS_DIR", resources.join("migrations").to_string_lossy().into_owned()),
+        ("WONO_VERSION", version.trim().to_string()),
+        ("WONO_MIGRATIONS_DIR", resources.join("migrations").to_string_lossy().into_owned()),
     ];
-    let value = run_wnotes(&bundled_binary()?, &["install"], &envs)?;
+    let value = run_wono(&bundled_binary()?, &["install"], &envs)?;
     value["binary"]
         .as_str()
         .map(PathBuf::from)
-        .ok_or_else(|| "`wnotes install` didn't say where it installed".to_string())
+        .ok_or_else(|| "`wono install` didn't say where it installed".to_string())
 }
 
 fn show_error(window: &WebviewWindow, message: &str) {
     let text = serde_json::to_string(message).unwrap_or_default();
     let _ = window.eval(format!(
-        "document.getElementById('status').textContent = \"Working Notes couldn't start.\";\
+        "document.getElementById('status').textContent = \"Wonos couldn't start.\";\
          const e = document.getElementById('error'); e.hidden = false; e.textContent = {text};"
     ));
 }
@@ -100,13 +100,13 @@ fn start(app: AppHandle, window: WebviewWindow) {
     std::thread::spawn(move || {
         let result = install(&app).and_then(|binary| {
             app.manage(Installed(binary.clone()));
-            run_wnotes(&binary, &["app", "ensure"], &[])
+            run_wono(&binary, &["app", "ensure"], &[])
         });
         match result.and_then(|value| {
             value["url"]
                 .as_str()
                 .and_then(|url| Url::parse(url).ok())
-                .ok_or_else(|| "`wnotes app ensure` gave no address".to_string())
+                .ok_or_else(|| "`wono app ensure` gave no address".to_string())
         }) {
             Ok(url) => {
                 let _ = window.navigate(url);
@@ -136,12 +136,12 @@ fn connect(app: AppHandle, target: &'static str) {
     let (name, explain, after) = match target {
         "claude-desktop" => (
             "Claude desktop",
-            "This adds Working Notes to Claude desktop's MCP servers, in its config file. Skip it if you installed the Working Notes plugin in Claude desktop, which already includes it.",
+            "This adds Wonos to Claude desktop's MCP servers, in its config file. Skip it if you installed the Wonos plugin in Claude desktop, which already includes it.",
             "Restart Claude desktop to use it.",
         ),
         _ => (
             "Claude Code",
-            "This runs `claude mcp add` to add Working Notes to Claude Code for your user. Skip it if you installed the Working Notes plugin in Claude Code, which already includes it.",
+            "This runs `claude mcp add` to add Wonos to Claude Code for your user. Skip it if you installed the Wonos plugin in Claude Code, which already includes it.",
             "New Claude Code sessions will have it.",
         ),
     };
@@ -156,12 +156,12 @@ fn connect(app: AppHandle, target: &'static str) {
                 return;
             }
             let message = match app.try_state::<Installed>() {
-                None => Err("Working Notes is still starting. Try again in a moment.".to_string()),
-                Some(installed) => run_wnotes(&installed.0, &["connect", target], &[]),
+                None => Err("Wonos is still starting. Try again in a moment.".to_string()),
+                Some(installed) => run_wono(&installed.0, &["connect", target], &[]),
             };
             let (kind, text) = match message {
-                Ok(value) if value["change"] == "unchanged" => (MessageDialogKind::Info, format!("Working Notes was already connected to {name}.")),
-                Ok(_) => (MessageDialogKind::Info, format!("Connected Working Notes to {name}. {after}")),
+                Ok(value) if value["change"] == "unchanged" => (MessageDialogKind::Info, format!("Wonos was already connected to {name}.")),
+                Ok(_) => (MessageDialogKind::Info, format!("Connected Wonos to {name}. {after}")),
                 Err(error) => (MessageDialogKind::Error, error),
             };
             app.dialog().message(text).title(format!("Connect to {name}")).kind(kind).show(|_| {});
@@ -202,7 +202,7 @@ fn main() {
             // Links out of the app (a Linear issue in the sidebar) open in the browser.
             let opener = handle.clone();
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("Working Notes")
+                .title("Wonos")
                 .inner_size(1280.0, 860.0)
                 .min_inner_size(800.0, 560.0)
                 .on_navigation(move |url| {
@@ -218,7 +218,7 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Working Notes");
+        .expect("error while running Wonos");
 }
 
 #[cfg(test)]

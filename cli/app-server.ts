@@ -2,6 +2,8 @@
 // everything else (pages, the API, the guard in hooks.server.ts) through the
 // SvelteKit server. Loopback only, like `bun run start`.
 
+import { LOCAL_HEADER } from '../src/shared/trpc/config';
+
 /** The parts of SvelteKit's generated `Server` (build/server/index.js) this uses. */
 export interface SvelteKitServer {
   readonly init: (options: { readonly env: Record<string, string>; readonly read?: (file: string) => ReadableStream }) => Promise<void>;
@@ -30,9 +32,12 @@ export const staticFile = (files: StaticFiles, pathname: string): string | null 
 };
 
 /** GET: the running app's version, so a newer release can tell it's stale (cli/app-launch.ts). */
-export const APP_CONTROL_PATH = '/__wnotes/app';
+export const APP_CONTROL_PATH = '/__wono/app';
 /** POST: stops the app, so a newer release can replace it. */
-export const APP_STOP_PATH = '/__wnotes/app/stop';
+export const APP_STOP_PATH = '/__wono/app/stop';
+/** The same, in apps from before the rename to Wonos, which a newer release still replaces. */
+export const LEGACY_APP_CONTROL_PATH = '/__wnotes/app';
+export const LEGACY_APP_STOP_PATH = '/__wnotes/app/stop';
 
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -44,14 +49,14 @@ export type AppControl =
 /**
  * The app's own control requests, which bypass SvelteKit and so its guard in
  * hooks.server.ts. Stopping keeps both of that guard's rules: a loopback hostname
- * (blocks DNS rebinding) and the x-working-notes header (blocks cross-site requests).
+ * (blocks DNS rebinding) and the x-wono header (blocks cross-site requests).
  * Null for any other request.
  */
 export const appControl = (request: Request, version: string): AppControl | null => {
   const url = new URL(request.url);
   if (url.pathname === APP_CONTROL_PATH && request.method === 'GET') return { kind: 'version', body: { version } };
   if (url.pathname !== APP_STOP_PATH) return null;
-  const allowed = request.method === 'POST' && LOOPBACK_HOSTS.has(url.hostname) && request.headers.get('x-working-notes') === '1';
+  const allowed = request.method === 'POST' && LOOPBACK_HOSTS.has(url.hostname) && request.headers.get(LOCAL_HEADER) === '1';
   return allowed ? { kind: 'stop' } : { kind: 'forbidden' };
 };
 
@@ -80,7 +85,7 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
         if (control?.kind === 'version') return Response.json(control.body);
         if (control?.kind === 'forbidden') return new Response('Forbidden', { status: 403 });
         if (control?.kind === 'stop') {
-          console.error('Working Notes is stopping for a newer version.');
+          console.error('Wonos is stopping for a newer version.');
           // Answer first, then exit.
           setTimeout(() => process.exit(0), 100);
           return new Response(null, { status: 202 });
@@ -97,10 +102,10 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
         return server.respond(request, { getClientAddress: () => bunServer.requestIP(request)?.address ?? APP_HOST });
       }
     });
-    console.error(`Working Notes is running at http://${APP_HOST}:${http.port}/app`);
+    console.error(`Wonos is running at http://${APP_HOST}:${http.port}/app`);
   } catch (error) {
     const inUse = (error as { code?: string }).code === 'EADDRINUSE';
-    console.error(inUse ? `Something is already running on ${APP_HOST}:${port}. If it's Working Notes, open http://${APP_HOST}:${port}/app` : error);
+    console.error(inUse ? `Something is already running on ${APP_HOST}:${port}. If it's Wonos, open http://${APP_HOST}:${port}/app` : error);
     process.exit(1);
   }
   // Hourly snapshots while the app is open, on every platform (see scripts/backup/schedule.ts).

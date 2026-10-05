@@ -1,7 +1,7 @@
 {
   "id": "/app",
-  "name": "Working Notes",
-  "short_name": "Working Notes",
+  "name": "Wonos",
+  "short_name": "Wonos",
   "description": "A local notebook for your org chart, projects, goals, wiki and notes.",
   "start_url": "/app",
   "scope": "/",

@@ -6,4 +6,4 @@ export const TRPC_BASE_PATH = '/api/trpc';
  * cross-origin request without a CORS preflight, which this server never
  * approves, so hostile web pages cannot drive the local API (see hooks.server.ts).
  */
-export const LOCAL_HEADER = 'x-working-notes';
+export const LOCAL_HEADER = 'x-wono';

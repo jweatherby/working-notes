@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "working-notes": {
+    "wonos": {
       "command": "sh",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/wnotes", "mcp"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/wono", "mcp"]
     }
   }
 }

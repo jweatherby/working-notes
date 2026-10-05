@@ -1,5 +1,5 @@
 // Starting the UI from the MCP server (the `app_open` tool), so a machine without a
-// clone or a terminal habit can still open it: runs `wnotes app` in the background.
+// clone or a terminal habit can still open it: runs `wono app` in the background.
 // The app keeps running after the MCP server exits, so a release also replaces an app
 // left running by an older version (see planAppLaunch).
 
@@ -7,8 +7,9 @@ import { execFile, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import pluginManifest from '../plugin/.claude-plugin/plugin.json';
-import { APP_CONTROL_PATH, APP_HOST, APP_PORT, APP_STOP_PATH } from './app-server';
-import { isPortListening } from '../scripts/backup/restore';
+import { APP_CONTROL_PATH, APP_HOST, APP_PORT, APP_STOP_PATH, LEGACY_APP_CONTROL_PATH, LEGACY_APP_STOP_PATH } from './app-server';
+import { LOCAL_HEADER } from '../src/shared/trpc/config';
+import { isPortListening } from '../scripts/backup/port';
 
 export interface LaunchCommand {
   readonly command: string;
@@ -18,7 +19,7 @@ export interface LaunchCommand {
 }
 
 /**
- * A release runs its own binary. A clone runs bin/wnotes, which starts the dev server;
+ * A release runs its own binary. A clone runs bin/wono, which starts the dev server;
  * Windows can't run that shell script, so there Bun (this process) runs `bun run dev`
  * in the clone, which is what the script does.
  */
@@ -30,7 +31,7 @@ export const appLaunchCommand = (o: {
 }): LaunchCommand => {
   if (o.standalone) return { command: o.execPath, args: ['app'] };
   if ((o.platform ?? process.platform) === 'win32') return { command: o.execPath, args: ['run', 'dev'], cwd: o.repoDir };
-  return { command: join(o.repoDir, 'bin', 'wnotes'), args: ['app'] };
+  return { command: join(o.repoDir, 'bin', 'wono'), args: ['app'] };
 };
 
 /** The app's address, opening the given notebook. */
@@ -62,10 +63,13 @@ const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(do
 export const probeApp = async (): Promise<RunningApp> => {
   if (!(await isPortListening(APP_PORT))) return null;
   try {
-    const response = await fetch(`${base}${APP_CONTROL_PATH}`, { signal: AbortSignal.timeout(1_000) });
-    const body: unknown = response.ok ? await response.json() : null;
-    const version = typeof body === 'object' && body !== null ? (body as { version?: unknown }).version : undefined;
-    return typeof version === 'string' ? { version } : 'other';
+    for (const path of [APP_CONTROL_PATH, LEGACY_APP_CONTROL_PATH]) {
+      const response = await fetch(`${base}${path}`, { signal: AbortSignal.timeout(1_000) });
+      const body: unknown = response.ok ? await response.json().catch(() => null) : null;
+      const version = typeof body === 'object' && body !== null ? (body as { version?: unknown }).version : undefined;
+      if (typeof version === 'string') return { version };
+    }
+    return 'other';
   } catch {
     return 'other';
   }
@@ -81,9 +85,13 @@ const waitForPort = async (listening: boolean, timeoutMs: number): Promise<boole
 };
 
 const stopApp = async (): Promise<void> => {
-  await fetch(`${base}${APP_STOP_PATH}`, { method: 'POST', headers: { 'x-working-notes': '1' }, signal: AbortSignal.timeout(2_000) }).catch(() => null);
+  // An app from before the rename to Wonos has the old path and header.
+  for (const path of [APP_STOP_PATH, LEGACY_APP_STOP_PATH]) {
+    const response = await fetch(`${base}${path}`, { method: 'POST', headers: { [LOCAL_HEADER]: '1', 'x-working-notes': '1' }, signal: AbortSignal.timeout(2_000) }).catch(() => null);
+    if (response?.ok) break;
+  }
   if (!(await waitForPort(false, 5_000))) {
-    throw new Error(`An older Working Notes app is still running on ${APP_HOST}:${APP_PORT}. Quit it, then open the app again.`);
+    throw new Error(`An older Wonos app is still running on ${APP_HOST}:${APP_PORT}. Quit it, then open the app again.`);
   }
 };
 
@@ -99,10 +107,10 @@ const startApp = async (launch: LaunchCommand, timeoutMs: number): Promise<void>
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await sleep(250);
-    if (failure) throw new Error(`Couldn't start Working Notes: ${(failure as Error).message}`);
+    if (failure) throw new Error(`Couldn't start Wonos: ${(failure as Error).message}`);
     if (await isPortListening(APP_PORT)) return;
   }
-  throw new Error(`Working Notes didn't start within ${timeoutMs / 1000} seconds. Run \`wnotes app\` in a terminal to see why.`);
+  throw new Error(`Wonos didn't start within ${timeoutMs / 1000} seconds. Run \`wono app\` in a terminal to see why.`);
 };
 
 export interface AppOwner {
@@ -113,17 +121,17 @@ export interface AppOwner {
 
 /** The app this process starts: a release's own binary, or a clone's dev server. */
 export const currentAppOwner = (repoDir: string): AppOwner => {
-  const standalone = process.env['WNOTES_STANDALONE'] === '1';
+  const standalone = process.env['WONO_STANDALONE'] === '1';
   return { launch: appLaunchCommand({ standalone, execPath: process.execPath, repoDir }), standalone, version: pluginManifest.version };
 };
 
 /**
- * Whether a process's command line is Working Notes: a release binary (`…/wnotes app`)
- * or a clone's dev server (vite, run from the working-notes folder). A restart stops
+ * Whether a process's command line is Wonos: a release binary (`…/wono app`)
+ * or a clone's dev server (vite, run from the wonos folder). A restart stops
  * nothing else that happens to hold the port.
  */
-export const isWorkingNotesCommand = (command: string): boolean =>
-  /(^|[\\/"])wnotes(\.exe)?(["\s]|$)/i.test(command) || /working-notes/i.test(command);
+export const isWonoCommand = (command: string): boolean =>
+  /(^|[\\/"])(wono|wnotes)(\.exe)?(["\s]|$)/i.test(command) || /wonos|working-notes/i.test(command);
 
 const run = promisify(execFile);
 
@@ -150,18 +158,18 @@ const commandLine = async (pid: number): Promise<string> =>
     : await run('ps', ['-o', 'command=', '-p', String(pid)]).then((r) => r.stdout, () => '')
   ).trim();
 
-/** Stops whatever Working Notes process listens on the app port, by pid (for apps without the stop endpoint). */
+/** Stops whatever Wonos process listens on the app port, by pid (for apps without the stop endpoint). */
 const stopByPid = async (): Promise<void> => {
   const pids = await listeningPids(APP_PORT);
   for (const pid of pids) {
     const command = await commandLine(pid);
-    if (!isWorkingNotesCommand(command)) {
-      throw new Error(`Something other than Working Notes is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
+    if (!isWonoCommand(command)) {
+      throw new Error(`Something other than Wonos is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
     }
     process.kill(pid, 'SIGTERM');
   }
   if (!(await waitForPort(false, 5_000))) {
-    throw new Error(`The Working Notes app on ${APP_HOST}:${APP_PORT} didn't stop. Quit it, then restart the app.`);
+    throw new Error(`The Wonos app on ${APP_HOST}:${APP_PORT} didn't stop. Quit it, then restart the app.`);
   }
 };
 
@@ -189,10 +197,15 @@ export const openApp = async (owner: AppOwner, timeoutMs = 20_000): Promise<Open
   return { started: true, restarted: plan === 'restart' };
 };
 
-/** When the MCP server starts: replace an app an older release left running, but start nothing new. */
-export const restartStaleApp = async (owner: AppOwner): Promise<boolean> => {
+/**
+ * When the MCP server starts: stops an app an older release left running, before this
+ * process opens the data directory (which may still need moving from its name before
+ * the rename to Wonos). True if it stopped one; start this version's app then with startOwnApp.
+ */
+export const stopStaleApp = async (owner: AppOwner): Promise<boolean> => {
   if (planAppLaunch(await probeApp(), owner) !== 'restart') return false;
   await stopApp();
-  await startApp(owner.launch, 20_000);
   return true;
 };
+
+export const startOwnApp = (owner: AppOwner): Promise<void> => startApp(owner.launch, 20_000);

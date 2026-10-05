@@ -1,5 +1,5 @@
 <script lang="ts">
-  // What a locked Working Notes Pro feature shows instead of itself: what it is, why
+  // What a locked Wonos Pro feature shows instead of itself: what it is, why
   // it's locked (the server's message), and the way to the License page.
   import type { Snippet } from 'svelte';
 

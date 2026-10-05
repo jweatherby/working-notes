@@ -1,6 +1,6 @@
 # Database Conventions — `prisma/`
 
-SQLite, one file per user: `~/Library/Application Support/Working Notes/working-notes.db` (`./data/test` for integration tests). The path comes from `src/shared/settings/server` via `server/paths.ts`, used by `prisma.config.ts`, `src/shared/registry.server.ts` and the migrator.
+SQLite, one file per user: `~/Library/Application Support/Wonos/working-notes.db` (`./data/test` for integration tests). The path comes from `src/shared/settings/server` via `server/paths.ts`, used by `prisma.config.ts`, `src/shared/registry.server.ts` and the migrator.
 
 ## Schema conventions
 

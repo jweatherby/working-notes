@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Builds the standalone plugin: one `wnotes` binary (the CLI, MCP server, backups and
+// Builds the standalone plugin: one `wono` binary (the CLI, MCP server, backups and
 // UI, with Bun and the UI's static files built in) and the migrations, in a copy of
 // plugin/. A machine that installs it needs no clone and no Bun. The static files are
 // embedded rather than shipped as hundreds of minified files, so an organisation's
@@ -49,7 +49,7 @@ const main = async (): Promise<void> => {
     await Bun.file(join(REPO, '.claude-plugin/marketplace.json')).text()
   );
   if (!version.ok) throw version.error;
-  console.log(`Building Working Notes ${version.value} for ${target}`);
+  console.log(`Building Wonos ${version.value} for ${target}`);
 
   // The UI, as SvelteKit's adapter-node output in build/.
   run('bunx', ['svelte-kit', 'sync']);
@@ -70,7 +70,7 @@ const main = async (): Promise<void> => {
     .sort();
 
   // The generated entry imports the built SvelteKit server, so it isn't type-checked source.
-  const entry = join(DIST, '.build', 'wnotes.ts');
+  const entry = join(DIST, '.build', 'wono.ts');
   await mkdir(join(DIST, '.build'), { recursive: true });
   await writeFile(entry, [
     `import { runStandalone } from ${JSON.stringify(join(REPO, 'cli/standalone.ts'))};`,
@@ -85,7 +85,7 @@ const main = async (): Promise<void> => {
     ''
   ].join('\n'));
 
-  const binary = join(server, `wnotes-${target}${spec.exe}`);
+  const binary = join(server, `wono-${target}${spec.exe}`);
   const built = await Bun.build({
     entrypoints: [entry],
     compile: { target: `bun-${target}` as Bun.Build.CompileTarget, outfile: binary },

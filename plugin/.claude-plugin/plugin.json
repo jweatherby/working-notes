@@ -1,7 +1,7 @@
 {
-  "name": "working-notes",
+  "name": "wonos",
   "version": "0.10.2",
-  "description": "Lets Claude read and write your local Working Notes notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
+  "description": "Lets Claude read and write your local Wonos notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
   "author": {
     "name": "jweatherby"
   },

@@ -8,6 +8,7 @@ import { createCallerFactory } from '$shared/trpc/init';
 import { createNotebookContext } from '$shared/trpc/context.server';
 import { listProcedures, type ProcedureMeta } from '$shared/trpc/meta';
 import { resolveCurrentNotebook } from '$shared/notebooks/current.server';
+import { notebookFromEnv } from '$shared/notebooks/resolve';
 import { closeRegistries } from '$shared/registry.server';
 import { features } from '$shared/settings/base/features';
 
@@ -29,7 +30,7 @@ export type CallOutcome =
   | { readonly kind: 'invalid'; readonly issues: readonly InputIssue[] };
 
 export interface CallOptions {
-  /** Notebook id or name. Otherwise WNOTES_NOTEBOOK, then the default notebook. */
+  /** Notebook id or name. Otherwise WONO_NOTEBOOK, then the default notebook. */
   readonly notebook?: string;
 }
 
@@ -43,7 +44,7 @@ export const callProcedure = async (name: string, input: unknown, options: CallO
   if (!procedures.some((p) => p.name === name)) throw new Error(`Unknown procedure: ${name}`);
 
   // Resolved on every call, so a long-running MCP server sees notebook.setDefault.
-  const notebook = await resolveCurrentNotebook({ explicit: options.notebook, env: process.env['WNOTES_NOTEBOOK'] });
+  const notebook = await resolveCurrentNotebook({ explicit: options.notebook, env: notebookFromEnv(process.env) });
   if (!notebook.ok) throw notebook.error;
 
   const caller = createCallerFactory(appRouter)(await createNotebookContext(notebook.value));
