@@ -1,5 +1,5 @@
 // What a notebook's profile changes. Client-safe and pure. A home notebook hides
-// the org-only parts and renames four terms in the nav and page headings; field
+// goals and the org-only parts and renames four terms in the nav and page headings; field
 // labels, forms and the API stay the same in every notebook.
 
 import type { NotebookProfile } from '$shared/types/notebook';
@@ -11,6 +11,8 @@ export interface ProfileFeatures {
   readonly orgLead: boolean;
   /** The Org Map page; home links People instead. */
   readonly orgMap: boolean;
+  /** Goals: the nav link, the finder entry, /app/goals, owned goals and the home graph. Data and router stay. */
+  readonly goals: boolean;
   /** Partner, parent, sibling and friend relations between people. */
   readonly personalRelations: boolean;
   /** The home page's upcoming birthdays. */
@@ -21,6 +23,7 @@ export const profileFeatures = (profile: NotebookProfile): ProfileFeatures => ({
   departments: profile === 'work',
   orgLead: profile === 'work',
   orgMap: profile === 'work',
+  goals: profile === 'work',
   personalRelations: profile === 'home',
   birthdays: profile === 'home'
 });

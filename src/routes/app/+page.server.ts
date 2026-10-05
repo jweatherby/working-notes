@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { trpc } from '$shared/trpc/client';
-import { FOCUS_TYPES } from '$shared/types/home';
+import { FOCUS_TYPES, parseHomeTodoSort } from '$shared/types/home';
 import { parseTypedIdValue } from '$shared/utils/entity';
 import { profileFeatures } from '$shared/settings/base/profile';
 import { upcomingBirthdays } from '$shared/utils/birthday';
@@ -10,9 +10,12 @@ export const load: PageServerLoad = async ({ fetch, url, locals }) => {
   const focus = parseTypedIdValue(url.searchParams.get('focus') ?? '', FOCUS_TYPES);
   const showBirthdays = profileFeatures(locals.notebook.profile).birthdays;
   const [todos, updates, graph, persons] = await Promise.all([
-    client.home.todos.query({ limit: 15 }),
+    client.home.todos.query({ limit: 15, sort: parseHomeTodoSort(url.searchParams.get('todoSort')) }),
     client.home.updates.query({ limit: 12 }),
-    client.home.graph.query(focus ? { focusType: focus.type, focusId: focus.id } : {}),
+    client.home.graph.query({
+      ...(focus ? { focusType: focus.type, focusId: focus.id } : {}),
+      ...(profileFeatures(locals.notebook.profile).goals ? {} : { exclude: ['GOAL' as const] })
+    }),
     showBirthdays ? client.person.list.query({}) : Promise.resolve(null)
   ]);
   const birthdays = persons?.ok
@@ -27,7 +30,7 @@ export const load: PageServerLoad = async ({ fetch, url, locals }) => {
   return {
     todos: todos.ok ? todos.value : [],
     updates: updates.ok ? updates.value : [],
-    graph: graph.ok ? graph.value : { focus: null, groups: [] },
+    graph: graph.ok ? graph.value : { focus: null, groups: [], branches: {} },
     birthdays
   };
 };

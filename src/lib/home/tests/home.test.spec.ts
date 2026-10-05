@@ -31,6 +31,26 @@ describe('layoutFocus', () => {
   it('handles no groups', () => {
     expect(layoutFocus([], 1000, 560).nodes).toEqual([]);
   });
+
+  it('with a second ring, puts the first ring inside and fans each branch out beyond its parent', () => {
+    const layout = layoutFocus([{ size: 2, branches: [3, 0] }, { size: 1, branches: [2] }], 1000, 560);
+    const distance = (p: { x: number; y: number }) => Math.hypot((p.x - 500) / 410, (p.y - 280) / 244);
+    expect(layout.outer.map((g) => g.map((b) => b.length))).toEqual([[3, 0], [2]]);
+    for (const p of layout.nodes.flat()) expect(distance(p)).toBeCloseTo(0.5);
+    for (const p of layout.outer.flat(2)) {
+      expect(distance(p)).toBeCloseTo(1);
+      expect(p.x).toBeGreaterThanOrEqual(90);
+      expect(p.x).toBeLessThanOrEqual(910);
+    }
+    // A branch's middle child sits on its parent's angle.
+    const parent = layout.nodes[0]![0]!;
+    const middle = layout.outer[0]![0]![1]!;
+    expect(Math.atan2(middle.y - 280, (middle.x - 500) * 244 / 410)).toBeCloseTo(Math.atan2(parent.y - 280, (parent.x - 500) * 244 / 410));
+  });
+
+  it('keeps the one-ring layout when no pill has a branch', () => {
+    expect(layoutFocus([{ size: 2, branches: [0, 0] }], 1000, 560).nodes).toEqual(layoutFocus([{ size: 2 }], 1000, 560).nodes);
+  });
 });
 
 describe('focusHeight', () => {

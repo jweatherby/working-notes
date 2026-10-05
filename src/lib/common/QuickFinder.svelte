@@ -30,7 +30,7 @@
     { name: $labels.teams, href: '/app/teams' },
     ...($profileFlags.departments ? [{ name: 'Departments', href: '/app/departments' }] : []),
     { name: 'Projects', href: '/app/projects' },
-    { name: 'Goals', href: '/app/goals' },
+    ...($profileFlags.goals ? [{ name: 'Goals', href: '/app/goals' }] : []),
     { name: $labels.wiki, href: '/app/wiki' },
     { name: 'Page kinds', href: '/app/wiki/kinds' },
     ...($profileFlags.orgMap ? [{ name: 'Org Map', href: '/app/orgmap' }] : []),

@@ -167,6 +167,12 @@
   };
 </script>
 
+
+{#snippet exportLink()}
+  {#if exportHref && content.trim()}
+    <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
+  {/if}
+{/snippet}
 <section class="card doc-card">
   <div class="doc-header">
     {#if editingTitle}
@@ -187,8 +193,11 @@
     {#if hasSourcePdf && onConvertPdf && !converting && !content.trim()}
       <button type="button" class="btn ghost sm" onclick={onConvertPdf}>Convert with Claude</button>
     {/if}
-    {#if exportHref && content.trim()}
-      <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
+    {#if onUploadPdf && !hasSourcePdf}
+      <label class="btn ghost sm">
+        Attach PDF
+        <input type="file" accept=".pdf,application/pdf" onchange={handlePdfUpload} hidden />
+      </label>
     {/if}
     {#if onClose}
       <button type="button" class="btn icon" onclick={onClose} aria-label="Close">&times;</button>
@@ -212,12 +221,7 @@
       {#if mode === 'write'}
         <div class="toolbar write-actions">
           <span class="spacer"></span>
-          {#if onUploadPdf && !hasSourcePdf}
-            <label class="btn ghost sm">
-              Attach PDF
-              <input type="file" accept=".pdf,application/pdf" onchange={handlePdfUpload} hidden />
-            </label>
-          {/if}
+          {@render exportLink()}
           {#if isDirty}<span class="unsaved text-xs">● Unsaved</span>{/if}
           <button type="button" class="btn primary sm" onclick={handleSave} disabled={saving || !isDirty} aria-busy={saving}>Save</button>
         </div>
@@ -226,18 +230,19 @@
         {#key resolvedContent}
           <MarkdownEditor value={draft} onChange={(md) => (draft = md)} {pendingImages}>
             {#snippet toolbarEnd()}
-              {#if onUploadPdf && !hasSourcePdf}
-                <label class="btn ghost sm">
-                  Attach PDF
-                  <input type="file" accept=".pdf,application/pdf" onchange={handlePdfUpload} hidden />
-                </label>
-              {/if}
+              {@render exportLink()}
               {#if isDirty}<span class="unsaved text-xs">● Unsaved</span>{/if}
               <button type="button" class="btn primary sm" onclick={handleSave} disabled={saving || !isDirty} aria-busy={saving}>Save</button>
             {/snippet}
           </MarkdownEditor>
         {/key}
       {:else}
+        {#if exportHref && content.trim()}
+          <div class="toolbar write-actions">
+            <span class="spacer"></span>
+            {@render exportLink()}
+          </div>
+        {/if}
         <div class="doc-preview">
           <MarkdownRenderer content={draft} branding={chartBranding} />
         </div>

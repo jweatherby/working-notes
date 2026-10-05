@@ -1,21 +1,27 @@
 import { z } from 'zod';
 import { router, procedure } from '$shared/trpc/init';
-import { FOCUS_TYPES } from '$shared/types/home';
+import { RELATABLE_TYPES } from '$shared/types/enums';
+import { FOCUS_TYPES, HOME_TODO_SORTS } from '$shared/types/home';
 import { listOpenTodos, listRecentUpdates } from './operations';
 import { getFocusGraph } from './focus-graph';
 
 export const homeRouter = router({
   todos: procedure
-    .input(z.object({ limit: z.number().int().min(1).max(200).optional() }))
-    .query(({ ctx, input }) => listOpenTodos(ctx.reg, input.limit)),
+    .input(z.object({ limit: z.number().int().min(1).max(200).optional(), sort: z.enum(HOME_TODO_SORTS).optional() }))
+    .query(({ ctx, input }) => listOpenTodos(ctx.reg, input.limit, input.sort)),
 
   updates: procedure
     .input(z.object({ limit: z.number().int().min(1).max(200).optional() }))
     .query(({ ctx, input }) => listRecentUpdates(ctx.reg, input.limit)),
 
   graph: procedure
-    .input(z.object({ focusType: z.enum(FOCUS_TYPES).optional(), focusId: z.string().min(1).optional() }).default({}))
+    .input(z.object({
+      focusType: z.enum(FOCUS_TYPES).optional(),
+      focusId: z.string().min(1).optional(),
+      // Types to leave out of both rings; the app leaves out GOAL in a home notebook.
+      exclude: z.array(z.enum(RELATABLE_TYPES)).optional()
+    }).default({}))
     .query(({ ctx, input }) =>
-      getFocusGraph(ctx.reg, input.focusType && input.focusId ? { type: input.focusType, id: input.focusId } : undefined)
+      getFocusGraph(ctx.reg, input.focusType && input.focusId ? { type: input.focusType, id: input.focusId } : undefined, { exclude: input.exclude })
     )
 });

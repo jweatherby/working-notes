@@ -17,6 +17,14 @@ export const UPDATE_KINDS = [
 
 export type UpdateKind = (typeof UPDATE_KINDS)[number];
 
+/** How the home page's Todos panel orders open todos. */
+export const HOME_TODO_SORTS = ['priority', 'status'] as const;
+
+export type HomeTodoSort = (typeof HOME_TODO_SORTS)[number];
+
+/** `?todoSort=` on the home page; anything unknown is the default, priority. */
+export const parseHomeTodoSort = (value: string | null): HomeTodoSort => (value === 'status' ? 'status' : 'priority');
+
 export interface RecentUpdate {
   readonly kind: UpdateKind;
   readonly id: string;
@@ -27,8 +35,9 @@ export interface RecentUpdate {
   readonly isNew: boolean;
 }
 
-// The focus graph: one entity in the middle and everything one link away,
-// grouped by how each link reads from the middle ("Reports to", "Owns").
+// The focus graph: one entity in the middle, everything one link away grouped by
+// how each link reads from the middle ("Reports to", "Owns"), and a second ring:
+// what each of those links to in turn.
 
 /** Types that can sit in the middle of the focus graph. */
 export const FOCUS_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE'] as const;
@@ -51,7 +60,18 @@ export interface FocusGroup {
   readonly more: number;
 }
 
+/** A first-ring node's own neighbours, on the outer ring. */
+export interface FocusBranch {
+  readonly nodes: readonly FocusNode[];
+  /** Left out by the cap. */
+  readonly more: number;
+}
+
 export interface FocusGraph {
   readonly focus: FocusNode | null;
   readonly groups: readonly FocusGroup[];
+  /** Keyed `TYPE:id` of a first-ring node; only nodes with something new to show have one. */
+  readonly branches: Readonly<Record<string, FocusBranch>>;
 }
+
+export const focusKey = (node: Pick<FocusNode, 'type' | 'id'>): string => `${node.type}:${node.id}`;

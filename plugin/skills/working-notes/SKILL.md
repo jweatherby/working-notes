@@ -46,7 +46,7 @@ Every call works on one notebook: the default, unless you name another.
 - **Name it on the call** to use a notebook other than the default: `--notebook <id or name>` on any CLI call, or `notebook` in any tool's arguments. Keep passing it for every call in that notebook, lookups included.
 - **Ids don't carry across notebooks.** Look people, teams and projects up in the notebook you're writing to.
 - **Say which notebook** you read or wrote when there's more than one: "Added Dana Park to Platform, in Work".
-- **A notebook's profile** is `work` or `home` (`notebook.list` shows it). A home notebook hides departments, leads and the org map, and its UI calls teams **groups** (family, college friends) and the wiki the **Library**. The data and tools are the same; use the user's words when you report back.
+- **A notebook's profile** is `work` or `home` (`notebook.list` shows it). A home notebook hides goals, departments, leads and the org map, and its UI calls teams **groups** (family, college friends) and the wiki the **Library**. The data and tools are the same; use the user's words when you report back.
 - `notebook.create --name "Garden"` makes a notebook; its id comes from the name, or pass `--id`. Add `--profile home` for home life. A work notebook starts with the page kinds POLICY, PRODUCT, SOFTWARE and DECISION; a home one starts with none. `notebook.setProfile --id <id> --profile home` changes it, only when the user asks. `notebook.setDefault --id <id>` changes the default for every later call, so do it only when the user asks. There is no delete: the user removes a notebook themselves.
 
 ## Rules

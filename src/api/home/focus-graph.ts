@@ -1,13 +1,21 @@
 // The home page's focus graph: one entity and everything one link away, grouped
-// by how the link reads from it. Links are relations (including goal–project
-// links), ownership, parent/child, reporting lines, team members and
-// departments. Attached docs, notes and todos only appear when a relation
-// points at them.
+// by how the link reads from it, plus a second ring: what each of those links to
+// in turn (a few each). Links are relations (including goal–project links),
+// ownership, parent/child, reporting lines, team members and departments.
+// Attached docs, notes and todos only appear when a relation points at them.
 
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import type { RelatableType } from '$shared/types/enums';
-import { FOCUS_TYPES, type FocusGraph, type FocusGroup, type FocusNode, type FocusType } from '$shared/types/home';
+import {
+  FOCUS_TYPES,
+  focusKey,
+  type FocusBranch,
+  type FocusGraph,
+  type FocusGroup,
+  type FocusNode,
+  type FocusType
+} from '$shared/types/home';
 import { entityPath, entityTypeLabel } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
@@ -73,7 +81,36 @@ export const buildFocusGraph = (focus: FocusNode, links: readonly FocusLink[], c
       const sorted = [...nodes.values()].sort((a, b) => a.label.localeCompare(b.label));
       return { label, nodes: sorted.slice(0, cap), more: Math.max(0, sorted.length - cap) };
     });
-  return { focus, groups };
+  return { focus, groups, branches: {} };
+};
+
+/**
+ * The outer ring: for each first-ring node, its own neighbours that aren't the
+ * focus, aren't on the first ring, and haven't been placed under an earlier node,
+ * sorted by name and capped at `cap`.
+ */
+export const buildBranches = (
+  graph: FocusGraph,
+  linksOf: ReadonlyMap<string, readonly FocusLink[]>,
+  cap = 4
+): Readonly<Record<string, FocusBranch>> => {
+  if (!graph.focus) return {};
+  const shown = new Set([focusKey(graph.focus), ...graph.groups.flatMap((g) => g.nodes.map(focusKey))]);
+  const branches: Record<string, FocusBranch> = {};
+  for (const node of graph.groups.flatMap((g) => g.nodes)) {
+    const key = focusKey(node);
+    const fresh = new Map<string, FocusNode>();
+    for (const link of linksOf.get(key) ?? []) {
+      const k = focusKey(link.node);
+      if (!shown.has(k)) fresh.set(k, link.node);
+    }
+    if (fresh.size === 0) continue;
+    const sorted = [...fresh.values()].sort((a, b) => a.label.localeCompare(b.label));
+    const kept = sorted.slice(0, cap);
+    for (const n of kept) shown.add(focusKey(n));
+    branches[key] = { nodes: kept, more: sorted.length - kept.length };
+  }
+  return branches;
 };
 
 // ----- Loading -----
@@ -168,14 +205,15 @@ const structuralLinks = async (reg: Pick<Registry, 'prisma'>, type: FocusType, i
   }
 };
 
-/** The most recently updated active project, goal or team. */
+/** The most recently updated active project, goal or team (not a goal when goals are left out). */
 const defaultFocus = async (
-  reg: Pick<Registry, 'prisma'>
+  reg: Pick<Registry, 'prisma'>,
+  withGoals: boolean
 ): Promise<{ readonly type: FocusType; readonly id: string } | null> => {
   const latest = { where: { archivedAt: null }, orderBy: { updatedAt: 'desc' as const }, select: { id: true, updatedAt: true } };
   const [project, goal, team] = await Promise.all([
     reg.prisma.project.findFirst(latest),
-    reg.prisma.goal.findFirst(latest),
+    withGoals ? reg.prisma.goal.findFirst(latest) : Promise.resolve(null),
     reg.prisma.team.findFirst(latest)
   ]);
   const candidates = [
@@ -187,22 +225,18 @@ const defaultFocus = async (
   return newest ? { type: newest.type, id: newest.id } : null;
 };
 
-export const getFocusGraph = async (
+type ArchivedIds = Awaited<ReturnType<typeof loadArchivedIds>>;
+
+/** Everything one link away from an entity, minus archived entities and the types left out. */
+const loadLinks = async (
   reg: Pick<Registry, 'prisma'>,
-  requested?: { readonly type: FocusType; readonly id: string }
-): Promise<Result<FocusGraph>> => {
-  const target = requested ?? (await defaultFocus(reg));
-  if (!target) return ok({ focus: null, groups: [] });
-
-  const label = await resolveEntityLabel(reg, target.type, target.id);
-  if (label === null) {
-    return err(new Error(`No ${entityTypeLabel(target.type).toLowerCase()} with id ${target.id}. Find ids with ${target.type.toLowerCase()}.list.`));
-  }
-
-  const [relations, structural, archived] = await Promise.all([
+  target: { readonly type: FocusType; readonly id: string },
+  archived: ArchivedIds,
+  exclude: ReadonlySet<string>
+): Promise<Result<readonly FocusLink[]>> => {
+  const [relations, structural] = await Promise.all([
     listRelationsForEntity(reg, target.type, target.id),
-    structuralLinks(reg, target.type, target.id),
-    loadArchivedIds(reg)
+    structuralLinks(reg, target.type, target.id)
   ]);
   if (!relations.ok) return relations;
 
@@ -215,9 +249,43 @@ export const getFocusGraph = async (
 
   const isArchived = (node: FocusNode): boolean =>
     isFocusType(node.type) && (archived.get(node.type) ?? []).includes(node.id);
-  const visible = [...structural, ...relationLinks].filter(
-    ({ node }) => !isArchived(node) && (features.reports || node.type !== 'REPORT')
-  );
+  return ok([...structural, ...relationLinks].filter(
+    ({ node }) => !isArchived(node) && !exclude.has(node.type) && (features.reports || node.type !== 'REPORT')
+  ));
+};
 
-  return ok(buildFocusGraph(focusNode(target.type, target.id, label), visible));
+export interface FocusGraphOptions {
+  /** Entity types to leave out (a home notebook leaves out goals). */
+  readonly exclude?: readonly RelatableType[];
+}
+
+export const getFocusGraph = async (
+  reg: Pick<Registry, 'prisma'>,
+  requested?: { readonly type: FocusType; readonly id: string },
+  options: FocusGraphOptions = {}
+): Promise<Result<FocusGraph>> => {
+  const exclude = new Set<string>(options.exclude ?? []);
+  const target = requested ?? (await defaultFocus(reg, !exclude.has('GOAL')));
+  if (!target) return ok({ focus: null, groups: [], branches: {} });
+
+  const label = await resolveEntityLabel(reg, target.type, target.id);
+  if (label === null) {
+    return err(new Error(`No ${entityTypeLabel(target.type).toLowerCase()} with id ${target.id}. Find ids with ${target.type.toLowerCase()}.list.`));
+  }
+
+  const archived = await loadArchivedIds(reg);
+  const first = await loadLinks(reg, target, archived, exclude);
+  if (!first.ok) return first;
+  const graph = buildFocusGraph(focusNode(target.type, target.id, label), first.value);
+
+  // The second ring: each first-ring entity that can be a focus, one hop further.
+  const ring = graph.groups.flatMap((g) => g.nodes).filter((n): n is FocusNode & { type: FocusType } => isFocusType(n.type));
+  const seen = new Set<string>();
+  const outer = await Promise.all(
+    ring
+      .filter((n) => !seen.has(focusKey(n)) && seen.add(focusKey(n)))
+      .map(async (n) => [focusKey(n), await loadLinks(reg, n, archived, exclude)] as const)
+  );
+  const linksOf = new Map(outer.map(([key, links]) => [key, links.ok ? links.value : []]));
+  return ok({ ...graph, branches: buildBranches(graph, linksOf) });
 };

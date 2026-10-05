@@ -24,6 +24,14 @@ describe('home smoke', () => {
     const todos = await listOpenTodos(reg);
     expect(todos.ok && todos.value[0]?.title).toBe('Urgent');
 
+    const started = await createTodo(reg, { title: 'Started', priority: 0, entityType: 'PERSON', entityId: 'person_alice' });
+    if (!started.ok) return;
+    await reg.prisma.todo.update({ where: { id: started.value.id }, data: { status: 'ACTIVE' } });
+    const byStatus = await listOpenTodos(reg, 200, 'status');
+    expect(byStatus.ok && byStatus.value[0]?.status).toBe('ACTIVE');
+    const byPriority = await listOpenTodos(reg, 200);
+    expect(byPriority.ok && byPriority.value[0]?.title).not.toBe('Started');
+
     const updates = await listRecentUpdates(reg);
     expect(updates.ok).toBe(true);
     if (!updates.ok) return;
@@ -68,6 +76,15 @@ describe('home smoke', () => {
       'Needed by': ['Focus Goal']
     });
     expect(labelsOf(await getFocusGraph(reg, { type: 'TEAM', id: team.id }))).toEqual({ Members: ['Focus Lead'] });
+
+    // One link further: the team's other member, the project's upstream and goal.
+    const second = await getFocusGraph(reg, { type: 'PERSON', id: lead.id });
+    const outer = second.ok ? Object.values(second.value.branches).flatMap((b) => b.nodes.map((n) => n.label)).sort() : null;
+    expect(outer).toEqual(['Focus Goal', 'Focus Upstream']);
+
+    // A home notebook leaves goals out of both rings.
+    const noGoals = await getFocusGraph(reg, { type: 'PROJECT', id: project.id }, { exclude: ['GOAL'] });
+    expect(labelsOf(noGoals)).toEqual({ 'Owned by': ['Focus Lead'], 'Depends on': ['Focus Upstream'] });
 
     const fallback = await getFocusGraph(reg);
     expect(fallback.ok && fallback.value.focus).not.toBeNull();

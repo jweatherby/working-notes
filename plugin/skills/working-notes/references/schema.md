@@ -12,7 +12,7 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 - `person.get` returns `leadName`, `reports`, `teamMemberships` and `department`.
 - Deleting a person clears their reports' `leadId` and their department link, and removes their team memberships.
-- In a `home` notebook the UI calls teams **groups** and hides departments, leads and the org map; the procedures are the same, and the home page lists birthdays in the next 30 days.
+- In a `home` notebook the UI calls teams **groups** and hides goals, departments, leads and the org map; the procedures are the same, and the home page lists birthdays in the next 30 days.
 
 ## Projects
 

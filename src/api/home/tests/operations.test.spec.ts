@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mergeUpdates, summarizeContent } from '../operations';
-import { buildFocusGraph, focusNode } from '../focus-graph';
+import { buildBranches, buildFocusGraph, focusNode, type FocusLink } from '../focus-graph';
 
 const d = (iso: string): Date => new Date(iso);
 
@@ -63,6 +63,35 @@ describe('buildFocusGraph', () => {
   });
 
   it('is empty without links', () => {
-    expect(buildFocusGraph(focus, [])).toEqual({ focus, groups: [] });
+    expect(buildFocusGraph(focus, [])).toEqual({ focus, groups: [], branches: {} });
+  });
+});
+
+describe('buildBranches', () => {
+  const focus = focusNode('PERSON', 'p1', 'Alice');
+  const team = focusNode('TEAM', 't1', 'Core');
+  const project = focusNode('PROJECT', 'pr1', 'Checkout');
+  const graph = buildFocusGraph(focus, [
+    { label: 'Member of', node: team },
+    { label: 'Owns', node: project }
+  ]);
+  const link = (node: ReturnType<typeof focusNode>): FocusLink => ({ label: 'x', node });
+
+  it('adds what each first-ring node links to, leaving out the focus, the first ring and repeats', () => {
+    const bob = focusNode('PERSON', 'p2', 'Bob');
+    const carol = focusNode('PERSON', 'p3', 'Carol');
+    const branches = buildBranches(graph, new Map([
+      ['TEAM:t1', [link(focus), link(project), link(carol), link(bob)]],
+      ['PROJECT:pr1', [link(bob), link(team)]]
+    ]));
+    expect(Object.keys(branches)).toEqual(['TEAM:t1']);
+    expect(branches['TEAM:t1']?.nodes.map((n) => n.label)).toEqual(['Bob', 'Carol']);
+  });
+
+  it('caps each branch and counts the rest', () => {
+    const many = Array.from({ length: 6 }, (_, i) => link(focusNode('PERSON', `m${i}`, `M${i}`)));
+    const branches = buildBranches(graph, new Map([['TEAM:t1', many]]), 4);
+    expect(branches['TEAM:t1']).toMatchObject({ more: 2 });
+    expect(branches['TEAM:t1']?.nodes).toHaveLength(4);
   });
 });
