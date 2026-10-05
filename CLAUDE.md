@@ -1,4 +1,4 @@
-# CLAUDE.md — Working Notes
+# CLAUDE.md — Wonos
 
 A local-only, single-user structured notebook: an org chart (people, teams, departments), projects, notes, docs, todos, tags, and branded reports with charts. A more opinionated Obsidian, backed by SQLite.
 
@@ -26,7 +26,7 @@ Scoped docs:
 - **The network boundary is the security boundary** (`src/hooks.server.ts`). Keep all three parts:
   - the server binds to `127.0.0.1`
   - requests whose hostname isn't loopback get 403 (blocks DNS rebinding)
-  - `/api/trpc` requires the `x-working-notes: 1` header (blocks cross-site requests)
+  - `/api/trpc` requires the `x-wono: 1` header (blocks cross-site requests)
 
 ## Stack
 
@@ -51,36 +51,36 @@ Ask "who imports this?" Only the backend → `src/api/`. Both → `src/shared/`.
 
 ## Writing data with the CLI
 
-The CLI runs the tRPC router in-process against the local database, with the same Zod validation as the app. **The app doesn't need to be running.** `bun run setup` links `bin/wnotes` onto PATH as `wnotes`, and either form works from any directory.
+The CLI runs the tRPC router in-process against the local database, with the same Zod validation as the app. **The app doesn't need to be running.** `bun run setup` links `bin/wono` onto PATH as `wono`, and either form works from any directory.
 
 ```bash
-wnotes help                                   # every procedure
-wnotes help todo.create                       # one procedure's inputs, types and limits
-wnotes person.create --name "Alice Johnson" --title "Staff Engineer"
-wnotes person.update --id <personId> --leadId <leadPersonId>
-wnotes team.addMember --teamId <teamId> --personId <personId>
-wnotes note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
-wnotes todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
-wnotes report.create --entityType PERSON --entityId <personId> --title "Q3 review" --content-file q3.md
-wnotes goal.create --title "99.9% uptime" --ownerType TEAM --ownerId <teamId> --period 2026-H2 --target 99.9
-wnotes goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK
-wnotes pageKind.create --input '{"key":"EXPENSE","name":"Expense","fields":[{"key":"amount","label":"Amount","input":"number","format":"money","currency":"USD"}]}'
-wnotes page.create --title "Datadog" --kind SOFTWARE --properties '{"vendor":"Datadog","seats":40}'
-wnotes page.query --kind EXPENSE --filters '["amount:gte:100"]' --groupBy category --aggregates '["amount:sum"]'
-wnotes relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
-wnotes relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --toId <otherProjectId> --kind DEPENDS_ON
-wnotes search.query --q "vendor renewal -draft"             # full-text search over everything
-wnotes search.recall --entityType PERSON --entityId <personId>  # everything about one entity, in one call
+wono help                                   # every procedure
+wono help todo.create                       # one procedure's inputs, types and limits
+wono person.create --name "Alice Johnson" --title "Staff Engineer"
+wono person.update --id <personId> --leadId <leadPersonId>
+wono team.addMember --teamId <teamId> --personId <personId>
+wono note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
+wono todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
+wono report.create --entityType PERSON --entityId <personId> --title "Q3 review" --content-file q3.md
+wono goal.create --title "99.9% uptime" --ownerType TEAM --ownerId <teamId> --period 2026-H2 --target 99.9
+wono goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK
+wono pageKind.create --input '{"key":"EXPENSE","name":"Expense","fields":[{"key":"amount","label":"Amount","input":"number","format":"money","currency":"USD"}]}'
+wono page.create --title "Datadog" --kind SOFTWARE --properties '{"vendor":"Datadog","seats":40}'
+wono page.query --kind EXPENSE --filters '["amount:gte:100"]' --groupBy category --aggregates '["amount:sum"]'
+wono relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
+wono relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --toId <otherProjectId> --kind DEPENDS_ON
+wono search.query --q "vendor renewal -draft"             # full-text search over everything
+wono search.recall --entityType PERSON --entityId <personId>  # everything about one entity, in one call
 ```
 
 - **Output:** stdout is JSON (logs go to stderr). Operations return `{ "ok": true, "value": ... }` or `{ "ok": false, "error": { "message": ... } }`, and the CLI exits 1 on `ok: false`, invalid input or an unknown procedure. The error text is written to be actionable.
-- **Notebooks:** every call runs against the default notebook, unless it passes `--notebook <id or name>` (anywhere in the arguments) or `WNOTES_NOTEBOOK` is set. `notebook.list`, `notebook.create --name`, `notebook.rename` and `notebook.setDefault` manage them. There is deliberately no delete: the user moves a folder out of `Notebooks/` by hand.
+- **Notebooks:** every call runs against the default notebook, unless it passes `--notebook <id or name>` (anywhere in the arguments) or `WONO_NOTEBOOK` is set. `notebook.list`, `notebook.create --name`, `notebook.rename` and `notebook.setDefault` manage them. There is deliberately no delete: the user moves a folder out of `Notebooks/` by hand.
 - **Typing:** values are coerced by each procedure's JSON Schema. `--title 2024` stays a string, `--priority 2` becomes a number, and `--leadId null` clears a field.
 - **Input:** `--<field>-file <path>` reads a value from a file (use it for markdown), and `--input '<json>'` passes the whole input.
 - **Entity types:** `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
 - **Search and recall:** `search.query` is full-text search (SQLite FTS5, kept current by triggers) over names, notes, docs, pages, todos, comments, links and check-ins; `search.recall` returns an entity with everything attached to it and the text elsewhere that names it without linking it. See `src/api/CLAUDE.md` § Search.
 - **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities as `RELATED` (no direction) or `DEPENDS_ON`, with an optional note; in the UI, "+" in an entity's Related section adds one. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
-- **The Claude skill** in `plugin/skills/working-notes/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).
+- **The Claude skill** in `plugin/skills/wonos/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).
 
 ### Importing a PDF
 
@@ -92,32 +92,32 @@ A doc's "Export PDF" opens `/app/docs/<id>/print`, and a wiki page's (beside its
 
 ### Reports and charts
 
-**Reports are switched off while they're unfinished:** `features.reports` in `src/shared/settings/base/features.ts`. Off, the UI hides them (nav, finder, sidebar widget, home feed and graph), `/app/reports` is a 404, and `report.*` is left out of the CLI and MCP. The router, tables and data stay. To turn them back on, set the flag and restore the Reports section of the skill (`plugin/skills/working-notes/SKILL.md`, `references/schema.md`) and "reports" in the MCP instructions (`cli/mcp.ts`).
+**Reports are switched off while they're unfinished:** `features.reports` in `src/shared/settings/base/features.ts`. Off, the UI hides them (nav, finder, sidebar widget, home feed and graph), `/app/reports` is a 404, and `report.*` is left out of the CLI and MCP. The router, tables and data stay. To turn them back on, set the flag and restore the Reports section of the skill (`plugin/skills/wonos/SKILL.md`, `references/schema.md`) and "reports" in the MCP instructions (`cli/mcp.ts`).
 
-Reports are markdown with fenced `chart` blocks, rendered with the report's branding and printed to PDF from `/app/reports/<id>/print`. See `src/api/CLAUDE.md` § Reports and `plugin/skills/working-notes/references/charts.md`. Invalid chart blocks are rejected on save, and the error names the line.
+Reports are markdown with fenced `chart` blocks, rendered with the report's branding and printed to PDF from `/app/reports/<id>/print`. See `src/api/CLAUDE.md` § Reports and `plugin/skills/wonos/references/charts.md`. Invalid chart blocks are rejected on save, and the error names the line.
 
 ## Claude plugin and MCP server
 
 The repo is a Claude Code plugin marketplace (`.claude-plugin/marketplace.json`) with one plugin, in `plugin/`:
 - the skill
-- `plugin/scripts/wnotes`, the shim `.mcp.json` runs to start the server. It isn't in `bin/`: claude.ai-hosted plugins (Cowork) reject a top-level `bin/`, so `bun run setup` puts `wnotes` on PATH instead
-- `plugin/.mcp.json`, which starts the `working-notes` MCP server
+- `plugin/scripts/wono`, the shim `.mcp.json` runs to start the server. It isn't in `bin/`: claude.ai-hosted plugins (Cowork) reject a top-level `bin/`, so `bun run setup` puts `wono` on PATH instead
+- `plugin/.mcp.json`, which starts the `wonos` MCP server
 
-The shim runs, in order: the clone named by `$WORKING_NOTES_HOME`; the clone in `<data dir>/app-path`, which `bun run setup` writes (so a development machine runs its own code); or the standalone binary a release carries (see § Releases).
+The shim runs, in order: the clone named by `$WONO_HOME`; the clone in `<data dir>/app-path`, which `bun run setup` writes (so a development machine runs its own code); or the standalone binary a release carries (see § Releases).
 
-- **MCP server:** `wnotes mcp` (`cli/mcp.ts`) serves every procedure as a tool over stdio, with `.` written as `_` (`person_create`), plus `backup_snapshot` and `backup_list`. Every tool except `notebook_*` takes an optional `notebook` argument, which `callTool` strips before the call. It uses JSON-RPC and no SDK. The protocol is the pure `handleMessage` in `cli/mcp-protocol.ts`. Queries are marked read-only, and `delete`/`remove`/`detach` tools destructive. stdout carries protocol messages only; the app's logs go to stderr. It's stdio only: no port, no network.
+- **MCP server:** `wono mcp` (`cli/mcp.ts`) serves every procedure as a tool over stdio, with `.` written as `_` (`person_create`), plus `backup_snapshot` and `backup_list`. Every tool except `notebook_*` takes an optional `notebook` argument, which `callTool` strips before the call. It uses JSON-RPC and no SDK. The protocol is the pure `handleMessage` in `cli/mcp-protocol.ts`. Queries are marked read-only, and `delete`/`remove`/`detach` tools destructive. stdout carries protocol messages only; the app's logs go to stderr. It's stdio only: no port, no network.
 - **Shared calls:** the CLI and the MCP server both call procedures through `cli/api.ts`, so new procedures need no changes in either.
-- **Minimal PATH:** Claude desktop starts MCP servers with a minimal PATH. So `.mcp.json` runs the shim with `sh`, and `bin/wnotes` looks for Bun in `~/.bun/bin`, `/opt/homebrew/bin` and `/usr/local/bin` (or `$WNOTES_BUN`).
+- **Minimal PATH:** Claude desktop starts MCP servers with a minimal PATH. So `.mcp.json` runs the shim with `sh`, and `bin/wono` looks for Bun in `~/.bun/bin`, `/opt/homebrew/bin` and `/usr/local/bin` (or `$WONO_BUN`).
 - **`bun run setup`** does four things:
   - writes the pointer
-  - links `wnotes` into Bun's global bin folder
-  - zips `plugin/` into `dist/working-notes.zip` for Claude desktop Chat and Cowork
+  - links `wono` into Bun's global bin folder
+  - zips `plugin/` into `dist/wonos.zip` for Claude desktop Chat and Cowork
   - installs or updates the Claude Code plugin
 
   `bun run setup uninstall` undoes that. The logic is the pure `planInstall`/`planUninstall` in `scripts/setup/plan.ts`.
 - **Why a subdirectory:** the plugin's cache copy holds only the skill, the shim and `.mcp.json`. At the repo root, the whole app would be copied, including the `bin/` folder that claude.ai-hosted plugins reject.
 - **Bump the version with `bun run release:version <x.y.z>` whenever the plugin should update.** It sets `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` together, and `package.json` to match. `claude plugin update` and Cowork skip a version they already have.
-- **No repo paths in the skill:** it uses only MCP tools and `wnotes`. `wnotes backup …` and `wnotes app` run the backup script and the dev server.
+- **No repo paths in the skill:** it uses only MCP tools and `wono`. `wono backup …` and `wono app` run the backup script and the dev server.
 
 ## Releases
 
@@ -125,24 +125,25 @@ Releases include the app, so a computer that installs the plugin needs no clone 
 
 - **Releasing:** run `bun run release:version <x.y.z>`, commit and push to main. After CI passes, `.github/workflows/release.yml` publishes it. `scripts/release/plan.ts` skips a version that's already released, and fails if `plugin/` changed since the last release without a new version.
 - **CI** (`.github/workflows/ci.yml`): `check`, unit and integration tests on every push and pull request, on Linux. `portability` also runs the unit tests on macOS and Windows, without blocking.
-- **Build** (`bun run release:build [--target <t>]`, `scripts/release/build.ts`): builds the UI, then compiles `cli/standalone.ts` and the built SvelteKit server into one `wnotes-<target>` binary (`.exe` on Windows) with Bun embedded. Targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `windows-x64`; the default is this machine. Build a target on its own OS, since the binary embeds the host's libsql native package (the map is in `build.ts`). It writes `dist/plugin/` (the plugin plus `server/`: the binary, with the UI's static files embedded, `migrations/` and `VERSION`).
-- **Package** (`bun run release:package [<built plugin dir> ...]`, `scripts/release/package.ts`, pure plan in `package-plan.ts`): merges the binaries of several builds into `dist/plugin`, then zips it once per platform with only that platform's binary: `dist/working-notes-<version>-<target>.zip`. Each binary is over 100 MB, so a release carries three platforms, not five.
-- **Smoke test** (`bun run release:smoke`, `scripts/release/smoke.ts`): picks this machine's binary, installs it through the shim (`wnotes.cmd` on Windows) into an empty home folder, then checks a procedure, the MCP tool list and the app (page, asset, API, guard).
+- **Build** (`bun run release:build [--target <t>]`, `scripts/release/build.ts`): builds the UI, then compiles `cli/standalone.ts` and the built SvelteKit server into one `wono-<target>` binary (`.exe` on Windows) with Bun embedded. Targets: `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`, `windows-x64`; the default is this machine. Build a target on its own OS, since the binary embeds the host's libsql native package (the map is in `build.ts`). It writes `dist/plugin/` (the plugin plus `server/`: the binary, with the UI's static files embedded, `migrations/` and `VERSION`).
+- **Package** (`bun run release:package [<built plugin dir> ...]`, `scripts/release/package.ts`, pure plan in `package-plan.ts`): merges the binaries of several builds into `dist/plugin`, then zips it once per platform with only that platform's binary: `dist/wonos-<version>-<target>.zip`. Each binary is 80–120 MB, so a release carries three platforms, not five. GitHub refuses a file over 100 MB in git, so the `dist` branch (the marketplace plugin) leaves off any binary over 95 MB (`branchBinaries`); that platform's release zip still has it. Today that leaves Linux to the release zip and the desktop app.
+- **Windows paths:** Windows can't check out a path with a reserved device name (`con`, `prn`, `aux`, `nul`, `com1`…, `lpt1`…) as any segment, or with `<>:"|?*`. A unit test (`scripts/release/windows-paths.ts`) fails on any such tracked file; `src/api/aux/` became `src/api/attached/` for this.
+- **Smoke test** (`bun run release:smoke`, `scripts/release/smoke.ts`): picks this machine's binary, installs it through the shim (`wono.cmd` on Windows) into an empty home folder, then checks a procedure, the MCP tool list and the app (page, asset, API, guard).
 - **Publish:** force-pushes the contents of `dist/plugin` to the root of the `dist` branch (Cowork's sync requires `.claude-plugin/plugin.json` at the root and ignores a source `path`), then creates GitHub release `v<version>` with the zips (for Claude desktop Chat, which only takes uploads). The workflow builds and smoke-tests each platform on its own runner, then merges them on Linux.
 - **marketplace.json** points the plugin at that branch: `"source": {"source": "github", "repo": …, "ref": "dist"}`. So Claude Code, Cowork and `bun run setup` all install the released plugin; a development machine's MCP server still runs its clone (shim order above).
-- **The binary:** `cli/standalone.ts` sets `WNOTES_STANDALONE` and `WNOTES_MIGRATIONS_DIR`, then runs `mcp`, `backup`, `app` (`cli/app-server.ts`: the SvelteKit server plus static files, on 127.0.0.1:5173) or a procedure. `cli/main.ts` and `cli/mcp.ts` don't chdir to a repo when `WNOTES_STANDALONE` is set.
+- **The binary:** `cli/standalone.ts` sets `WONO_STANDALONE` and `WONO_MIGRATIONS_DIR`, then runs `mcp`, `backup`, `app` (`cli/app-server.ts`: the SvelteKit server plus static files, on 127.0.0.1:5173) or a procedure. `cli/main.ts` and `cli/mcp.ts` don't chdir to a repo when `WONO_STANDALONE` is set.
 - **Native SQLite:** libsql picks its native module with a runtime `require`, which a bundler can't follow. `scripts/release/libsql.ts` rewrites it into a static require so Bun embeds the module, and fails the build if libsql changes that line.
-- **Cowork:** sessions run in a sandbox (a VM on the Mac, or the cloud) that can't see `~/Library/Application Support`. Claude desktop runs the plugin's MCP server on the Mac and bridges its tools into local sessions only, so the tools are the only way in. The skill and the MCP instructions tell Claude never to read the data folder, run `wnotes` from a sandbox, or ask for the folder to be attached; a SQLite database opened from both the VM and the Mac isn't safe.
-- **On the user's computer:** the shim copies the binary (with `cat`, which drops a download quarantine flag) and `migrations/` into `<data dir>/App/<version>`, and points `App/current` at it. On Windows, `plugin/scripts/wnotes.cmd` does the same with `copy` and a directory junction, so a plugin update never replaces a running `.exe`; under Git Bash the `sh` shim hands over to it. A clone on Windows runs through `cli/clone-entry.ts`, which does what `bin/wnotes` does. `wnotes backup install` from a release makes the LaunchAgent run `App/current/wnotes backup`, which keeps working across updates. The MCP tool `app_open` starts the app in the background. A release app reports its version (`GET /__wnotes/app`); when the MCP server starts, and on `app_open`, a release replaces an app of a different version (`POST /__wnotes/app/stop`, loopback and the local header only), so updating the plugin and restarting Claude desktop updates the app too. It never stops what it can't identify, such as a clone's dev server. The plan is the pure `planAppLaunch` in `cli/app-launch.ts`. `app_restart` (MCP) and `wnotes app restart` (`cli/app-restart.ts`) stop the app explicitly, whatever its version: through the stop endpoint, or by pid for an app without it (a clone's dev server, a release before 0.6.6), and never a process that isn't Working Notes (`isWorkingNotesCommand`). It finds the pid with `lsof` and `ps`, or PowerShell on Windows.
+- **Cowork:** sessions run in a sandbox (a VM on the Mac, or the cloud) that can't see `~/Library/Application Support`. Claude desktop runs the plugin's MCP server on the Mac and bridges its tools into local sessions only, so the tools are the only way in. The skill and the MCP instructions tell Claude never to read the data folder, run `wono` from a sandbox, or ask for the folder to be attached; a SQLite database opened from both the VM and the Mac isn't safe.
+- **On the user's computer:** the shim copies the binary (with `cat`, which drops a download quarantine flag) and `migrations/` into `<data dir>/App/<version>`, and points `App/current` at it. On Windows, `plugin/scripts/wono.cmd` does the same with `copy` and a directory junction, so a plugin update never replaces a running `.exe`; under Git Bash the `sh` shim hands over to it. A clone on Windows runs through `cli/clone-entry.ts`, which does what `bin/wono` does. `wono backup install` from a release makes the LaunchAgent run `App/current/wono backup`, which keeps working across updates. The MCP tool `app_open` starts the app in the background. A release app reports its version (`GET /__wono/app`); when the MCP server starts, and on `app_open`, a release replaces an app of a different version (`POST /__wono/app/stop`, loopback and the local header only), so updating the plugin and restarting Claude desktop updates the app too. It never stops what it can't identify, such as a clone's dev server. The plan is the pure `planAppLaunch` in `cli/app-launch.ts`. `app_restart` (MCP) and `wono app restart` (`cli/app-restart.ts`) stop the app explicitly, whatever its version: through the stop endpoint, or by pid for an app without it (a clone's dev server, a release before 0.6.6), and never a process that isn't Wonos (`isWonoCommand`). It finds the pid with `lsof` and `ps`, or PowerShell on Windows.
 
-## Working Notes Pro (licenses)
+## Wonos Pro (licenses)
 
 Three features need a yearly license: **full-text search** (`search.query`, `search.recall`), **branding** (`branding.create/update/delete/uploadImage`, and the app wearing a branding's colours and icon) and **PDF export** (the doc and wiki print pages). Everything else is free, and nothing stored is touched when a license lapses: brandings stay listed, and it all comes back with a renewed key.
 
 - **Keys are checked offline.** A key is `WN1.<base64url payload>.<base64url Ed25519 signature>`; the payload is `{ v, id, name, email, plan: 'pro', issued, expires }`, good through `expires` (UTC). `verifyLicenseKey` (`src/shared/license/verify.server.ts`) checks it against `settings.licensePublicKey`: the real key in `src/shared/license/public-key.ts` for development and production, and a test-only key under `APP_ENV=test` (its private half is `tests/license-test-key.ts`, outside the app). No network, ever.
-- **One license per computer:** `licenseKey` in `<data dir>/settings.json` (beside `defaultNotebook`; `src/shared/settings/server/root-settings.server.ts` reads and writes that file, keeping other keys), read on every check (`currentLicense` in `src/shared/license/store.server.ts`), so the app, CLI and MCP server agree at once. `license.status`, `license.activate --key` (refuses an invalid or expired key) and `license.remove`; the app's page is `/app/license` (nav: License).
+- **One license per computer:** `licenseKey` in `<data dir>/settings.json` (beside `defaultNotebook`; `src/shared/settings/server/root-settings.server.ts` reads and writes that file, keeping other keys), read on every check (`currentLicense` in `src/shared/license/store.server.ts`), so the app, CLI and MCP server agree at once. `license.status`, `license.activate --key` (refuses an invalid or expired key) and `license.remove`; the app's page is `/app/license`, in the notebook menu (the chevron beside the notebook name), and every Pro notice links to it.
 - **Gating:** routes wrap a Pro operation in `gated(ctx, feature, run)` (`src/api/_license.ts`), which returns `err(lockedMessage(…))` without an active license: a message that says what to do, for Claude (`tool`) or the app (`app`). `ctx.license` is on the tRPC context. The `/app` layout loads `license` and drops the branded theme without one; the print pages' loads return `locked` and render `ProLock` (`src/lib/ui/ProLock.svelte`); `ProBadge` marks a locked control. Feature names and messages are `src/shared/types/license.ts`.
-- **Issuing keys** (the seller, never the app): `bun run license:keygen` makes the signing keypair once, writes the private key outside the repo (`~/.working-notes-license/private.pem`, never commit it; `*.pem` is ignored) and rewrites `public-key.ts`. `bun run license:issue --name --email [--months 12] [--from <old expiry + 1 day>] [--renews <id>]` prints a key. A new keypair invalidates every key issued with the old one, so do it once.
+- **Issuing keys** (the seller, never the app): `bun run license:keygen` makes the signing keypair once, writes the private key outside the repo (`~/.wonos-license/private.pem`, never commit it; `*.pem` is ignored) and rewrites `public-key.ts`. `bun run license:issue --name --email [--months 12] [--from <old expiry + 1 day>] [--renews <id>]` prints a key. A new keypair invalidates every key issued with the old one, so do it once.
 - **Refunds:** `bun run license:revoke --key <latest key> [--reason refund]` (or `--id <id> --expires <date>`) adds the license to `src/shared/license/revoked.ts`, which ships with each release: `verifyLicenseKey` treats a listed id as invalid ("refunded or revoked"), so the key stops working once the app updates, with no network. A renewal keeps its id, so revoking covers it. Each entry carries the license's expiry, and every run of the script drops entries past it (those keys have expired anyway), so the list stays short; `--prune` does only that. Ids only, never names or emails. Pure logic in `scripts/license/revoke-list.ts`.
 - **It's an honour system,** like any check in a public codebase: it's there so paying is easy and fair, not to stop someone determined. Don't add obfuscation, phoning home or anything that could lock a user out of their own data.
 
@@ -150,24 +151,24 @@ Three features need a yearly license: **full-text search** (`search.query`, `sea
 
 `desktop/` is a Tauri 2 app: a window on the local server, for every platform, and the way Windows users connect Claude (the plugin's `sh` launcher doesn't run there). It's a preview: built by hand (`.github/workflows/desktop.yml`, unsigned) and not part of the release yet.
 
-- **A thin shell.** `desktop/src-tauri/src/main.rs` only runs the `wnotes` binary it bundles as a sidecar (the release binary, placed by `bun run desktop:prepare` as `binaries/wnotes-<rust triple>`, with `migrations/` and `VERSION` as resources). The logic is in TypeScript, in `cli/desktop.ts` (pure parts in `cli/desktop-plan.ts`):
-  - `wnotes install` copies the running binary, its migrations and VERSION into `<data dir>/App/<version>` and points `App/current` at it, as the plugin shim does. The app passes `WNOTES_VERSION` and `WNOTES_MIGRATIONS_DIR`, since its sidecar has no files beside it.
-  - `wnotes app ensure` starts the server or reuses it (`openApp`, so a different version is replaced), and prints its address. The app runs this on the installed copy, so an app update never replaces a running binary.
-  - `wnotes connect claude-desktop|claude-code` registers `App/current/wnotes mcp` as the `working-notes` MCP server: in Claude desktop's `claude_desktop_config.json` (keeping everything else, refusing a file it can't parse, keeping a `.bak` once), or with `claude mcp add --scope user`.
+- **A thin shell.** `desktop/src-tauri/src/main.rs` only runs the `wono` binary it bundles as a sidecar (the release binary, placed by `bun run desktop:prepare` as `binaries/wono-<rust triple>`, with `migrations/` and `VERSION` as resources). The logic is in TypeScript, in `cli/desktop.ts` (pure parts in `cli/desktop-plan.ts`):
+  - `wono install` copies the running binary, its migrations and VERSION into `<data dir>/App/<version>` and points `App/current` at it, as the plugin shim does. The app passes `WONO_VERSION` and `WONO_MIGRATIONS_DIR`, since its sidecar has no files beside it.
+  - `wono app ensure` starts the server or reuses it (`openApp`, so a different version is replaced), and prints its address. The app runs this on the installed copy, so an app update never replaces a running binary.
+  - `wono connect claude-desktop|claude-code` registers `App/current/wono mcp` as the `wonos` MCP server: in Claude desktop's `claude_desktop_config.json` (keeping everything else, refusing a file it can't parse, keeping a `.bak` once), or with `claude mcp add --scope user`.
 - **The window** opens `desktop/ui/index.html` ("Starting…", or the error), then navigates to `http://127.0.0.1:5173/app`. The page gets no Tauri IPC (`capabilities/default.json` grants nothing), so it's the same web app a browser shows, behind the same `hooks.server.ts` boundary. Any other address opens in the default browser (`is_app_url`, tested with `cargo test`). The server keeps running when the window closes.
 - **The Claude menu** has "Connect to Claude desktop…" and "Connect to Claude Code…". Each asks first, because it changes another app's settings, and says to skip it when the plugin is installed.
 - `bun run desktop:dev` / `desktop:build` run `tauri dev` / `tauri build` in `desktop/` (after `release:build` and `desktop:prepare`). Linux needs `libwebkit2gtk-4.1-dev` and friends.
 
 ## Local state (like a native app)
 
-- **Where it lives:** `~/Library/Application Support/Working Notes/` on macOS, `%LOCALAPPDATA%\Working Notes\` on Windows (local, not roaming), `$XDG_DATA_HOME/working-notes` on Linux (`dataDirFor` in `src/shared/settings/server/app-dirs.ts`, pure):
+- **Where it lives:** `~/Library/Application Support/Wonos/` on macOS, `%LOCALAPPDATA%\Wonos\` on Windows (local, not roaming), `$XDG_DATA_HOME/wonos` on Linux (`dataDirFor` in `src/shared/settings/server/app-dirs.ts`, pure):
   - `settings.json` — `defaultNotebook`, the notebook the CLI and MCP use when none is named, and `licenseKey`, the Pro license
   - `Notebooks/<id>/notebook.json` — the notebook's name and profile
   - `Notebooks/<id>/working-notes.db` — SQLite, WAL mode, so the app, CLI and backups can use it at the same time
   - `Notebooks/<id>/files/` — uploaded PDFs and branding images
   - `Backups/<id>/` — that notebook's snapshots, outside its folder so they outlive it
   - `app-path` — the clone `bun run setup` points the plugin at
-- **Which notebook:** `resolveNotebook` (`src/shared/notebooks/resolve.ts`, pure). The CLI and MCP use the named notebook, then `WNOTES_NOTEBOOK`, then the default. The UI uses `?notebook=<id>`, then its `wn-notebook` cookie, then the default, so switching in the browser never changes where Claude writes.
+- **Which notebook:** `resolveNotebook` (`src/shared/notebooks/resolve.ts`, pure). The CLI and MCP use the named notebook, then `WONO_NOTEBOOK`, then the default. The UI uses `?notebook=<id>`, then its `wn-notebook` cookie, then the default, so switching in the browser never changes where Claude writes.
 - **First run:** nothing to set up. `ensureLayout()` (`src/shared/notebooks/layout.server.ts`) runs before any database opens. A fresh data directory gets a notebook called `notebook`. A data directory from before notebooks (a `working-notes.db` at the top) is moved, by renames only, into the notebook `work-work`, snapshots included. It refuses while another process (the old app, an MCP server) has that database open. Then `ensureDatabase(notebookId)` (`src/shared/db/bootstrap.server.ts`) applies pending migrations with a Prisma-compatible in-process migrator, the first time each process touches each notebook.
 - **Dev and prod** share these notebooks. Integration tests use `./data/test` (`APP_ENV=test`) and refuse to run against anything else.
 
@@ -176,7 +177,7 @@ Three features need a yearly license: **full-text search** (`search.query`, `sea
 `bun run backup` snapshots each notebook whose data changed: a consistent `VACUUM INTO` copy of its database, its files (unchanged ones hard-linked from the previous snapshot), and a `manifest.json` naming the notebook. Add `--notebook <id>` to `run`, `list` or `restore` to work on one.
 
 - **Hourly, on every platform:** the MCP server and the release app each check every 5 minutes and snapshot every changed notebook once an hour (`scripts/backup/schedule.ts`). A lock file (`Backups/.lock`, taken over after 15 minutes) lets one process do it, and `Backups/.last-run` makes the others skip the hour. So backups run whenever Claude or the app is open, with no OS scheduler.
-- `bun run backup install` (macOS) also adds one hourly LaunchAgent (`dev.jweatherby.working-notes.backup`), for backups while nothing else is running; `uninstall` removes it. It shares the hour, and the lock, with the processes above. The log is `~/Library/Logs/Working Notes/backup.log`. A manual `backup` run takes the lock too, and says so when another process holds it.
+- `bun run backup install` (macOS) also adds one hourly LaunchAgent (`dev.jweatherby.wonos.backup`), for backups while nothing else is running; `uninstall` removes it. It shares the hour, and the lock, with the processes above. The log is `~/Library/Logs/Wonos/backup.log`. A manual `backup` run takes the lock too, and says so when another process holds it.
 - `bun run backup --force --reason "<why>"` snapshots regardless. Do this before bulk or destructive changes.
 - `bun run backup list` shows snapshots with counts, per notebook.
 - `bun run backup restore <id|latest> --notebook <id>` refuses while the app is running on 5173, checks the snapshot's integrity, snapshots the current data first, then restores and migrates forward. `--notebook` may be left out only when there is one notebook.
@@ -192,16 +193,16 @@ Three features need a yearly license: **full-text search** (`search.query`, `sea
 | `bun run check` | svelte-check, plus tsc for `cli/` and `scripts/` |
 | `bun run test` | Unit tests (`src/`, `cli/`, `scripts/`) |
 | `bun run test:integration` | Integration tests against `./data/test` |
-| `wnotes <procedure> [--field value] [--notebook <id>]` | Call the API in-process (also `bin/wnotes`, `bun run wnotes`) |
-| `wnotes app` | Dev server, from any directory |
-| `wnotes app restart` | Stop the running app and start it again |
-| `wnotes mcp` | MCP server on stdio, for Claude desktop Chat, Cowork and Claude Code |
-| `bun run backup [list\|restore\|install\|uninstall] [--notebook <id>]` | Snapshots and restore (also `wnotes backup`) |
+| `wono <procedure> [--field value] [--notebook <id>]` | Call the API in-process (also `bin/wono`, `bun run wono`) |
+| `wono app` | Dev server, from any directory |
+| `wono app restart` | Stop the running app and start it again |
+| `wono mcp` | MCP server on stdio, for Claude desktop Chat, Cowork and Claude Code |
+| `bun run backup [list\|restore\|install\|uninstall] [--notebook <id>]` | Snapshots and restore (also `wono backup`) |
 | `bun run release:version <x.y.z>` | Set the plugin version; pushing it to main releases it |
 | `bun run release:build` / `release:package` / `release:smoke` | Build this platform's standalone plugin into `dist/`, zip it (merging other platforms' builds), and smoke-test it |
 | `bun run desktop:prepare` / `desktop:dev` / `desktop:build` | Put the release binary into the Tauri app, then run it or build its installers |
-| `bun run setup [uninstall]` | Put `wnotes` on PATH, build the Claude desktop plugin zip, and install or remove the Claude Code plugin |
-| `bun run db:migrate --name <change>` | Author a migration against the default notebook, or `WNOTES_NOTEBOOK` (a real notebook; `bun run backup --force` first). Other notebooks migrate forward when next opened |
+| `bun run setup [uninstall]` | Put `wono` on PATH, build the Claude desktop plugin zip, and install or remove the Claude Code plugin |
+| `bun run db:migrate --name <change>` | Author a migration against the default notebook, or `WONO_NOTEBOOK` (a real notebook; `bun run backup --force` first). Other notebooks migrate forward when next opened |
 | `bun run db:studio` | Prisma Studio, on the same notebook |
 
 ## Settings
@@ -211,6 +212,16 @@ Config is plain TypeScript in `src/shared/settings/`: `base/` is client-safe and
 - The only server setting is `dataDir` (`server/app-dirs.ts` gives the native location).
 - `server/paths.ts` derives every path from it. Per-notebook paths take the notebook id and throw on an id that isn't a valid slug (`isNotebookId`), so an id can never become a path outside `Notebooks/`.
 - Processes run from the repo root, so `prisma/migrations` resolves; the CLI changes to the repo directory itself.
+
+## Renamed from Working Notes
+
+The product was called Working Notes, and the command `wnotes`. What still reads the old names, so existing installs move over by themselves (remove it once no one runs a release before the rename):
+
+- **Data folder:** `moveLegacyDataDir` (`src/shared/settings/server/legacy-data-dir.ts`, plan `planLegacyMove`) runs from `appDataDir()`, once per process. It renames `Notebooks/` first, then everything else the new folder lacks, except `App/` (old binaries), and leaves `MOVED-TO-WONOS.txt`. While another process has an old database open (lsof), it keeps the old folder for that process; `migrateLayout` refuses to start an empty notebook in a folder whose data has moved. The MCP server stops an old app (`stopStaleApp`) before it opens the data directory. The database file is still `working-notes.db`, so snapshots and restores need no change.
+- **App control:** `probeApp` and `stopApp` also try `/__wnotes/app` with the `x-working-notes` header, and `isWonoCommand` recognises `wnotes` and `working-notes`.
+- **Names:** `bin/wnotes` runs `bin/wono`; `WNOTES_NOTEBOOK` (`notebookFromEnv`), `WNOTES_BUN` and `WORKING_NOTES_HOME` are still read; the license scripts fall back to `~/.working-notes-license/` (`defaultPrivateKeyPath`). License keys keep the `WN1.` prefix.
+- **Elsewhere:** `bun run setup` removes the `working-notes` plugin and marketplace; `wono connect` replaces a `working-notes` MCP server that runs `wnotes`; the backup schedule and `backup install` replace the `dev.jweatherby.working-notes.backup` LaunchAgent (`replaceLegacyAgent`).
+- **Not renamed:** the GitHub repo (`jweatherby/working-notes`), which the marketplace and release links name.
 
 ## Coding conventions
 

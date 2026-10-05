@@ -109,7 +109,7 @@ export const chatPrompt = (input: ChatPromptInput): string => {
     .map((m) => `<${m.role}>\n${m.content}\n</${m.role}>`)
     .join('\n');
   return [
-    'You are helping the user think about a page in Working Notes, their private notebook of people, teams, projects, goals and wiki pages.',
+    'You are helping the user think about a page in Wonos, their private notebook of people, teams, projects, goals and wiki pages.',
     `The page is the ${input.entityType.toLowerCase()} "${input.entityName}". Its text, as the user sees it, is below.`,
     'You cannot change the notebook or use tools. Answer from the page, and say when the page does not contain what is asked.',
     'Reply to the last user message only, in concise GitHub-flavoured markdown, without repeating the transcript tags.',

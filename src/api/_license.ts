@@ -1,4 +1,4 @@
-// Cross-domain helper (not a domain): Working Notes Pro. A Pro procedure runs only
+// Cross-domain helper (not a domain): Wonos Pro. A Pro procedure runs only
 // while this computer has an active license, and otherwise returns an error that
 // says what to do, for the app's user or for Claude through a tool.
 

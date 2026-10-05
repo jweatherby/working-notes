@@ -16,7 +16,7 @@ Split into sub-domain folders with the same shape once an operations file passes
 Current domains, grouped into folders:
 
 - `org/`: `person`, `team`, `department`
-- `aux/` (attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
+- `attached/` (named so, not `aux`, which Windows reserves as a device name; attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
 - flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `page-kind` (each notebook's page kinds), `relation`, `branding`, `home`, `search`, `health`, `trpc-meta`
 - `notebook`: lists, creates and renames notebooks and sets the default. It works on the notebook store (`ctx.notebooks`), not on a database. See § Notebooks.
 
@@ -69,7 +69,7 @@ Operations that can fail return `Result<T>`: `ok(value)` or `err(new Error(messa
 - `src/shared/trpc/init.ts` exports `router`, `procedure`, `middleware`. There is one kind of procedure: no auth, no org scoping.
 - Context is `{ reg, notebook, notebooks, pdfConverter? }` (`context.server.ts`): the Registry of the notebook the call runs against, that notebook, the notebook store, and (over HTTP only) the PDF converter. Over HTTP the notebook comes from `event.locals.notebook`; the CLI and MCP server build the context with `createNotebookContext(notebook)`. Domain routes pass only `ctx.reg`.
 - Validate inputs with Zod inline in `routes.ts`. Use `z.enum(ENTITY_TYPES)` / `z.enum(TODO_STATUSES)` from `$shared/types/enums`. SQLite has no enums, so these unions are the source of truth.
-- Register new routers in `src/shared/trpc/router.ts`. The CLI (`wnotes`) and its MCP server (`wnotes mcp`) call every procedure in-process through `cli/api.ts` and `createCallerFactory`, and build their help and tool lists from `src/shared/trpc/meta.ts`, so new procedures need no CLI or MCP changes.
+- Register new routers in `src/shared/trpc/router.ts`. The CLI (`wono`) and its MCP server (`wono mcp`) call every procedure in-process through `cli/api.ts` and `createCallerFactory`, and build their help and tool lists from `src/shared/trpc/meta.ts`, so new procedures need no CLI or MCP changes.
 
 ## Polymorphic assets
 
@@ -93,7 +93,7 @@ Person, team, department, project, goal and page (`ARCHIVABLE_TYPES`) have a nul
 
 - `setArchived(reg, type, id, archived)` backs every `<type>.archive` / `<type>.unarchive` procedure. It's idempotent and keeps the first archive date.
 - `archiveWhere(filter)` is the `where` fragment for a list's `archived` input (`exclude`, the default; `only`; `include`). Every top-level `list*` takes one.
-- `ensureWritable(reg, entityType, entityId)` / `ensureAllWritable` refuse a write to an archived entity **or to anything attached to it**. Call one in every update, membership change and aux create/update/remove, before writing. Types that can't be archived pass. Deletes don't check: deleting an archived entity is allowed.
+- `ensureWritable(reg, entityType, entityId)` / `ensureAllWritable` refuse a write to an archived entity **or to anything attached to it**. Call one in every update, membership change and attached-item create/update/remove, before writing. Types that can't be archived pass. Deletes don't check: deleting an archived entity is allowed.
 - `loadArchivedIds` + `notAttachedToArchived(ids)` leave rows attached to archived entities out of cross-entity queries (home feed, open todos, `todo.list`).
 - Relations check only the `from` end, so a relation can point at an archived entity.
 
@@ -123,7 +123,7 @@ A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` a
 A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (name, profile, createdAt), `working-notes.db` and `files/`. The default notebook is in `<data dir>/settings.json`. The code lives in `src/shared/notebooks/`:
 
 - `id.ts`: `isNotebookId` (1–40 lowercase letters, digits and dashes) and `notebookIdFromName`. Client-safe.
-- `resolve.ts`: `resolveNotebook`, pure. Named on the call (id, or a name matching exactly one notebook), then `WNOTES_NOTEBOOK`, then the UI cookie, then the default. An unknown named notebook is an error listing the ones that exist.
+- `resolve.ts`: `resolveNotebook`, pure. Named on the call (id, or a name matching exactly one notebook), then `WONO_NOTEBOOK`, then the UI cookie, then the default. An unknown named notebook is an error listing the ones that exist.
 - `layout.ts` / `layout.server.ts`: `planLayout` (pure) and `ensureLayout`, which moves a pre-notebooks data directory into `work-work` and makes sure a default exists.
 - `store.server.ts`: `NotebookStore`, the raw filesystem reads and writes. `$api/notebook/operations` does the validation and writes the messages.
 - `current.server.ts`: `getNotebookStore`, `readNotebooks` and `resolveCurrentNotebook`. Every entry point resolves through these, so the layout is always in place first.
@@ -146,10 +146,10 @@ A page's `kind` is a key into the notebook's `page_kind` table (`key`, `name`, `
 
 ## Files
 
-`reg.storage` stores bytes under the notebook's `files/<key>` (`~/Library/Application Support/Working Notes/Notebooks/<id>/files`). Keys don't include the notebook, and the files route reads from the request's notebook. Keys look like `docs/<docId>/source-<uuid>.pdf` or `branding/<id>/logo-<uuid>.png`. The storage client rejects keys that resolve outside the files root. Hand clients a URL with `fileUrl(key)` (`$shared/utils/files`), which is served by `src/routes/files/[...key]/+server.ts`.
+`reg.storage` stores bytes under the notebook's `files/<key>` (`~/Library/Application Support/Wonos/Notebooks/<id>/files`). Keys don't include the notebook, and the files route reads from the request's notebook. Keys look like `docs/<docId>/source-<uuid>.pdf` or `branding/<id>/logo-<uuid>.png`. The storage client rejects keys that resolve outside the files root. Hand clients a URL with `fileUrl(key)` (`$shared/utils/files`), which is served by `src/routes/files/[...key]/+server.ts`.
 
 - **Docs:** `attachSourcePdf` stores the PDF and sets `sourceUrl`; it never converts. From the CLI or MCP, Claude reads the PDF and calls `doc.update`.
-- **Converting a PDF in the web app** (`aux/doc/convert.ts`):
+- **Converting a PDF in the web app** (`attached/doc/convert.ts`):
   - `doc.convertPdf` starts by looking for `claude` (`findClaude` in `$shared/assist/claude-cli`: PATH, then where installers put it). Without it, the result is `{ started: false, warning }`.
   - Otherwise it starts a background job (`$shared/assist/pdf-converter.server`) that runs `claude -p` in the PDF's folder with only the Read tool, and saves the markdown through `updateDoc`. The UI polls `doc.pdfConversion`.
 - **Page chat** (`api/assist/chat.ts`, `ctx.pageChat`, web app only like the converter): each entity has one saved conversation, a `PageChat` row with the messages as JSON. `chat.send` takes the entity, the page's visible text and the new message; it stores the message and starts a background `claude -p` job (`$shared/assist/page-chat.server`) with the prompt (the page and the last `CHAT_LIMITS.messages` messages) on stdin and no tools. The job appends the reply to the row (`saveChatReply`, a no-op if the chat was cleared meanwhile) before it reads as done. The UI polls `chat.status` with the returned `chatId`, which reports `done` with the reply (or `failed`) once. `chat.get` loads the conversation and whether a reply is still running; `chat.clear` deletes it. Without `claude`, `chat.send` warns and stores nothing. Chatting doesn't check `ensureWritable`: it never changes the entity. Both features run `claude` through `$shared/assist/claude-process.server`.

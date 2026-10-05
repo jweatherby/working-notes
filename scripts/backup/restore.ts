@@ -3,7 +3,6 @@
 
 import { existsSync } from 'node:fs';
 import { copyFile, cp, rm } from 'node:fs/promises';
-import { connect } from 'node:net';
 import { join } from 'node:path';
 import { createClient } from '@libsql/client';
 import { settings } from '$shared/settings/server/index.server';
@@ -12,20 +11,9 @@ import { migrateDatabase } from '$shared/db/bootstrap.server';
 import { getRegistry } from '$shared/registry.server';
 import { ok, err, type Result } from '$shared/utils/result';
 import { createSnapshot, listSnapshots } from './snapshot';
+import { isPortListening } from './port';
 
 export const APP_PORT = 5173;
-
-export const isPortListening = (port: number, host = '127.0.0.1'): Promise<boolean> =>
-  new Promise((resolve) => {
-    const socket = connect({ host, port });
-    const done = (listening: boolean): void => {
-      socket.destroy();
-      resolve(listening);
-    };
-    socket.once('connect', () => done(true));
-    socket.once('error', () => done(false));
-    socket.setTimeout(500, () => done(false));
-  });
 
 export interface RestoreOptions {
   readonly appPort?: number;
@@ -39,7 +27,7 @@ export const restoreSnapshot = async (
 ): Promise<Result<{ readonly restored: string; readonly safetySnapshot: string | null }>> => {
   const port = options.appPort ?? APP_PORT;
   if (await isPortListening(port)) {
-    return err(new Error(`Working Notes is running on 127.0.0.1:${port}. Quit it, then restore.`));
+    return err(new Error(`Wonos is running on 127.0.0.1:${port}. Quit it, then restore.`));
   }
 
   const snapshots = await listSnapshots(notebook);

@@ -13,7 +13,7 @@ src/lib/
 
 ## Data access
 
-Components call the API through `trpc()` from `$shared/trpc/client` (a browser singleton; pass SvelteKit's `fetch` in load functions). The client always sends the `x-working-notes` header; never call `/api/trpc` with a bare `fetch`.
+Components call the API through `trpc()` from `$shared/trpc/client` (a browser singleton; pass SvelteKit's `fetch` in load functions). The client always sends the `x-wono` header; never call `/api/trpc` with a bare `fetch`.
 
 There is no session, user or org anywhere in the UI, and nothing is gated on ownership: everything is editable.
 
@@ -21,7 +21,7 @@ The one app-wide context is the open notebook. The `/app` layout provides `data.
 - Switch with `switchNotebook(id)` (`$lib/notebook/switch`). It's a full page load, so no ids, lists or popups from the old notebook carry over. Never edit the cookie or `?notebook=` yourself.
 - Anything cached in the browser must be keyed by notebook id (QuickFinder's localStorage is).
 - The layout also applies the notebook's default branding: its primary colour replaces the `--accent*` tokens (and `--focus`), and its accent colour the `--selected*` tokens, through `.branded` in `styles/_tokens.scss`. Components keep using the accent tokens and never read branding colours for app chrome.
-- `notebook/components/`: `NotebookSwitcher` (the chevron beside the notebook title in the top bar, props `current`, `notebooks`), `NotebookForm` (create, or rename with `initial`), and `NewNotebookPopup` (global `?popup=new-notebook`; opens the new notebook).
+- `notebook/components/`: `NotebookSwitcher` (the chevron beside the notebook title in the top bar, props `current`, `notebooks`; it also links to the License page, which is kept out of the nav), `NotebookForm` (create, or rename with `initial`), and `NewNotebookPopup` (global `?popup=new-notebook`; opens the new notebook).
 
 ## Stores
 

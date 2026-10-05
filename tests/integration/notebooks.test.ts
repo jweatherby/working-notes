@@ -3,6 +3,7 @@
 // one-time move of a pre-notebooks data directory.
 
 import { describe, it, expect } from 'vitest';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createClient } from '@libsql/client';
@@ -13,6 +14,7 @@ import { getReadyRegistry } from '../../src/shared/db/bootstrap.server';
 import { getRegistry } from '../../src/shared/registry.server';
 import { resolveCurrentNotebook } from '../../src/shared/notebooks/current.server';
 import { migrateLayout } from '../../src/shared/notebooks/layout.server';
+import { moveLegacyDataDir } from '../../src/shared/settings/server/legacy-data-dir';
 import { notebookHandle } from '../../src/shared/notebooks/handle.server';
 import { NOTEBOOK_COOKIE } from '../../src/shared/notebooks/id';
 import type { NotebookInfo } from '../../src/shared/types/notebook';
@@ -146,4 +148,38 @@ describe('notebooks', () => {
 
     expect(await migrateLayout({ dataDir, licensePublicKey: "" })).toEqual([]);
   });
+
+  it('moves the data from before the rename to Wonos, and refuses to start over in the old folder', async () => {
+    const root = mkdtempSync(join(resolve('data/test'), 'rename-'));
+    const legacy = join(root, 'Working Notes');
+    const current = join(root, 'Wonos');
+    await migrateLayout({ dataDir: legacy, licensePublicKey: '' });
+    const before = JSON.parse(readFileSync(join(legacy, 'settings.json'), 'utf8')) as { defaultNotebook: string };
+
+    expect(moveLegacyDataDir(legacy, current)).toBe(current);
+    expect(await migrateLayout({ dataDir: current, licensePublicKey: '' })).toEqual([]);
+    expect(JSON.parse(readFileSync(join(current, 'settings.json'), 'utf8'))).toEqual(before);
+    expect(existsSync(join(current, 'Notebooks', before.defaultNotebook, 'notebook.json'))).toBe(true);
+
+    await expect(migrateLayout({ dataDir: legacy, licensePublicKey: '' })).rejects.toThrow(/moved to the Wonos folder/);
+    expect(existsSync(join(legacy, 'Notebooks'))).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')('keeps using the old folder while an older process has a database open', async () => {
+    const root = mkdtempSync(join(resolve('data/test'), 'rename-busy-'));
+    const legacy = join(root, 'Working Notes');
+    await migrateLayout({ dataDir: legacy, licensePublicKey: '' });
+    const id = (JSON.parse(readFileSync(join(legacy, 'settings.json'), 'utf8')) as { defaultNotebook: string }).defaultNotebook;
+    const db = join(legacy, 'Notebooks', id, 'working-notes.db');
+    writeFileSync(db, '');
+    const holder = spawn(process.execPath, ['-e', `require('node:fs').openSync(${JSON.stringify(db)}, 'r'); console.log('open'); setTimeout(() => {}, 30000)`], { stdio: ['ignore', 'pipe', 'ignore'] });
+    try {
+      await new Promise((ready) => holder.stdout.once('data', ready));
+      expect(moveLegacyDataDir(legacy, join(root, 'Wonos'))).toBe(legacy);
+      expect(existsSync(join(legacy, 'Notebooks', id))).toBe(true);
+    } finally {
+      holder.kill();
+    }
+  });
 });
+

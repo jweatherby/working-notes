@@ -16,8 +16,8 @@ import { getDepartment } from '$api/org/department/operations';
 import { getProject } from '$api/project/operations';
 import { getGoal } from '$api/goal/operations';
 import { getPage } from '$api/page/operations';
-import { getDoc } from '$api/aux/doc/operations';
-import { getReport } from '$api/aux/report/operations';
+import { getDoc } from '$api/attached/doc/operations';
+import { getReport } from '$api/attached/report/operations';
 import { phraseQuery } from './fts-query';
 import { archivedIdList, queryIndex, searchableTypes } from './operations';
 

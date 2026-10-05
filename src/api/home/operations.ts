@@ -6,7 +6,7 @@ import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
 import { loadArchivedIds, notAttachedToArchived } from '$api/_archive';
-import type { TodoSummary } from '$api/aux/todo/operations';
+import type { TodoSummary } from '$api/attached/todo/operations';
 
 // ----- Pure helpers -----
 

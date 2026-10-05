@@ -1,5 +1,5 @@
 // App-wide chrome data: the current notebook and the others (for the switcher),
-// the default branding icon shown in the nav, and the Working Notes Pro license.
+// the default branding icon shown in the nav, and the Wonos Pro license.
 // A notebook's branding colours the app only while the license is active (Pro);
 // without one the brandings stay stored but the app uses its own look.
 

@@ -1,12 +1,12 @@
 // Commands the desktop app (desktop/, Tauri) runs on the binary it bundles. They
 // work from any release binary:
-//   wnotes install                          copy this binary, its migrations and VERSION into
+//   wono install                          copy this binary, its migrations and VERSION into
 //                                           <data dir>/App/<version> and point App/current at it,
 //                                           as the plugin shim does
-//   wnotes app ensure                       start the app, or reuse or replace a running one,
+//   wono app ensure                       start the app, or reuse or replace a running one,
 //                                           and print its address
-//   wnotes connect claude-desktop|claude-code
-//                                           register App/current/wnotes as the working-notes MCP server
+//   wono connect claude-desktop|claude-code
+//                                           register App/current/wono as the wonos MCP server
 // Each prints one JSON result, like a procedure: {"ok": true, "value": ...} or {"ok": false, "error": ...}.
 
 import { spawnSync } from 'node:child_process';
@@ -15,13 +15,13 @@ import { chmod, cp, copyFile, mkdir, readFile, rename, rm, symlink, writeFile } 
 import { homedir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
 import { dataDirFor, type AppDirsHost } from '../src/shared/settings/server/app-dirs';
-import { MCP_SERVER_NAME, claudeDesktopConfigPath, installedBinary, withMcpServer } from './desktop-plan';
+import { LEGACY_MCP_SERVER_NAME, MCP_SERVER_NAME, claudeDesktopConfigPath, installedBinary, withMcpServer } from './desktop-plan';
 
 const host = (): AppDirsHost => ({ platform: platform(), home: homedir(), env: process.env });
-const binaryName = process.platform === 'win32' ? 'wnotes.exe' : 'wnotes';
+const binaryName = process.platform === 'win32' ? 'wono.exe' : 'wono';
 
 const readVersion = async (): Promise<string> =>
-  process.env['WNOTES_VERSION'] ?? (await readFile(join(dirname(process.execPath), 'VERSION'), 'utf8')).trim();
+  process.env['WONO_VERSION'] ?? (await readFile(join(dirname(process.execPath), 'VERSION'), 'utf8')).trim();
 
 /** Points App/current at a version folder: a relative symlink, or a junction on Windows (no admin rights needed). */
 const pointCurrent = async (appDir: string, version: string): Promise<void> => {
@@ -33,7 +33,7 @@ const pointCurrent = async (appDir: string, version: string): Promise<void> => {
 
 const install = async (): Promise<{ readonly version: string; readonly binary: string; readonly installed: boolean }> => {
   const version = await readVersion();
-  const migrations = process.env['WNOTES_MIGRATIONS_DIR'] ?? join(dirname(process.execPath), 'migrations');
+  const migrations = process.env['WONO_MIGRATIONS_DIR'] ?? join(dirname(process.execPath), 'migrations');
   if (!existsSync(migrations)) throw new Error(`No migrations at ${migrations}`);
   const appDir = join(dataDirFor(host()), 'App');
   const dest = join(appDir, version);
@@ -73,7 +73,7 @@ const ensureApp = async (): Promise<{ readonly url: string; readonly started: bo
 const connectClaudeDesktop = async (binary: string): Promise<{ readonly change: string; readonly configPath: string }> => {
   const configPath = claudeDesktopConfigPath(host());
   const existing = existsSync(configPath) ? await readFile(configPath, 'utf8') : null;
-  const next = withMcpServer(existing, MCP_SERVER_NAME, { command: binary, args: ['mcp'] });
+  const next = withMcpServer(existing, MCP_SERVER_NAME, { command: binary, args: ['mcp'] }, LEGACY_MCP_SERVER_NAME);
   if (!next.ok) throw next.error;
   if (next.value.change !== 'unchanged') {
     await mkdir(dirname(configPath), { recursive: true });
@@ -90,6 +90,9 @@ const connectClaudeCode = (binary: string): { readonly change: string } => {
     spawnSync('claude', [...args], { encoding: 'utf8', shell: process.platform === 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
   const existing = claude(['mcp', 'get', MCP_SERVER_NAME]);
   if (existing.error) throw new Error("Claude Code's `claude` command isn't on PATH. Install Claude Code, or add the server yourself.");
+  // The pre-rename server, if it runs our old binary.
+  const legacy = claude(['mcp', 'get', LEGACY_MCP_SERVER_NAME]);
+  if (legacy.status === 0 && /[\\/]wnotes(\.exe)?\b/i.test(legacy.stdout)) claude(['mcp', 'remove', '--scope', 'user', LEGACY_MCP_SERVER_NAME]);
   if (existing.status === 0) {
     if (existing.stdout.includes(binary)) return { change: 'unchanged' };
     claude(['mcp', 'remove', '--scope', 'user', MCP_SERVER_NAME]);
@@ -101,10 +104,10 @@ const connectClaudeCode = (binary: string): { readonly change: string } => {
 
 const connect = async (target: string | undefined): Promise<unknown> => {
   const binary = installedBinary(host());
-  if (!existsSync(binary)) throw new Error(`Working Notes isn't installed at ${binary}. Run \`wnotes install\` first.`);
+  if (!existsSync(binary)) throw new Error(`Wonos isn't installed at ${binary}. Run \`wono install\` first.`);
   if (target === 'claude-desktop') return connectClaudeDesktop(binary);
   if (target === 'claude-code') return connectClaudeCode(binary);
-  throw new Error('Say what to connect: `wnotes connect claude-desktop` or `wnotes connect claude-code`.');
+  throw new Error('Say what to connect: `wono connect claude-desktop` or `wono connect claude-code`.');
 };
 
 /** Runs one desktop command and prints its JSON result. Returns the exit code. */

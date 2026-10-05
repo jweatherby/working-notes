@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Working Notes MCP server: `wnotes mcp`. Serves every procedure, plus snapshots and
+// Wonos MCP server: `wono mcp`. Serves every procedure, plus snapshots and
 // opening the app, as MCP tools over stdio for Claude desktop Chat, Cowork and Claude Code.
 // Local only: no network, and it runs with the permissions of whoever starts it.
 // The protocol itself is in mcp-protocol.ts.
@@ -22,7 +22,7 @@ import {
 } from './mcp-protocol';
 
 const REPO = resolve(import.meta.dir, '..');
-const standalone = process.env['WNOTES_STANDALONE'] === '1';
+const standalone = process.env['WONO_STANDALONE'] === '1';
 if (!standalone) process.chdir(REPO);
 
 // stdout carries protocol messages only. Anything else the app prints goes to stderr.
@@ -30,35 +30,41 @@ const writeProtocol = process.stdout.write.bind(process.stdout);
 process.stdout.write = ((...args: Parameters<typeof process.stderr.write>) => process.stderr.write(...args)) as typeof process.stdout.write;
 console.log = console.info = console.debug = (...args: unknown[]): void => console.error(...args);
 
+// Before anything opens the data directory: an app an older release left running is
+// stopped now (and this version's started below), so updating the plugin updates the app.
+const { appUrl, currentAppOwner, openApp, restartApp, startOwnApp, stopStaleApp } = await import('./app-launch');
+const appOwner = currentAppOwner(REPO);
+const staleAppStopped = await stopStaleApp(appOwner).catch((error: unknown) => {
+  console.error(error);
+  return false;
+});
+
 const { procedures, callProcedure, disconnect } = await import('./api');
 const { createSnapshot, listSnapshots } = await import('../scripts/backup/snapshot');
 const { resolveCurrentNotebook } = await import('../src/shared/notebooks/current.server');
-const { appUrl, currentAppOwner, openApp, restartApp, restartStaleApp } = await import('./app-launch');
-
-const appOwner = currentAppOwner(REPO);
-// An app an older release left running is replaced now, so updating the plugin updates the app too.
-void restartStaleApp(appOwner).catch((error: unknown) => console.error(error));
+const { notebookFromEnv } = await import('../src/shared/notebooks/resolve');
+if (staleAppStopped) void startOwnApp(appOwner).catch((error: unknown) => console.error(error));
 // Hourly snapshots while Claude has the server open, on every platform (see scripts/backup/schedule.ts).
 const { startBackupSchedule } = await import('../scripts/backup/schedule');
 startBackupSchedule((message) => console.error(message));
 
 const INSTRUCTIONS = [
-  "Working Notes holds the user's local notebooks. Each notebook (for example work, home life, or a personal project) has its own people and teams (in a home notebook: friends, family and groups, with partner, parent, sibling and friend relations and birthdays), projects, goals with check-ins, wiki pages of kinds the notebook defines (pageKind_*; expenses, recipes, places and the like), which page_query filters, groups and totals, relations between entities, notes, docs, recurring todos and tags.",
+  "Wonos holds the user's local notebooks. Each notebook (for example work, home life, or a personal project) has its own people and teams (in a home notebook: friends, family and groups, with partner, parent, sibling and friend relations and birthdays), projects, goals with check-ins, wiki pages of kinds the notebook defines (pageKind_*; expenses, recipes, places and the like), which page_query filters, groups and totals, relations between entities, notes, docs, recurring todos and tags.",
   'Before creating a page kind, check pageKind_list and propose its fields to the user.',
   "Every tool except notebook_* works on one notebook: the default, unless you pass `notebook` (an id or name). Call notebook_list first. If there is more than one notebook and the user hasn't made clear which one they mean, ask. Say which notebook you read or wrote.",
   'Each tool is one procedure: person_create is person.create. Find ids with the list and get tools before writing, and never create a second person, team or project with an existing name, or a second goal or page with an existing title, in the same notebook.',
-  'To find anything by what it says (notes, docs, wiki pages, todos, comments, names), call search_query. For "what do I know about X", call search_recall with the entity: it returns its notes, todos, docs, links, tags, relations, owned goals and projects, and text elsewhere that names it without linking it. Both need Working Notes Pro; without a license they say so, and then you answer with the list and get tools instead.',
+  'To find anything by what it says (notes, docs, wiki pages, todos, comments, names), call search_query. For "what do I know about X", call search_recall with the entity: it returns its notes, todos, docs, links, tags, relations, owned goals and projects, and text elsewhere that names it without linking it. Both need Wonos Pro; without a license they say so, and then you answer with the list and get tools instead.',
   'Confirm with the user before any delete, remove or detach tool, and call backup_snapshot first before deletes or more than about five writes in one go.',
   'To show the user something in the app, call app_open and give them the link.',
   'When bringing in items from another tool (Linear, Notion, Jira), call link_find with the item URL first and update the entity it finds; attach a link to the source on anything you create.',
-  "Reach Working Notes only through these tools. Never read its data folder (~/Library/Application Support/Working Notes on macOS, %LOCALAPPDATA%\\Working Notes on Windows) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
-  'Report back by name, not id. The working-notes skill has the full rules and recipes.'
+  "Reach Wonos only through these tools. Never read its data folder (~/Library/Application Support/Wonos on macOS, %LOCALAPPDATA%\\Wonos on Windows) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
+  'Report back by name, not id. The wonos skill has the full rules and recipes.'
 ].join(' ');
 
 const extraTools: readonly McpTool[] = [
   {
     name: 'backup_snapshot',
-    description: 'Takes a snapshot of one Working Notes notebook now (the default unless you pass `notebook`), kept on this computer. Do this before deleting anything or making more than about five changes in one go.',
+    description: 'Takes a snapshot of one Wonos notebook now (the default unless you pass `notebook`), kept on this computer. Do this before deleting anything or making more than about five changes in one go.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -72,19 +78,19 @@ const extraTools: readonly McpTool[] = [
   },
   {
     name: 'backup_list',
-    description: "Lists a Working Notes notebook's snapshots with their reasons and counts. Only the user restores one, with `wnotes backup restore <id> --notebook <notebook>` while the app is closed.",
+    description: "Lists a Wonos notebook's snapshots with their reasons and counts. Only the user restores one, with `wono backup restore <id> --notebook <notebook>` while the app is closed.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   },
   {
     name: 'app_open',
-    description: "Starts the Working Notes app on this computer if it isn't running, and returns its address, opening the given notebook (or the default). Give the user the link. The app keeps running afterwards.",
+    description: "Starts the Wonos app on this computer if it isn't running, and returns its address, opening the given notebook (or the default). Give the user the link. The app keeps running afterwards.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
   },
   {
     name: 'app_restart',
-    description: "Stops the Working Notes app on this computer, whatever version is running, and starts it again, then returns its address for the given notebook (or the default). Use it when the user asks to restart the app, or when it's stuck or showing an old version. Nothing is lost: data lives in the notebook, not the app.",
+    description: "Stops the Wonos app on this computer, whatever version is running, and starts it again, then returns its address for the given notebook (or the default). Use it when the user asks to restart the app, or when it's stuck or showing an old version. Nothing is lost: data lives in the notebook, not the app.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
   }
@@ -93,7 +99,7 @@ const extraTools: readonly McpTool[] = [
 const procedureByTool = new Map(procedures.map((p) => [toolName(p.name), p.name]));
 
 const callExtraTool = async (name: string, args: Readonly<Record<string, unknown>>, notebookName: string | undefined): Promise<ToolResult> => {
-  const notebook = await resolveCurrentNotebook({ explicit: notebookName, env: process.env['WNOTES_NOTEBOOK'] });
+  const notebook = await resolveCurrentNotebook({ explicit: notebookName, env: notebookFromEnv(process.env) });
   if (!notebook.ok) return textResult(notebook.error.message, true);
   const id = notebook.value.id;
 
@@ -134,7 +140,7 @@ const callTool = async (name: string, rawArgs: Readonly<Record<string, unknown>>
 };
 
 const ctx: McpContext = {
-  info: { name: 'working-notes', version: pluginManifest.version, instructions: INSTRUCTIONS },
+  info: { name: 'wonos', version: pluginManifest.version, instructions: INSTRUCTIONS },
   tools: [...procedures.map(toolFromProcedure), ...extraTools],
   callTool
 };

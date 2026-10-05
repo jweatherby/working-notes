@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { agreedVersion, compareVersions, planRelease, versionsIn, withVersion } from '../versions';
 
-const plugin = '{\n  "name": "working-notes",\n  "version": "0.5.0",\n  "keywords": ["notes"]\n}\n';
-const marketplace = '{\n  "metadata": { "version": "0.5.0" },\n  "plugins": [{ "name": "working-notes", "version": "0.5.0", "keywords": ["a", "b"] }]\n}\n';
+const plugin = '{\n  "name": "wonos",\n  "version": "0.5.0",\n  "keywords": ["notes"]\n}\n';
+const marketplace = '{\n  "metadata": { "version": "0.5.0" },\n  "plugins": [{ "name": "wonos", "version": "0.5.0", "keywords": ["a", "b"] }]\n}\n';
 
 describe('versions', () => {
   it('compares versions numerically', () => {

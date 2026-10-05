@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Working Notes backups. Each notebook's snapshots stay on this computer in <data dir>/Backups/<notebook>.
+// Wonos backups. Each notebook's snapshots stay on this computer in <data dir>/Backups/<notebook>.
 // The MCP server and the app also take them hourly by themselves (scripts/backup/schedule.ts).
 //   bun run backup                          snapshot every notebook whose data changed (what the hourly LaunchAgent runs)
 //   bun run backup --force [--reason text]  snapshot even if unchanged
@@ -8,9 +8,6 @@
 //   bun run backup install | uninstall      manage the hourly LaunchAgent
 // Add --notebook <id> to run, list or restore one notebook. Restore needs it when there is more than one.
 
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { appDataDir, appLogsDir } from '$shared/settings/server/app-dirs';
 import { settings } from '$shared/settings/server/index.server';
 import { backupsDir, backupsRoot } from '$shared/settings/server/paths';
 import { readNotebooks, resolveCurrentNotebook } from '$shared/notebooks/current.server';
@@ -19,7 +16,7 @@ import type { NotebookInfo } from '$shared/types/notebook';
 import { ok, err, type Result } from '$shared/utils/result';
 import { createSnapshot, listSnapshots } from './snapshot';
 import { restoreSnapshot } from './restore';
-import { LABEL, backupCommand, installAgent, uninstallAgent } from './launchd';
+import { LABEL, LEGACY_LABEL, backupLogFile, installAgent, thisBackupCommand, uninstallAgent } from './launchd';
 import { runBackupsIfDue, withBackupLock } from './schedule';
 
 const args = process.argv.slice(2);
@@ -51,12 +48,12 @@ const main = async (): Promise<number> => {
         console.error(notebooks.error.message);
         return 1;
       }
-      const scheduled = process.env.XPC_SERVICE_NAME === LABEL;
+      const scheduled = process.env.XPC_SERVICE_NAME === LABEL || process.env.XPC_SERVICE_NAME === LEGACY_LABEL;
       if (scheduled && !hasFlag('notebook') && !hasFlag('force')) {
         // The LaunchAgent shares the hour with the MCP server and the app: whoever comes first takes it.
         const result = await runBackupsIfDue();
         if (!result) {
-          console.log(`${stamp()} skipped: this hour's backup was already taken, or is being taken, by another Working Notes process`);
+          console.log(`${stamp()} skipped: this hour's backup was already taken, or is being taken, by another Wonos process`);
           return 0;
         }
         for (const created of result.created) console.log(`${stamp()} created ${created}`);
@@ -87,7 +84,7 @@ const main = async (): Promise<number> => {
         return failed ? 1 : 0;
       });
       if (ran === null) {
-        console.error('Another Working Notes process is taking a backup. Try again in a minute.');
+        console.error('Another Wonos process is taking a backup. Try again in a minute.');
         return 1;
       }
       return ran;
@@ -134,16 +131,9 @@ const main = async (): Promise<number> => {
       return 0;
     }
     case 'install': {
-      const logFile = resolve(appLogsDir(), 'backup.log');
-      // A release runs through App/current, which the plugin shim repoints on every update.
-      const current = join(appDataDir(), 'App', 'current', 'wnotes');
-      const command = backupCommand({
-        standaloneBinary: process.env['WNOTES_STANDALONE'] === '1' ? (existsSync(current) ? current : process.execPath) : null,
-        dataDir: appDataDir(),
-        // The Homebrew symlink survives `brew upgrade`; process.execPath points into a versioned Cellar folder.
-        bunPath: Bun.which('bun') ?? process.execPath,
-        repoDir: resolve(import.meta.dir, '..', '..')
-      });
+      await uninstallAgent(LEGACY_LABEL);
+      const logFile = backupLogFile();
+      const command = thisBackupCommand();
       const result = await installAgent(command, logFile);
       if (!result.ok) {
         console.error(result.error.message);
@@ -154,6 +144,7 @@ const main = async (): Promise<number> => {
     }
     case 'uninstall': {
       await uninstallAgent();
+      await uninstallAgent(LEGACY_LABEL);
       console.log('Hourly backups removed. Existing snapshots were left in place.');
       return 0;
     }

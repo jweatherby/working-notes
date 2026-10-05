@@ -1,8 +1,11 @@
 // What `bun run setup` does, decided from the current state. Pure, so it can be
 // tested without touching ~/.claude, PATH or the claude CLI.
 
-export const MARKETPLACE = 'working-notes';
-export const PLUGIN_ID = `working-notes@${MARKETPLACE}`;
+export const MARKETPLACE = 'wonos';
+export const PLUGIN_ID = `wonos@${MARKETPLACE}`;
+/** The marketplace and plugin before the rename to Wonos, which setup replaces. */
+export const LEGACY_MARKETPLACE = 'working-notes';
+export const LEGACY_PLUGIN_ID = `working-notes@${LEGACY_MARKETPLACE}`;
 
 export interface ClaudePlugins {
   /** Marketplace names from `claude plugin marketplace list`. */
@@ -20,16 +23,16 @@ export type BinLink =
 export interface SetupState {
   /** Absolute path of this clone. */
   readonly repoDir: string;
-  /** `<data dir>/app-path`, which the plugin's `wnotes` shim reads. */
+  /** `<data dir>/app-path`, which the plugin's `wono` shim reads. */
   readonly pointerFile: string;
   /** The pointer file's contents, or null if it doesn't exist. */
   readonly pointer: string | null;
-  /** `<Bun's global bin dir>/wnotes`, which puts the CLI on PATH. */
+  /** `<Bun's global bin dir>/wono`, which puts the CLI on PATH. */
   readonly binLinkPath: string;
   readonly binLink: BinLink;
   /** Whether the directory holding binLinkPath is on PATH. */
   readonly binDirOnPath: boolean;
-  /** `~/.claude/skills/working-notes`, where the old installer linked the skill. */
+  /** `~/.claude/skills/wonos`, where the old installer linked the skill. */
   readonly legacySkillPath: string;
   /** The absolute target of that path if it's a symlink, otherwise null. */
   readonly legacySkillTarget: string | null;
@@ -53,9 +56,9 @@ export interface RepoPaths {
 }
 
 export const repoPaths = (repoDir: string): RepoPaths => ({
-  cli: `${repoDir}/bin/wnotes`,
+  cli: `${repoDir}/bin/wono`,
   pluginDir: `${repoDir}/plugin`,
-  pluginZip: `${repoDir}/dist/working-notes.zip`
+  pluginZip: `${repoDir}/dist/wonos.zip`
 });
 
 const isInside = (path: string, dir: string): boolean => path === dir || path.startsWith(`${dir}/`);
@@ -69,15 +72,15 @@ const binLinkSteps = (s: SetupState): readonly SetupStep[] => {
   const { cli } = repoPaths(s.repoDir);
   const link: SetupStep = { kind: 'link', path: s.binLinkPath, target: cli };
   const dir = s.binLinkPath.slice(0, s.binLinkPath.lastIndexOf('/'));
-  const onPath: readonly SetupStep[] = s.binDirOnPath ? [] : [{ kind: 'note', message: `${dir} isn't on your PATH. Add it to run \`wnotes\` in a terminal.` }];
-  const occupied: SetupStep = { kind: 'note', message: `${s.binLinkPath} already exists and isn't a Working Notes link, so it was left alone. Run ${cli} directly instead.` };
+  const onPath: readonly SetupStep[] = s.binDirOnPath ? [] : [{ kind: 'note', message: `${dir} isn't on your PATH. Add it to run \`wono\` in a terminal.` }];
+  const occupied: SetupStep = { kind: 'note', message: `${s.binLinkPath} already exists and isn't a Wonos link, so it was left alone. Run ${cli} directly instead.` };
   switch (s.binLink.kind) {
     case 'missing':
       return [link, ...onPath];
     case 'symlink':
       if (s.binLink.target === cli) return onPath;
-      // Another clone's link is ours to move; some other package's `wnotes` isn't.
-      return s.binLink.target.endsWith('/bin/wnotes') && !s.binLink.target.includes('/node_modules/') ? [link, ...onPath] : [occupied];
+      // Another clone's link is ours to move; some other package's `wono` isn't.
+      return s.binLink.target.endsWith('/bin/wono') && !s.binLink.target.includes('/node_modules/') ? [link, ...onPath] : [occupied];
     case 'other':
       return [occupied];
   }
@@ -97,12 +100,19 @@ export const planInstall = (s: SetupState): readonly SetupStep[] => {
 
   const marketplace = s.claude.marketplaces.includes(MARKETPLACE) ? ['plugin', 'marketplace', 'update', MARKETPLACE] : addMarketplace;
   const plugin = s.claude.plugins.includes(PLUGIN_ID) ? ['plugin', 'update', PLUGIN_ID] : installPlugin;
-  return [...local, { kind: 'claude', args: marketplace }, { kind: 'claude', args: plugin }];
+  return [...local, ...legacyPlugin(s.claude), { kind: 'claude', args: marketplace }, { kind: 'claude', args: plugin }];
 };
+
+/** Removes the plugin and marketplace from before the rename, so Claude doesn't run both. */
+const legacyPlugin = (claude: ClaudePlugins | null): readonly SetupStep[] => [
+  ...(claude?.plugins.includes(LEGACY_PLUGIN_ID) ? [{ kind: 'claude', args: ['plugin', 'uninstall', LEGACY_PLUGIN_ID] } as const] : []),
+  ...(claude?.marketplaces.includes(LEGACY_MARKETPLACE) ? [{ kind: 'claude', args: ['plugin', 'marketplace', 'remove', LEGACY_MARKETPLACE] } as const] : [])
+];
 
 export const planUninstall = (s: SetupState): readonly SetupStep[] => [
   ...(s.claude?.plugins.includes(PLUGIN_ID) ? [{ kind: 'claude', args: ['plugin', 'uninstall', PLUGIN_ID] } as const] : []),
   ...(s.claude?.marketplaces.includes(MARKETPLACE) ? [{ kind: 'claude', args: ['plugin', 'marketplace', 'remove', MARKETPLACE] } as const] : []),
+  ...legacyPlugin(s.claude),
   // Another clone may have claimed the pointer or the PATH link since; leave those alone.
   ...(s.pointer === s.repoDir ? [{ kind: 'remove', path: s.pointerFile } as const] : []),
   ...(s.binLink.kind === 'symlink' && s.binLink.target === repoPaths(s.repoDir).cli ? [{ kind: 'remove', path: s.binLinkPath } as const] : []),

@@ -48,7 +48,7 @@ jobs:
         run: bunx prisma generate
 
       # The same binary the plugin ships, which the app bundles as its sidecar.
-      - name: Build the wnotes binary
+      - name: Build the wono binary
         run: bun run release:build --target ${{ matrix.target }}
 
       - name: Smoke test the binary

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
-  import type { TodoSummary } from '$api/aux/todo/operations';
+  import type { TodoSummary } from '$api/attached/todo/operations';
   import StatusDot from '$lib/todo/components/StatusDot.svelte';
   import PriorityBadge from '$lib/todo/components/PriorityBadge.svelte';
   import { nextStatus, formatTodoDate, type TodoStatus } from '$lib/todo/utils';

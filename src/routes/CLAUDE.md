@@ -30,7 +30,7 @@ Use `trpc(fetch)` so SSR requests pass through the same guard and validation as 
 
 ## Security (`src/hooks.server.ts`)
 
-There is no auth; `localOnlyGuard` is the only protection. It returns 403 for any request whose hostname isn't `localhost`, `127.0.0.1` or `[::1]`, and for any `/api/trpc` request without `x-working-notes: 1`. Don't add routes that bypass it, don't add CORS headers, and don't bind the server to anything but loopback.
+There is no auth; `localOnlyGuard` is the only protection. It returns 403 for any request whose hostname isn't `localhost`, `127.0.0.1` or `[::1]`, and for any `/api/trpc` request without `x-wono: 1`. Don't add routes that bypass it, don't add CORS headers, and don't bind the server to anything but loopback.
 
 `notebookHandle` runs next and sets `event.locals.notebook` for every request:
 - `?notebook=<id or name>` on a page switches: it sets the `wn-notebook` cookie (HttpOnly, SameSite=Strict) and redirects to the same URL without the parameter. An unknown notebook is a 404.

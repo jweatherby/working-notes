@@ -33,7 +33,7 @@ export const planRevocation = (
   return ok({ entries: merged.filter((e) => e.expires >= today).sort((a, b) => a.expires.localeCompare(b.expires)), pruned });
 };
 
-const HEADER = `// License ids that no longer unlock Working Notes Pro: refunded or charged back.
+const HEADER = `// License ids that no longer unlock Wonos Pro: refunded or charged back.
 // Each release carries this list, so a revoked key stops working once the app
 // updates; nothing is ever looked up online. Ids are random UUIDs, never names or
 // emails, so the list is safe in a public repo.

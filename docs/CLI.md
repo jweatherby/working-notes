@@ -1,6 +1,6 @@
 # The CLI and the MCP server
 
-`wnotes` calls the application's own API against your local database, and applies the same
+`wono` calls the application's own API against your local database, and applies the same
 validation rules as the web app. **The app does not need to be running.** The MCP server — the
 standard way Claude connects to a local program — offers the same operations as tools, so Claude
 works the same way through either one.
@@ -10,18 +10,18 @@ Each operation is called a procedure, and its name is the domain and the action:
 program:
 
 ```bash
-wnotes help                    # every procedure
-wnotes help todo.create        # one procedure's inputs, types and limits
+wono help                    # every procedure
+wono help todo.create        # one procedure's inputs, types and limits
 ```
 
 ## Calling a procedure
 
 ```bash
-wnotes person.create --name "Dana Park" --title "Senior Engineer"
-wnotes person.update --id <personId> --leadId <leadPersonId>
-wnotes team.addMember --teamId <teamId> --personId <personId>
-wnotes note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
-wnotes todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
+wono person.create --name "Dana Park" --title "Senior Engineer"
+wono person.update --id <personId> --leadId <leadPersonId>
+wono team.addMember --teamId <teamId> --personId <personId>
+wono note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
+wono todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
 ```
 
 - **Results go to standard output as JSON. Logs go to standard error.** You can pipe the output
@@ -34,18 +34,18 @@ wnotes todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> 
 - **Pass long text in a file** with `--<field>-file <path>`, for example `--content-file review.md`.
   To pass a whole input at once, use `--input '{"...": ...}'`.
 - **A query needs at least one argument.** If you want them all, pass an optional flag, such as
-  `wnotes todo.list --archived exclude`.
+  `wono todo.list --archived exclude`.
 
 ## Notebooks
 
 Every call works on one notebook — the default, unless you name another.
 
 ```bash
-wnotes notebook.list
-wnotes notebook.create --name "Garden"
-wnotes notebook.setDefault --id garden
-wnotes person.list --notebook garden        # anywhere in the arguments
-WNOTES_NOTEBOOK=garden wnotes person.list
+wono notebook.list
+wono notebook.create --name "Garden"
+wono notebook.setDefault --id garden
+wono person.list --notebook garden        # anywhere in the arguments
+WONO_NOTEBOOK=garden wono person.list
 ```
 
 Ids do not carry across notebooks. Look a person, team or project up in the notebook you are
@@ -70,10 +70,10 @@ Notes, docs, todos, links, tags, comments and emoji attach to any of these throu
 is the place for that material.
 
 ```bash
-wnotes goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> \
+wono goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> \
   --period 2026-H2 --unit % --baseline 99.5 --target 99.9
-wnotes goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK --comment "Two brownouts."
-wnotes page.create --title Datadog --kind SOFTWARE \
+wono goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK --comment "Two brownouts."
+wono page.create --title Datadog --kind SOFTWARE \
   --properties '{"vendor":"Datadog","annualCost":40000,"currency":"USD","renewalDate":"2027-03-01"}'
 ```
 
@@ -96,17 +96,17 @@ error. `POLICY` takes `status`/`version`/`effectiveDate`/`reviewDate`; `PRODUCT`
 ownership relation.
 
 ```bash
-wnotes project.update --id <project> --ownerType TEAM --ownerId <team>
-wnotes goal.addProject --goalId <goal> --projectId <project>
+wono project.update --id <project> --ownerType TEAM --ownerId <team>
+wono goal.addProject --goalId <goal> --projectId <project>
 ```
 
 **Relations.** `relation.add` links any two entities (people, teams, departments, projects, goals,
 pages, docs, notes and todos), with only two kinds on purpose:
 
 ```bash
-wnotes relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> \
+wono relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> \
   --note "Uses it for alerting"
-wnotes relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <api> \
+wono relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <api> \
   --kind DEPENDS_ON
 ```
 
@@ -119,11 +119,11 @@ as "Needed by". For anything else — uses, replaces, applies to — use `RELATE
 something came from, and `link.find` finds it again:
 
 ```bash
-wnotes link.add --entityType PROJECT --entityId <checkout> \
+wono link.add --entityType PROJECT --entityId <checkout> \
   --url https://linear.app/acme/project/checkout-4f2a --title "Linear: Checkout" --synced true
-wnotes link.find --url http://www.linear.app/acme/project/checkout-4f2a/
-wnotes link.find --contains ENG-123
-wnotes link.markSynced --id <link>
+wono link.find --url http://www.linear.app/acme/project/checkout-4f2a/
+wono link.find --contains ENG-123
+wono link.markSynced --id <link>
 ```
 
 `--url` ignores the protocol, `www.`, a trailing slash, the fragment and tracking parameters.
@@ -153,8 +153,8 @@ backlink by removing the link.
 Archiving keeps history; deleting doesn't.
 
 ```bash
-wnotes project.archive --id <project>
-wnotes project.list --archived only        # also include, or the default exclude
+wono project.archive --id <project>
+wono project.list --archived only        # also include, or the default exclude
 ```
 
 An archived entity disappears from every `list`, from the org map, from the home feed and from the
@@ -200,7 +200,7 @@ number — not `"12%"`, not `null`, and never blank.
 Use **bar** to compare categories, **line** for a trend over time, and **radar** for a profile
 across three to eight dimensions on one scale.
 
-Working Notes validates chart blocks when it saves a **wiki page** or a report. If a chart is wrong,
+Wonos validates chart blocks when it saves a **wiki page** or a report. If a chart is wrong,
 it rejects the whole save and names the line of the opening fence:
 
 | Error | Fix |
@@ -223,10 +223,10 @@ unfinished. The flag is `features.reports`. Write finished write-ups as docs ins
 The CLI stores PDFs but doesn't read them. Read it yourself, then:
 
 ```bash
-wnotes doc.add --entityType PERSON --entityId <id> --title "Career plan"
-wnotes doc.update --id <doc> --content-file /tmp/doc.md
+wono doc.add --entityType PERSON --entityId <id> --title "Career plan"
+wono doc.update --id <doc> --content-file /tmp/doc.md
 base64 -i file.pdf > /tmp/pdf.b64
-wnotes doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64
+wono doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64
 ```
 
 In the web app, "Convert with Claude" on a doc does the same by running your own `claude` CLI with
@@ -240,15 +240,15 @@ title. The toolbar picks the branding and turns the letterhead on or off. **Down
 the file in the browser, as page images; **Print…** uses the browser's dialog, for a PDF with
 selectable text. A line of just `<!-- pagebreak -->` starts a new page.
 
-## Working Notes Pro
+## Wonos Pro
 
 Full-text search (`search.query`, `search.recall`), branding changes and PDF export need a yearly
 license. Without one, those procedures fail with a message saying so; everything else works.
 
 ```bash
-wnotes license.status                     # none, active (with the expiry date), expired or invalid
-wnotes license.activate --key WN1.…       # checked on this computer; refuses an invalid or expired key
-wnotes license.remove
+wono license.status                     # none, active (with the expiry date), expired or invalid
+wono license.activate --key WN1.…       # checked on this computer; refuses an invalid or expired key
+wono license.remove
 ```
 
 The license is stored in the data folder's `settings.json`, beside the default notebook, and
@@ -258,10 +258,10 @@ checked offline against a public key built into the app.
 ## Backups
 
 ```bash
-wnotes backup --force --reason "before the reorg"   # snapshot now, regardless
-wnotes backup list                                  # snapshots with counts, per notebook
-wnotes backup install                               # hourly LaunchAgent (macOS; Claude and the app back up hourly anyway)
-wnotes backup restore latest --notebook <id>        # app must be closed
+wono backup --force --reason "before the reorg"   # snapshot now, regardless
+wono backup list                                  # snapshots with counts, per notebook
+wono backup install                               # hourly LaunchAgent (macOS; Claude and the app back up hourly anyway)
+wono backup restore latest --notebook <id>        # app must be closed
 ```
 
 A snapshot is a consistent `VACUUM INTO` copy of the database plus the notebook's files, with
@@ -274,7 +274,7 @@ Add `--notebook <id>` to `run`, `list` or `restore` to work on one notebook.
 ## The MCP server
 
 ```bash
-wnotes mcp
+wono mcp
 ```
 
 This runs a server that talks over standard input and output. It opens no port and uses no network.
@@ -285,4 +285,4 @@ marked destructive. Every tool except `notebook_*` accepts an optional `notebook
 On top of the procedures it adds `backup_snapshot`, `backup_list`, `app_open` (starts the app and
 returns its link) and `app_restart`.
 
-The plugin starts this for you. Point another MCP client at `wnotes mcp` to use it directly.
+The plugin starts this for you. Point another MCP client at `wono mcp` to use it directly.

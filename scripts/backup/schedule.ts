@@ -1,4 +1,4 @@
-// Hourly backups from inside a long-running Working Notes process (the MCP server,
+// Hourly backups from inside a long-running Wonos process (the MCP server,
 // the release app), so every platform gets them without an OS scheduler. Several
 // processes, and the macOS LaunchAgent, may run at once: a lock file makes one of
 // them take the snapshots, and a last-run file makes the others skip the hour.
@@ -9,6 +9,7 @@ import { settings } from '$shared/settings/server/index.server';
 import { backupsRoot } from '$shared/settings/server/paths';
 import { readNotebooks } from '$shared/notebooks/current.server';
 import { createSnapshot } from './snapshot';
+import { replaceLegacyAgent } from './launchd';
 
 export const BACKUP_INTERVAL_MS = 60 * 60 * 1000;
 /** How often a process checks whether the hour is up. */
@@ -97,6 +98,10 @@ export const runBackupsIfDue = async (now: () => Date = () => new Date()): Promi
  * keep the process alive. Returns a function that stops it.
  */
 export const startBackupSchedule = (log: (message: string) => void): (() => void) => {
+  void replaceLegacyAgent().then((result) => {
+    if (!result.ok) log(`Couldn't replace the hourly backup LaunchAgent from before the rename to Wonos: ${result.error.message}`);
+    else if (result.value.replaced) log('Replaced the hourly backup LaunchAgent from before the rename to Wonos.');
+  });
   let running = false;
   const tick = async (): Promise<void> => {
     if (running) return;

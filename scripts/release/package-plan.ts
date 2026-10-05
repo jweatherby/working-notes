@@ -3,8 +3,8 @@
 import { join } from 'node:path';
 import { ok, err, type Result } from '$shared/utils/result';
 
-/** The target of a release binary's file name (`wnotes-linux-x64`, `wnotes-windows-x64.exe`), or null. */
-export const binaryTarget = (name: string): string | null => name.match(/^wnotes-([a-z]+-[a-z0-9]+)(\.exe)?$/)?.[1] ?? null;
+/** The target of a release binary's file name (`wono-linux-x64`, `wono-windows-x64.exe`), or null. */
+export const binaryTarget = (name: string): string | null => name.match(/^wono-([a-z]+-[a-z0-9]+)(\.exe)?$/)?.[1] ?? null;
 
 export interface BuiltPlugin {
   readonly dir: string;
@@ -36,6 +36,22 @@ export const mergePlan = (builds: readonly BuiltPlugin[]): Result<MergePlan> => 
       copies.push({ from: join(build.dir, 'server', name), name });
     }
   }
-  if (copies.length === 0) return err(new Error('The built plugins have no wnotes binaries'));
+  if (copies.length === 0) return err(new Error('The built plugins have no wono binaries'));
   return ok({ version: first.version, base: first.dir, copies });
 };
+
+/** GitHub refuses a file over 100 MB in git; the dist branch keeps a margin under that. */
+export const BRANCH_FILE_LIMIT_BYTES = 95 * 1024 * 1024;
+
+/**
+ * Which binaries the `dist` branch can carry. A binary over the limit is left off the
+ * branch, so the marketplace plugin has no build for that platform; its release zip
+ * still carries it, for a Claude desktop upload or the desktop app.
+ */
+export const branchBinaries = (
+  binaries: readonly { readonly name: string; readonly bytes: number }[],
+  limit = BRANCH_FILE_LIMIT_BYTES
+): { readonly keep: readonly string[]; readonly omit: readonly string[] } => ({
+  keep: binaries.filter((b) => b.bytes <= limit).map((b) => b.name),
+  omit: binaries.filter((b) => b.bytes > limit).map((b) => b.name)
+});

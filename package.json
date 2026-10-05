@@ -1,6 +1,6 @@
 {
-  "name": "working-notes",
-  "version": "0.10.1",
+  "name": "wonos",
+  "version": "0.11.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,7 +31,7 @@
     "desktop:dev": "cd desktop && tauri dev",
     "desktop:build": "cd desktop && tauri build",
     "icons": "bun scripts/icons/render.ts",
-    "wnotes": "bun cli/main.ts"
+    "wono": "bun cli/main.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

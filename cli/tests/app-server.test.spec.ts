@@ -1,31 +1,36 @@
 import { describe, it, expect } from 'vitest';
 import { appControl, staticFile } from '../app-server';
-import { appLaunchCommand, appUrl, isWorkingNotesCommand, parsePids, planAppLaunch } from '../app-launch';
+import { appLaunchCommand, appUrl, isWonoCommand, parsePids, planAppLaunch } from '../app-launch';
 
-describe('isWorkingNotesCommand', () => {
+describe('isWonoCommand', () => {
   it('recognises a release binary and a clone’s dev server', () => {
-    expect(isWorkingNotesCommand('/Users/me/Library/Application Support/Working Notes/App/0.6.7/wnotes app')).toBe(true);
-    expect(isWorkingNotesCommand('node /Users/me/code/working-notes/node_modules/.bin/vite dev')).toBe(true);
+    expect(isWonoCommand('/Users/me/Library/Application Support/Wonos/App/0.6.7/wono app')).toBe(true);
+    expect(isWonoCommand('node /Users/me/code/wonos/node_modules/.bin/vite dev')).toBe(true);
   });
 
   it('recognises a Windows release binary', () => {
-    expect(isWorkingNotesCommand('"C:\\Users\\me\\AppData\\Local\\Working Notes\\App\\0.8.0\\wnotes.exe" app')).toBe(true);
-    expect(isWorkingNotesCommand('C:\\Tools\\wnotes.exe app')).toBe(true);
-    expect(isWorkingNotesCommand('C:\\Tools\\notwnotes.exe app')).toBe(false);
+    expect(isWonoCommand('"C:\\Users\\me\\AppData\\Local\\Wonos\\App\\0.8.0\\wono.exe" app')).toBe(true);
+    expect(isWonoCommand('C:\\Tools\\wono.exe app')).toBe(true);
+    expect(isWonoCommand('C:\\Tools\\notwono.exe app')).toBe(false);
+  });
+
+  it('recognises an app from before the rename to Wonos', () => {
+    expect(isWonoCommand('/Users/me/Library/Application Support/Working Notes/App/0.10.2/wnotes app')).toBe(true);
+    expect(isWonoCommand('node /Users/me/code/working-notes/node_modules/.bin/vite dev')).toBe(true);
   });
 
   it('refuses anything else on the port', () => {
-    expect(isWorkingNotesCommand('node /Users/me/code/other-app/node_modules/.bin/vite dev')).toBe(false);
-    expect(isWorkingNotesCommand('')).toBe(false);
+    expect(isWonoCommand('node /Users/me/code/other-app/node_modules/.bin/vite dev')).toBe(false);
+    expect(isWonoCommand('')).toBe(false);
   });
 });
 
 describe('appControl', () => {
-  const stop = (host: string, headers: Record<string, string> = { 'x-working-notes': '1' }, method = 'POST') =>
-    appControl(new Request(`http://${host}/__wnotes/app/stop`, { method, headers }), '1.2.3');
+  const stop = (host: string, headers: Record<string, string> = { 'x-wono': '1' }, method = 'POST') =>
+    appControl(new Request(`http://${host}/__wono/app/stop`, { method, headers }), '1.2.3');
 
   it('reports the version', () => {
-    expect(appControl(new Request('http://127.0.0.1:5173/__wnotes/app'), '1.2.3')).toEqual({ kind: 'version', body: { version: '1.2.3' } });
+    expect(appControl(new Request('http://127.0.0.1:5173/__wono/app'), '1.2.3')).toEqual({ kind: 'version', body: { version: '1.2.3' } });
   });
 
   it('stops only for a loopback POST with the local header', () => {
@@ -33,7 +38,7 @@ describe('appControl', () => {
     expect(stop('localhost:5173')).toEqual({ kind: 'stop' });
     expect(stop('evil.example:5173')).toEqual({ kind: 'forbidden' });
     expect(stop('127.0.0.1:5173', {})).toEqual({ kind: 'forbidden' });
-    expect(stop('127.0.0.1:5173', { 'x-working-notes': '1' }, 'GET')).toEqual({ kind: 'forbidden' });
+    expect(stop('127.0.0.1:5173', { 'x-wono': '1' }, 'GET')).toEqual({ kind: 'forbidden' });
   });
 
   it('leaves every other request to the app', () => {
@@ -78,9 +83,9 @@ describe('staticFile', () => {
 });
 
 describe('app launch', () => {
-  it('runs the release binary, or the clone’s bin/wnotes', () => {
-    expect(appLaunchCommand({ standalone: true, execPath: '/data/App/0.5.0/wnotes', repoDir: '/repo' })).toEqual({ command: '/data/App/0.5.0/wnotes', args: ['app'] });
-    expect(appLaunchCommand({ standalone: false, execPath: '/opt/homebrew/bin/bun', repoDir: '/repo', platform: 'darwin' })).toEqual({ command: '/repo/bin/wnotes', args: ['app'] });
+  it('runs the release binary, or the clone’s bin/wono', () => {
+    expect(appLaunchCommand({ standalone: true, execPath: '/data/App/0.5.0/wono', repoDir: '/repo' })).toEqual({ command: '/data/App/0.5.0/wono', args: ['app'] });
+    expect(appLaunchCommand({ standalone: false, execPath: '/opt/homebrew/bin/bun', repoDir: '/repo', platform: 'darwin' })).toEqual({ command: '/repo/bin/wono', args: ['app'] });
     expect(appLaunchCommand({ standalone: false, execPath: 'C:\\bun\\bun.exe', repoDir: 'C:\\repo', platform: 'win32' })).toEqual({ command: 'C:\\bun\\bun.exe', args: ['run', 'dev'], cwd: 'C:\\repo' });
   });
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // Fills desktop/src-tauri from a release build, before `tauri build`:
-//   binaries/wnotes-<rust target triple>[.exe]   the sidecar Tauri bundles
+//   binaries/wono-<rust target triple>[.exe]   the sidecar Tauri bundles
 //   resources/migrations/, resources/VERSION      what the sidecar needs beside it
 //   bun scripts/desktop-prepare.ts [dist/plugin]   (run bun run release:build first)
 
@@ -25,7 +25,7 @@ const triple = TRIPLES[target];
 if (!triple) throw new Error(`No desktop build for ${target}`);
 
 const exe = windows ? '.exe' : '';
-const binary = join(plugin, 'server', `wnotes-${target}${exe}`);
+const binary = join(plugin, 'server', `wono-${target}${exe}`);
 if (!existsSync(binary)) {
   console.error(`No ${binary}. Run \`bun run release:build\` first.`);
   process.exit(1);
@@ -36,7 +36,7 @@ await rm(join(tauri, 'binaries'), { recursive: true, force: true });
 await rm(join(tauri, 'resources'), { recursive: true, force: true });
 await mkdir(join(tauri, 'binaries'), { recursive: true });
 await mkdir(join(tauri, 'resources'), { recursive: true });
-await cp(binary, join(tauri, 'binaries', `wnotes-${triple}${exe}`));
+await cp(binary, join(tauri, 'binaries', `wono-${triple}${exe}`));
 await cp(join(plugin, 'server', 'migrations'), join(tauri, 'resources', 'migrations'), { recursive: true });
 await cp(join(plugin, 'server', 'VERSION'), join(tauri, 'resources', 'VERSION'));
 console.log(`Prepared desktop/src-tauri for ${triple} from ${plugin}`);

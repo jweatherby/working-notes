@@ -1,5 +1,5 @@
 // Cross-domain helper (not a domain): validates and resolves the owner of a
-// goal or project. Owners are polymorphic (ownerType + ownerId), like aux items.
+// goal or project. Owners are polymorphic (ownerType + ownerId), like attached items.
 
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';

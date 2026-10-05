@@ -3,18 +3,18 @@
 You need [Bun](https://bun.sh). Claude Code and the Claude desktop app are optional.
 
 ```bash
-git clone <repo-url> working-notes
-cd working-notes
+git clone <repo-url> wonos
+cd wonos
 bun install
-bun run setup              # put `wnotes` on PATH and install the Claude plugin
-wnotes app                 # the UI at http://127.0.0.1:5173
+bun run setup              # put `wono` on PATH and install the Claude plugin
+wono app                 # the UI at http://127.0.0.1:5173
 ```
 
 The database is created on first use. Try it:
 
 ```bash
-wnotes help
-wnotes person.create --name "Alice Johnson" --title "Staff Engineer"
+wono help
+wono person.create --name "Alice Johnson" --title "Staff Engineer"
 ```
 
 Dev and prod share the same notebooks in your app data folder. Integration tests use `./data/test`
@@ -25,12 +25,12 @@ Dev and prod share the same notebooks in your app data folder. Integration tests
 Four things, and it's safe to re-run:
 
 1. Writes a pointer at this clone (`<data dir>/app-path`).
-2. Links `wnotes` into Bun's global bin folder (`~/.bun/bin`), so it works from any directory.
-3. Zips `plugin/` into `dist/working-notes.zip`, for Claude desktop Chat and Cowork.
+2. Links `wono` into Bun's global bin folder (`~/.bun/bin`), so it works from any directory.
+3. Zips `plugin/` into `dist/wonos.zip`, for Claude desktop Chat and Cowork.
 4. Installs or updates the Claude Code plugin, from this clone as a local marketplace.
 
 The pointer matters: because of it, the plugin's MCP server runs **this clone's code** instead of a
-release's. The shim, `plugin/scripts/wnotes`, tries three sources in order — `$WORKING_NOTES_HOME`,
+release's. The shim, `plugin/scripts/wono`, tries three sources in order — `$WONO_HOME`,
 the clone named by `app-path`, then the standalone binary inside a release. A development machine
 therefore always runs the code it has checked out.
 
@@ -88,8 +88,8 @@ root, Claude would copy the whole application, including the `bin/` folder that 
 claude.ai reject.
 
 Claude desktop starts MCP servers with a minimal PATH, so `.mcp.json` runs the shim with `sh`, and
-`bin/wnotes` looks for Bun in `~/.bun/bin`, `/opt/homebrew/bin` and `/usr/local/bin` (or
-`$WNOTES_BUN`).
+`bin/wono` looks for Bun in `~/.bun/bin`, `/opt/homebrew/bin` and `/usr/local/bin` (or
+`$WONO_BUN`).
 
 **Bump the version whenever the plugin should update:**
 
@@ -114,13 +114,13 @@ since the last release without a new version.
 - **CI** (`.github/workflows/ci.yml`): `check`, unit and integration tests on every push and PR,
   on Linux, plus the unit tests on macOS and Windows (not blocking).
 - **Build** (`bun run release:build [--target <t>]`): builds the UI, then compiles
-  `cli/standalone.ts` and the built SvelteKit server into one `wnotes-<target>` binary with Bun
+  `cli/standalone.ts` and the built SvelteKit server into one `wono-<target>` binary with Bun
   embedded. Build each target on its own OS: the binary embeds the host's SQLite native module.
   Writes `dist/plugin/`.
 - **Package** (`bun run release:package [<built plugin dirs>]`): merges several builds' binaries
-  into `dist/plugin` and writes one `dist/working-notes-<version>-<target>.zip` per platform.
+  into `dist/plugin` and writes one `dist/wonos-<version>-<target>.zip` per platform.
 - **Smoke test** (`bun run release:smoke`): installs this machine's binary through the shim
-  (`wnotes.cmd` on Windows) into an empty home folder, then checks a procedure, the MCP tool list
+  (`wono.cmd` on Windows) into an empty home folder, then checks a procedure, the MCP tool list
   and the app (page, asset, API, guard).
 - **Publish:** the workflow builds and smoke-tests `darwin-arm64` (required), `windows-x64` and
   `linux-x64` on their own runners, packages them on Linux, force-pushes `dist/plugin` to the root
@@ -147,4 +147,4 @@ Each of these is deliberate. A change that breaks one needs a different design:
   entity in the notebook (`page_chat`) until cleared or the entity is deleted.
 - **The network boundary is the security boundary** (`src/hooks.server.ts`). Keep all three parts:
   the server binds to `127.0.0.1`; requests whose hostname isn't loopback get 403 (blocks DNS
-  rebinding); `/api/trpc` requires the `x-working-notes: 1` header (blocks cross-site requests).
+  rebinding); `/api/trpc` requires the `x-wono: 1` header (blocks cross-site requests).

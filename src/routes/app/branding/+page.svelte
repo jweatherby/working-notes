@@ -11,7 +11,7 @@
 
   const { data } = $props<{ data: PageData }>();
   const brandings = $derived(data.brandings.ok ? data.brandings.value : []);
-  // Branding is Working Notes Pro: without a license, profiles are listed but can't be made or changed.
+  // Branding is Wonos Pro: without a license, profiles are listed but can't be made or changed.
   const locked = $derived(!isProActive(data.license));
 
   let busy = $state(false);

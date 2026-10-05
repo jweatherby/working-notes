@@ -99,7 +99,7 @@ jobs:
       - name: Attest the binary's provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/plugin/server/wnotes-${{ matrix.target }}*
+          subject-path: dist/plugin/server/wono-${{ matrix.target }}*
 
       - uses: actions/upload-artifact@v4
         with:
@@ -153,12 +153,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -q -m "Working Notes $VERSION, built from $RELEASE_SHA"
+          git commit -q -m "Wonos $VERSION, built from $RELEASE_SHA"
           git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist
 
       - name: Create the GitHub release
         run: |
-          gh release create "v$VERSION" dist/working-notes-*.zip \
+          gh release create "v$VERSION" dist/wonos-*.zip \
             --target "$RELEASE_SHA" \
-            --title "Working Notes $VERSION" \
+            --title "Wonos $VERSION" \
             --generate-notes
