@@ -8,6 +8,12 @@
   import { openPopup } from '$lib/ui/popup-url';
   import { submit } from '$lib/ui/submit';
   import EmptyState from '$lib/ui/EmptyState.svelte';
+  import ParamToggle from '$lib/ui/ParamToggle.svelte';
+
+  const SORT_OPTIONS = [
+    { id: 'priority', name: 'Priority' },
+    { id: 'status', name: 'Status' }
+  ];
 
   interface Props {
     readonly todos: readonly TodoSummary[];
@@ -29,7 +35,10 @@
 <section class="card panel">
   <header class="section-header">
     <h2>Todos <span class="count">{todos.length}</span></h2>
-    <a href="/app/todos" class="text-sm">All todos →</a>
+    <div class="header-actions">
+      <ParamToggle param="todoSort" options={SORT_OPTIONS} defaultValue="priority" ariaLabel="Sort todos" />
+      <a href="/app/todos" class="text-sm">All todos →</a>
+    </div>
   </header>
 
   {#if statusError}<p class="form-error" role="alert">{statusError}</p>{/if}
@@ -58,6 +67,7 @@
 
 <style lang="scss">
   h2 { font-size: var(--fs-base); }
+  .header-actions { display: flex; align-items: center; gap: var(--sp-3); }
   .todo-row {
     align-items: flex-start;
     padding: var(--sp-2) 0;

@@ -17,6 +17,14 @@ export const UPDATE_KINDS = [
 
 export type UpdateKind = (typeof UPDATE_KINDS)[number];
 
+/** How the home page's Todos panel orders open todos. */
+export const HOME_TODO_SORTS = ['priority', 'status'] as const;
+
+export type HomeTodoSort = (typeof HOME_TODO_SORTS)[number];
+
+/** `?todoSort=` on the home page; anything unknown is the default, priority. */
+export const parseHomeTodoSort = (value: string | null): HomeTodoSort => (value === 'status' ? 'status' : 'priority');
+
 export interface RecentUpdate {
   readonly kind: UpdateKind;
   readonly id: string;

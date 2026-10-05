@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { router, procedure } from '$shared/trpc/init';
-import { FOCUS_TYPES } from '$shared/types/home';
+import { FOCUS_TYPES, HOME_TODO_SORTS } from '$shared/types/home';
 import { listOpenTodos, listRecentUpdates } from './operations';
 import { getFocusGraph } from './focus-graph';
 
 export const homeRouter = router({
   todos: procedure
-    .input(z.object({ limit: z.number().int().min(1).max(200).optional() }))
-    .query(({ ctx, input }) => listOpenTodos(ctx.reg, input.limit)),
+    .input(z.object({ limit: z.number().int().min(1).max(200).optional(), sort: z.enum(HOME_TODO_SORTS).optional() }))
+    .query(({ ctx, input }) => listOpenTodos(ctx.reg, input.limit, input.sort)),
 
   updates: procedure
     .input(z.object({ limit: z.number().int().min(1).max(200).optional() }))

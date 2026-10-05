@@ -1,7 +1,7 @@
 import type { Registry } from '$shared/registry';
 import { ok, type Result } from '$shared/utils';
 import type { EntityType, TodoRecurrence, TodoStatus } from '$shared/types/enums';
-import type { RecentUpdate, UpdateKind } from '$shared/types/home';
+import type { HomeTodoSort, RecentUpdate, UpdateKind } from '$shared/types/home';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
@@ -65,11 +65,16 @@ const OPEN_STATUSES: readonly TodoStatus[] = ['ACTIVE', 'PENDING'];
 
 export const listOpenTodos = async (
   reg: Pick<Registry, 'prisma'>,
-  limit = 25
+  limit = 25,
+  sort: HomeTodoSort = 'priority'
 ): Promise<Result<readonly TodoSummary[]>> => {
   const todos = await reg.prisma.todo.findMany({
     where: { status: { in: [...OPEN_STATUSES] }, ...notAttachedToArchived(await loadArchivedIds(reg)) },
-    orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
+    // By status, ACTIVE sorts before PENDING, as in todo.list.
+    orderBy:
+      sort === 'status'
+        ? [{ status: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }]
+        : [{ priority: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
     take: limit
   });
 
