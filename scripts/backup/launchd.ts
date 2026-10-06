@@ -1,7 +1,7 @@
 // The hourly backup LaunchAgent (macOS).
 
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -90,8 +90,21 @@ export const thisBackupCommand = (): BackupCommand => {
     dataDir: appDataDir(),
     // The Homebrew symlink survives `brew upgrade`; process.execPath points into a versioned Cellar folder.
     bunPath: Bun.which('bun') ?? process.execPath,
-    repoDir: resolve(import.meta.dir, '..', '..')
+    repoDir: setupClone() ?? resolve(import.meta.dir, '..', '..')
   });
+};
+
+/**
+ * The clone `bun run setup` points the plugin at (`<data dir>/app-path`). The agent
+ * runs that one, so a second clone or a git worktree never takes the backups over.
+ */
+const setupClone = (): string | null => {
+  try {
+    const path = readFileSync(join(appDataDir(), 'app-path'), 'utf8').trim();
+    return path && existsSync(join(path, 'scripts', 'backup', 'main.ts')) ? path : null;
+  } catch {
+    return null;
+  }
 };
 
 export const backupLogFile = (): string => resolve(appLogsDir(), 'backup.log');
@@ -127,6 +140,8 @@ export const uninstallAgent = async (label = LABEL): Promise<Result<{ readonly r
  * data folder, with this one. Nothing to do if there's none.
  */
 export const replaceLegacyAgent = async (): Promise<Result<{ readonly replaced: boolean }>> => {
+  // Tests and test-data dev servers must never rewrite the user's real LaunchAgent.
+  if (process.env['APP_ENV'] === 'test') return ok({ replaced: false });
   const legacy = LEGACY_LABELS.filter((label) => existsSync(plistPath(label)));
   if (platform() !== 'darwin' || legacy.length === 0) return ok({ replaced: false });
   for (const label of legacy) await uninstallAgent(label);
