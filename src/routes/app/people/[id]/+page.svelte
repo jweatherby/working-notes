@@ -9,54 +9,41 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submitOrThrow } from '$lib/ui/submit';
   import OwnedWork from '$lib/goal/components/OwnedWork.svelte';
-  import { labels, profileFlags } from '$lib/stores/profile';
-  import { formatBirthday } from '$shared/utils/birthday';
+  import { model } from '$lib/stores/notebook-model';
+  import { fieldPatch, fieldText } from '$lib/person/fields';
+  import type { PersonDetail } from '$shared/types/person';
+  import type { GroupSummary } from '$shared/types/groups';
+  import type { PersonFieldDescriptor } from '$shared/modules/types';
 
   const { data } = $props<{ data: PageData }>();
-  const person = $derived(data.person);
+  const person = $derived(data.person as PersonDetail);
   const docs = $derived(data.docs);
   const notes = $derived(data.notes);
   const todos = $derived(data.todos);
   const reports = $derived(data.reports);
   const relations = $derived(data.relations);
 
-  const leadOptions = $derived(
-    data.allPersons.filter((p: { id: string }) => p.id !== person.id),
+  const personOptions = $derived(data.allPersons.filter((p: { id: string }) => p.id !== person.id));
+  // Groups to join, under their kind (Teams, Families), leaving out the ones they're in.
+  const groupOptions = $derived(
+    (data.allGroups as readonly GroupSummary[])
+      .filter((g) => !person.groups.some((m) => m.id === g.id))
+      .map((g) => ({ id: g.id, name: g.name, group: g.kindName }))
   );
+  const reports_ = $derived(person.extensions.org?.reports ?? []);
 
-  const availableTeams = $derived(
-    data.allTeams.filter(
-      (t: { id: string }) =>
-        !person.teamMemberships.some((m: { teamId: string }) => m.teamId === t.id),
-    ),
-  );
-
-  const availableDepartments = $derived(
-    data.allDepartments.filter((d: { id: string }) => d.id !== person.department?.id),
-  );
-
-  const handleSetLead = async (leadId: string | null) => {
-    await submitOrThrow(() => trpc().person.update.mutate({ id: person.id, leadId }));
+  const setField = async (field: PersonFieldDescriptor, value: string | null) => {
+    await submitOrThrow(() => trpc().person.update.mutate({ id: person.id, extensions: fieldPatch(field, value) }));
     await invalidateAll();
   };
 
-  const handleAddTeam = async (teamId: string) => {
-    await submitOrThrow(() => trpc().team.addMember.mutate({ teamId, personId: person.id }));
+  const handleJoin = async (groupId: string) => {
+    await submitOrThrow(() => trpc().group.addMember.mutate({ groupId, personId: person.id }));
     await invalidateAll();
   };
 
-  const handleRemoveTeam = async (teamId: string) => {
-    await submitOrThrow(() => trpc().team.removeMember.mutate({ teamId, personId: person.id }));
-    await invalidateAll();
-  };
-
-  const handleAddDept = async (departmentId: string) => {
-    await submitOrThrow(() => trpc().department.addMember.mutate({ departmentId, personId: person.id }));
-    await invalidateAll();
-  };
-
-  const handleRemoveDept = async (departmentId: string) => {
-    await submitOrThrow(() => trpc().department.removeMember.mutate({ departmentId, personId: person.id }));
+  const handleLeave = async (groupId: string) => {
+    await submitOrThrow(() => trpc().group.removeMember.mutate({ groupId, personId: person.id }));
     await invalidateAll();
   };
 </script>
@@ -82,82 +69,69 @@
         <dt>Email</dt>
         <dd>{#if person.email}<a href="mailto:{person.email}">{person.email}</a>{:else}<span class="muted">—</span>{/if}</dd>
       </div>
-      {#if person.birthday}
+      {#each $model.personFields as field (`${field.module}.${field.key}`)}
+        {@const text = fieldText(person.extensions, field)}
         <div>
-          <dt>Birthday</dt>
-          <dd>{formatBirthday(person.birthday)}</dd>
+          <dt>{field.label}</dt>
+          <dd>
+            {#if field.input === 'person'}
+              {#if text && person.extensions.org?.leadId}
+                <a href="/app/people/{person.extensions.org.leadId}">{text}</a>
+                <ConfirmButton label="Unassign" confirmLabel="Unassign {field.label.toLowerCase()}" onConfirm={() => setField(field, null)} />
+              {:else}
+                <InlinePicker label="Assign {field.label.toLowerCase()}" options={personOptions} placeholder="Select a person…" onPick={(id) => setField(field, id)} />
+              {/if}
+            {:else}
+              {#if text}{text}{:else}<span class="muted">—</span>{/if}
+            {/if}
+          </dd>
         </div>
-      {/if}
-      {#if $profileFlags.orgLead}
-      <div>
-        <dt>Lead</dt>
-        <dd>
-          {#if person.leadName}
-            <a href="/app/people/{person.leadId}">{person.leadName}</a>
-            <ConfirmButton label="Unassign" confirmLabel="Unassign lead" onConfirm={() => handleSetLead(null)} />
-          {:else}
-            <InlinePicker label="Assign lead" options={leadOptions} placeholder="Select a lead…" onPick={handleSetLead} />
-          {/if}
-        </dd>
-      </div>
-      {/if}
-      {#if $profileFlags.departments}
-      <div>
-        <dt>Department</dt>
-        <dd>
-          {#if person.department}
-            <a href="/app/departments/{person.department.id}">{person.department.name}</a>
-            <ConfirmButton label="Remove" confirmLabel="Remove from department" onConfirm={() => handleRemoveDept(person.department!.id)} />
-          {:else}
-            <InlinePicker label="Assign department" options={availableDepartments} placeholder="Select a department…" onPick={handleAddDept} />
-          {/if}
-        </dd>
-      </div>
-      {/if}
+      {/each}
     </dl>
   {/snippet}
 
   {#snippet renderOverview()}
-    {#if $profileFlags.orgLead}
-    <section class="section">
-      <div class="section-header">
-        <h4>Direct reports <span class="count">{person.reports.length}</span></h4>
-      </div>
-      {#if person.reports.length > 0}
-        <ul class="list">
-          {#each person.reports as r (r.id)}
-            <li class="list-row">
-              <a class="grow truncate" href="/app/people/{r.id}">{r.name}</a>
-              {#if r.title}<span class="meta">{r.title}</span>{/if}
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <EmptyState message="No direct reports." />
-      {/if}
-    </section>
+    {#if $model.has('org')}
+      <section class="section">
+        <div class="section-header">
+          <h4>Direct reports <span class="count">{reports_.length}</span></h4>
+        </div>
+        {#if reports_.length > 0}
+          <ul class="list">
+            {#each reports_ as r (r.id)}
+              <li class="list-row">
+                <a class="grow truncate" href="/app/people/{r.id}">{r.name}</a>
+                {#if r.title}<span class="meta">{r.title}</span>{/if}
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <EmptyState message="No direct reports." />
+        {/if}
+      </section>
     {/if}
 
     <section class="section">
       <div class="section-header">
-        <h4>{$labels.teams} <span class="count">{person.teamMemberships.length}</span></h4>
+        <h4>Groups <span class="count">{person.groups.length}</span></h4>
       </div>
-      {#if person.teamMemberships.length > 0}
+      {#if person.groups.length > 0}
         <ul class="list">
-          {#each person.teamMemberships as m (m.teamId)}
+          {#each person.groups as g (g.id)}
             <li class="list-row">
-              <a class="grow truncate" href="/app/teams/{m.teamId}">{m.teamName}</a>
+              <a class="grow truncate" href={g.path}>{g.name}</a>
+              <span class="meta">{g.kindName}</span>
               <span class="row-actions">
-                <ConfirmButton label="Remove from {$labels.team.toLowerCase()}" variant="icon" onConfirm={() => handleRemoveTeam(m.teamId)} />
+                <ConfirmButton label="Leave {g.name}" variant="icon" onConfirm={() => handleLeave(g.id)} />
               </span>
             </li>
           {/each}
         </ul>
       {:else}
-        <EmptyState message="Not in any {$labels.team.toLowerCase()}." />
+        <EmptyState message="Not in any group." />
       {/if}
       <div class="section-footer">
-        <InlinePicker label="Add to {$labels.team.toLowerCase()}" options={availableTeams} placeholder="Select a {$labels.team.toLowerCase()}…" onPick={handleAddTeam} />
+        <InlinePicker label="Add to group" options={groupOptions} placeholder="Select a group…" onPick={handleJoin} />
       </div>
     </section>
 
@@ -165,12 +139,13 @@
   {/snippet}
 
   {#snippet renderAssetHeader()}
+    {@const subtitle = $model.personFields.filter((f) => f.input === 'text').map((f) => fieldText(person.extensions, f)).find(Boolean)}
     <span class="asset-h-name">{person.name}</span>
-    {#if person.title}<span class="asset-h-meta">{person.title}</span>{/if}
+    {#if subtitle}<span class="asset-h-meta">{subtitle}</span>{/if}
   {/snippet}
 
   {#snippet renderEditForm({ onSuccess, onCancel })}
-    <PersonForm initial={person} {leadOptions} {onSuccess} {onCancel} />
+    <PersonForm initial={person} {personOptions} {onSuccess} {onCancel} />
   {/snippet}
 </EntityDetailPage>
 

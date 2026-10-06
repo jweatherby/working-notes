@@ -1,5 +1,5 @@
-// Owner choices (departments, teams, people) for goal and project owner
-// pickers. Each option's id is `TYPE:id`, so one <select> can hold all three.
+// Owner choices (groups, by kind, then people) for goal and project owner
+// pickers. Each option's id is `TYPE:id`, so one <select> can hold both types.
 
 import type { CreateTRPCClient } from '@trpc/client';
 import type { AppRouter } from './router';
@@ -22,16 +22,14 @@ export const parseOwnerOptionValue = (
 };
 
 export const loadOwnerOptions = async (client: CreateTRPCClient<AppRouter>): Promise<readonly OwnerOption[]> => {
-  const [departments, teams, people] = await Promise.all([
-    client.department.list.query(),
-    client.team.list.query(),
+  const [groups, kinds, people] = await Promise.all([
+    client.group.list.query(),
+    client.groupKind.list.query(),
     client.person.list.query()
   ]);
-  const options = (group: string, ownerType: OwnerType, rows: readonly { readonly id: string; readonly name: string }[]) =>
-    rows.map((row) => ({ id: ownerOptionValue(ownerType, row.id), name: row.name, group }));
+  const plural = new Map((kinds.ok ? kinds.value : []).map((k) => [k.key, k.plural]));
   return [
-    ...options('Departments', 'DEPARTMENT', departments.ok ? departments.value : []),
-    ...options('Teams', 'TEAM', teams.ok ? teams.value : []),
-    ...options('People', 'PERSON', people.ok ? people.value : [])
+    ...(groups.ok ? groups.value : []).map((g) => ({ id: ownerOptionValue('GROUP', g.id), name: g.name, group: plural.get(g.kind) ?? 'Groups' })),
+    ...(people.ok ? people.value : []).map((p) => ({ id: ownerOptionValue('PERSON', p.id), name: p.name, group: 'People' }))
   ];
 };

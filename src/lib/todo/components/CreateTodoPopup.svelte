@@ -8,7 +8,7 @@
   import type { EntityType } from '../utils';
 
   // Detail pages whose entity a new todo belongs to.
-  const TODO_OWNERS: ReadonlySet<EntityType> = new Set(['PROJECT', 'PERSON', 'TEAM', 'DEPARTMENT', 'GOAL', 'PAGE']);
+  const TODO_OWNERS: ReadonlySet<EntityType> = new Set(['PROJECT', 'PERSON', 'GROUP', 'GOAL', 'PAGE']);
 
   const entityContext = $derived.by((): { entityType: EntityType; entityId: string } | null => {
     const ref = parseEntityPath($page.url.pathname);

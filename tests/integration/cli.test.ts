@@ -35,19 +35,23 @@ describe('remry CLI', () => {
     expect(one.stdout).toContain('--priority  integer');
   });
 
-  it('writes without a server and keeps schema types (a numeric-looking title stays a string)', () => {
-    const created = remry('person.create', '--name', 'Dana Park', '--title', '2024');
+  it('writes without a server and keeps schema types (a numeric-looking name stays a string)', () => {
+    const team = remry('group.create', '--kind', 'TEAM', '--name', '2024');
+    expect(team.code).toBe(0);
+    expect(remry('group.get', '--id', team.json?.value?.['id'] as string).json?.value?.['name']).toBe('2024');
+
+    const created = remry('person.create', '--name', 'Dana Park', '--extensions', '{"org":{"title":"Staff Engineer"}}');
     expect(created.code).toBe(0);
     const id = created.json?.value?.['id'] as string;
 
-    const person = remry('person.get', '--id', id);
-    expect(person.json?.value?.['title']).toBe('2024');
-
-    const led = remry('person.update', '--id', id, '--leadId', 'person_alice');
+    const led = remry('person.update', '--id', id, '--extensions', '{"org":{"leadId":"person_alice"}}');
     expect(led.code).toBe(0);
-    expect(remry('person.get', '--id', id).json?.value?.['leadName']).toBe('Alice Johnson');
-    expect(remry('person.update', '--id', id, '--leadId', 'null').code).toBe(0);
-    expect(remry('person.get', '--id', id).json?.value?.['leadName']).toBeNull();
+    const org = (remry('person.get', '--id', id).json?.value?.['extensions'] as { org?: Record<string, unknown> } | undefined)?.org;
+    expect(org).toMatchObject({ title: 'Staff Engineer', leadName: 'Alice Johnson' });
+    // null clears a field, here inside the module's patch.
+    expect(remry('person.update', '--id', id, '--extensions', '{"org":{"leadId":null}}').code).toBe(0);
+    const cleared = (remry('person.get', '--id', id).json?.value?.['extensions'] as { org?: Record<string, unknown> } | undefined)?.org;
+    expect(cleared?.['leadName']).toBeNull();
   });
 
   it('reads long content from files relative to the caller, and reports chart errors by line', () => {
@@ -84,7 +88,7 @@ describe('remry CLI', () => {
     expect(typo.code).toBe(1);
     expect(typo.stderr).toContain('Unknown option --nmae');
 
-    const missing = remry('person.create', '--title', 'Engineer');
+    const missing = remry('person.create', '--email', 'dana@example.com');
     expect(missing.code).toBe(1);
     expect(missing.stderr).toContain('--name');
 

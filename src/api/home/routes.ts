@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { router, procedure } from '$shared/trpc/init';
-import { RELATABLE_TYPES } from '$shared/types/enums';
 import { FOCUS_TYPES, HOME_TODO_SORTS } from '$shared/types/home';
 import { listOpenTodos, listRecentUpdates } from './operations';
 import { getFocusGraph } from './focus-graph';
@@ -22,11 +21,9 @@ export const homeRouter = router({
   graph: procedure
     .input(z.object({
       focusType: z.enum(FOCUS_TYPES).optional(),
-      focusId: z.string().min(1).optional(),
-      // Types to leave out of both rings; the app leaves out GOAL in a home notebook.
-      exclude: z.array(z.enum(RELATABLE_TYPES)).optional()
+      focusId: z.string().min(1).optional()
     }).default({}))
     .query(({ ctx, input }) =>
-      getFocusGraph(ctx.reg, input.focusType && input.focusId ? { type: input.focusType, id: input.focusId } : undefined, { exclude: input.exclude })
+      getFocusGraph(ctx.reg, ctx.model, input.focusType && input.focusId ? { type: input.focusType, id: input.focusId } : undefined)
     )
 });

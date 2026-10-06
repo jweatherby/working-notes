@@ -5,8 +5,7 @@
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import PersonForm from '$lib/person/components/PersonForm.svelte';
-  import TeamForm from '$lib/team/components/TeamForm.svelte';
-  import DepartmentForm from '$lib/department/components/DepartmentForm.svelte';
+  import GroupForm from '$lib/group/components/GroupForm.svelte';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { invalidateAll } from '$app/navigation';
@@ -71,13 +70,13 @@
   const deleteDept = async () => {
     if (!editDept) return;
     const id = editDept.id;
-    await submitOrThrow(() => trpc().department.delete.mutate({ id }));
+    await submitOrThrow(() => trpc().group.delete.mutate({ id }));
     await finish();
   };
   const deleteTeam = async () => {
     if (!editTeam) return;
     const id = editTeam.id;
-    await submitOrThrow(() => trpc().team.delete.mutate({ id }));
+    await submitOrThrow(() => trpc().group.delete.mutate({ id }));
     await finish();
   };
   const deletePerson = async () => {
@@ -117,24 +116,19 @@
   const availableTeamsForPerson = $derived(
     editPersonId ? teams.filter((t: any) => !t.members.some((m: any) => m.personId === editPersonId)) : []
   );
-  const availableLeads = $derived(persons.filter((p: any) => p.id !== editPersonId));
-
-  const addDeptMember = async (departmentId: string, personId: string) => {
-    await submitOrThrow(() => trpc().department.addMember.mutate({ departmentId, personId }));
+  // Departments are an exclusive group kind, so adding a person to one moves them.
+  const addMember = async (groupId: string, personId: string) => {
+    await submitOrThrow(() => trpc().group.addMember.mutate({ groupId, personId }));
     await invalidateAll();
   };
-  const removeDeptMember = async (departmentId: string, personId: string) => {
-    await submitOrThrow(() => trpc().department.removeMember.mutate({ departmentId, personId }));
+  const removeMember = async (groupId: string, personId: string) => {
+    await submitOrThrow(() => trpc().group.removeMember.mutate({ groupId, personId }));
     await invalidateAll();
   };
-  const addTeamMember = async (teamId: string, personId: string) => {
-    await submitOrThrow(() => trpc().team.addMember.mutate({ teamId, personId }));
-    await invalidateAll();
-  };
-  const removeTeamMember = async (teamId: string, personId: string) => {
-    await submitOrThrow(() => trpc().team.removeMember.mutate({ teamId, personId }));
-    await invalidateAll();
-  };
+  const addDeptMember = addMember;
+  const removeDeptMember = removeMember;
+  const addTeamMember = addMember;
+  const removeTeamMember = removeMember;
 </script>
 
 <svelte:head><title>Org Map</title></svelte:head>
@@ -179,7 +173,7 @@
         <ul class="group-list">
           {#each departments as dept (dept.id)}
             <li class="card compact hover group-card">
-              <a class="group-title truncate" href="/app/departments/{dept.id}">{dept.name}</a>
+              <a class="group-title truncate" href="/app/groups/{dept.id}">{dept.name}</a>
               <button type="button" class="btn icon sm edit" onclick={() => startEditDept(dept.id)} aria-label="Edit {dept.name}" title="Edit"><PencilIcon /></button>
               <span class="badge muted">{dept.members.length}</span>
             </li>
@@ -196,7 +190,7 @@
         <ul class="group-list">
           {#each teams as team (team.id)}
             <li class="card compact hover group-card">
-              <a class="group-title truncate" href="/app/teams/{team.id}">{team.name}</a>
+              <a class="group-title truncate" href="/app/groups/{team.id}">{team.name}</a>
               <button type="button" class="btn icon sm edit" onclick={() => startEditTeam(team.id)} aria-label="Edit {team.name}" title="Edit"><PencilIcon /></button>
               <span class="badge muted">{team.members.length}</span>
             </li>
@@ -208,7 +202,7 @@
 </div>
 
 <Popup id="edit-department" title={editDept ? 'Edit department' : 'Add department'}>
-  <DepartmentForm initial={editDept ?? {}} onSuccess={finish} onCancel={cancel} onDelete={editDept ? deleteDept : undefined} />
+  <GroupForm initial={editDept ?? { kind: 'DEPARTMENT' }} kinds={data.kinds} onSuccess={finish} onCancel={cancel} onDelete={editDept ? deleteDept : undefined} />
   {#if editDept}
     <div class="members">
       <div class="section-header"><h4>Members <span class="count">{editDept.members.length}</span></h4></div>
@@ -219,7 +213,6 @@
           {#each editDept.members as m (m.personId)}
             <li class="list-row">
               <span class="grow truncate">{m.personName}</span>
-              {#if m.personTitle}<span class="meta">{m.personTitle}</span>{/if}
               <span class="row-actions"><ConfirmButton label="Remove member" variant="icon" onConfirm={() => removeDeptMember(editDept.id, m.personId)} /></span>
             </li>
           {/each}
@@ -231,7 +224,7 @@
 </Popup>
 
 <Popup id="edit-team" title={editTeam ? 'Edit team' : 'Add team'}>
-  <TeamForm initial={editTeam ?? {}} onSuccess={finish} onCancel={cancel} onDelete={editTeam ? deleteTeam : undefined} />
+  <GroupForm initial={editTeam ?? { kind: 'TEAM' }} kinds={data.kinds} onSuccess={finish} onCancel={cancel} onDelete={editTeam ? deleteTeam : undefined} />
   {#if editTeam}
     <div class="members">
       <div class="section-header"><h4>Members <span class="count">{editTeam.members.length}</span></h4></div>
@@ -242,7 +235,6 @@
           {#each editTeam.members as m (m.personId)}
             <li class="list-row">
               <span class="grow truncate">{m.personName}</span>
-              {#if m.personTitle}<span class="meta">{m.personTitle}</span>{/if}
               <span class="row-actions"><ConfirmButton label="Remove member" variant="icon" onConfirm={() => removeTeamMember(editTeam.id, m.personId)} /></span>
             </li>
           {/each}
@@ -255,7 +247,7 @@
 
 <Popup id="edit-person" title={editPerson ? 'Edit person' : 'Add person'}>
   {#key editPersonId}
-    <PersonForm initial={editPerson ?? {}} leadOptions={availableLeads} onSuccess={finish} onCancel={cancel} onDelete={editPerson ? deletePerson : undefined} />
+    <PersonForm initial={editPerson ?? {}} personOptions={persons} onSuccess={finish} onCancel={cancel} onDelete={editPerson ? deletePerson : undefined} />
   {/key}
   {#if editPerson}
     <div class="members">

@@ -5,8 +5,9 @@
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { setArchived } from '../../src/api/_archive';
-import { getPerson, listPersons, updatePerson } from '../../src/api/org/person/operations';
-import { addTeamMember, createTeam, listTeamsWithMembers } from '../../src/api/org/team/operations';
+import { getPerson, listPersons, updatePerson } from '../../src/api/person/operations';
+import { listGroupsWithMembers } from '../../src/api/group/operations';
+import { addTeamMember, createTeam } from './org-helpers';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../../src/api/project/operations';
 import { addNote } from '../../src/api/attached/note/operations';
 import { createTodo, listTodos } from '../../src/api/attached/todo/operations';
@@ -30,14 +31,14 @@ describe('archiving', () => {
     const only = await listPersons(reg, 'only');
     expect(only.ok && only.value.map((p) => p.id)).toEqual(['person_bob']);
 
-    const teams = await listTeamsWithMembers(reg);
+    const teams = await listGroupsWithMembers(reg);
     const archiveTeam = teams.ok ? teams.value.find((t) => t.id === team.value.id) : undefined;
     expect(archiveTeam?.members).toEqual([]);
 
     const bob = await getPerson(reg, 'person_bob');
     expect(bob.ok && bob.value.archivedAt).toBeInstanceOf(Date);
 
-    const update = await updatePerson(reg, 'person_bob', { title: 'Staff' });
+    const update = await updatePerson(reg, 'person_bob', { extensions: { org: { title: 'Staff' } } });
     expect(update.ok).toBe(false);
     if (!update.ok) expect(update.error.message).toContain('person.unarchive --id person_bob');
     expect((await addNote(reg, 'PERSON', 'person_bob', { content: 'Too late' })).ok).toBe(false);
@@ -50,7 +51,7 @@ describe('archiving', () => {
 
     // Unarchived, everything works again.
     await setArchived(reg, 'PERSON', 'person_bob', false);
-    expect((await updatePerson(reg, 'person_bob', { title: 'Staff' })).ok).toBe(true);
+    expect((await updatePerson(reg, 'person_bob', { extensions: { org: { title: 'Staff' } } })).ok).toBe(true);
   });
 
   it('hides an archived project from the feed, allows relations to it, and still deletes it', async () => {

@@ -37,16 +37,16 @@ describe('getDoc', () => {
         doc: {
           findUnique: vi.fn().mockResolvedValue({
             id: 'doc_1', title: 'Plan', content: '# Plan', sourceUrl: null, sortOrder: 1,
-            createdAt: now, updatedAt: now, entityType: 'TEAM', entityId: 'team_1'
+            createdAt: now, updatedAt: now, entityType: 'GROUP', entityId: 'team_1'
           })
         },
-        team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
+        group: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
       } as unknown as Registry['prisma']
     });
 
     const result = await getDoc(reg, 'doc_1');
 
-    expect(result.ok && [result.value.entityName, result.value.entityPath]).toEqual(['Payments', '/app/teams/team_1']);
+    expect(result.ok && [result.value.entityName, result.value.entityPath]).toEqual(['Payments', '/app/groups/team_1']);
   });
 
   it('fails for an unknown doc', async () => {

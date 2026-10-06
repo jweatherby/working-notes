@@ -3,8 +3,7 @@
 
 export const ENTITY_TYPES = [
   'PERSON',
-  'TEAM',
-  'DEPARTMENT',
+  'GROUP',
   'PROJECT',
   'GOAL',
   'PAGE',
@@ -30,7 +29,7 @@ export const TODO_RECURRENCES = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'] as 
 export type TodoRecurrence = (typeof TODO_RECURRENCES)[number];
 
 /** Who can own a goal or a project. */
-export const OWNER_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT'] as const;
+export const OWNER_TYPES = ['PERSON', 'GROUP'] as const;
 
 export type OwnerType = (typeof OWNER_TYPES)[number];
 
@@ -44,6 +43,8 @@ export type GoalStatus = (typeof GOAL_STATUSES)[number];
  */
 export const MANUAL_RELATION_KINDS = ['RELATED', 'DEPENDS_ON', 'PARTNER_OF', 'PARENT_OF', 'SIBLING_OF', 'FRIEND_OF'] as const;
 
+export type ManualRelationKind = (typeof MANUAL_RELATION_KINDS)[number];
+
 /** Kinds that only link two people. */
 export const PERSONAL_RELATION_KINDS = ['PARTNER_OF', 'PARENT_OF', 'SIBLING_OF', 'FRIEND_OF'] as const;
 
@@ -55,7 +56,7 @@ export const RELATION_KINDS = [...MANUAL_RELATION_KINDS, 'MENTIONS'] as const;
 export type RelationKind = (typeof RELATION_KINDS)[number];
 
 /** Entity types that can be archived: hidden from lists and read-only until unarchived. */
-export const ARCHIVABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE'] as const;
+export const ARCHIVABLE_TYPES = ['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE'] as const;
 
 export type ArchivableType = (typeof ARCHIVABLE_TYPES)[number];
 
@@ -65,6 +66,6 @@ export const ARCHIVE_FILTERS = ['exclude', 'only', 'include'] as const;
 export type ArchiveFilter = (typeof ARCHIVE_FILTERS)[number];
 
 /** Entity types a relation can start or end at. */
-export const RELATABLE_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE', 'DOC', 'NOTE', 'REPORT', 'TODO'] as const;
+export const RELATABLE_TYPES = ['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE', 'DOC', 'NOTE', 'REPORT', 'TODO'] as const;
 
 export type RelatableType = (typeof RELATABLE_TYPES)[number];

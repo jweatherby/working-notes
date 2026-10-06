@@ -10,7 +10,7 @@
   import { submit } from '$lib/ui/submit';
   import { nextStatus, formatTodoDate, type TodoStatus, type EntityType } from '$lib/todo/utils';
   import { entityPath, entityTypeLabel } from '$shared/utils/entity';
-  import { profile } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
 
   const { data } = $props<{ data: PageData }>();
   const todos = $derived(data.todos);
@@ -92,8 +92,7 @@
       <option value="ALL">All types</option>
       <option value="PROJECT">Projects</option>
       <option value="PERSON">People</option>
-      <option value="TEAM">Teams</option>
-      <option value="DEPARTMENT">Departments</option>
+      <option value="GROUP">Groups</option>
     </select>
   </div>
 
@@ -104,7 +103,7 @@
       <section class="section group">
         <div class="section-header">
           <h3>
-            <span class="eyebrow">{entityTypeLabel(group.entityType, $profile)}</span>
+            <span class="eyebrow">{entityTypeLabel(group.entityType)}</span>
             <a href={entityPath(group.entityType, group.entityId)}>{group.entityLabel}</a>
           </h3>
         </div>

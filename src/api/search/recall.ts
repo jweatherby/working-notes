@@ -10,9 +10,8 @@ import type { Recall, RecallList, SearchHit } from '$shared/types/search';
 import { entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
 import { listRelationsForEntity } from '$api/relation/operations';
-import { getPerson } from '$api/org/person/operations';
-import { getTeam } from '$api/org/team/operations';
-import { getDepartment } from '$api/org/department/operations';
+import { getPerson } from '$api/person/operations';
+import { getGroup } from '$api/group/operations';
 import { getProject } from '$api/project/operations';
 import { getGoal } from '$api/goal/operations';
 import { getPage } from '$api/page/operations';
@@ -23,7 +22,7 @@ import { archivedIdList, queryIndex, searchableTypes } from './operations';
 
 export const RECALL_LIMITS = { defaultItems: 10, maxItems: 50, docExcerpt: 300 } as const;
 
-const OWNER_TYPES: ReadonlySet<RelatableType> = new Set(['PERSON', 'TEAM', 'DEPARTMENT']);
+const OWNER_TYPES: ReadonlySet<RelatableType> = new Set(['PERSON', 'GROUP']);
 
 // ----- Pure helpers -----
 
@@ -52,8 +51,7 @@ export const mentioningIds = (relations: readonly RelationGroup[]): readonly str
 const loadEntity = async (reg: Pick<Registry, 'prisma'>, entityType: RelatableType, id: string): Promise<Result<unknown>> => {
   switch (entityType) {
     case 'PERSON': return getPerson(reg, id);
-    case 'TEAM': return getTeam(reg, id);
-    case 'DEPARTMENT': return getDepartment(reg, id);
+    case 'GROUP': return getGroup(reg, id);
     case 'PROJECT': return getProject(reg, id);
     case 'GOAL': return getGoal(reg, id);
     case 'PAGE': return getPage(reg, id);

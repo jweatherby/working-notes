@@ -12,7 +12,7 @@
   import { focusKey, type FocusBranch, type FocusGraph, type FocusNode } from '$shared/types/home';
   import type { RelatableType } from '$shared/types/enums';
   import { ENTITY_SEARCH_SCOPES, entityTypeLabel, typedIdValue } from '$shared/utils/entity';
-  import { profile, hiddenTypes } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { errorMessage } from '$lib/ui/submit';
@@ -39,8 +39,7 @@
       case 'PROJECT': return 'project';
       case 'PERSON': return 'person';
       case 'GOAL': return 'goal';
-      case 'TEAM':
-      case 'DEPARTMENT': return 'org';
+      case 'GROUP': return 'org';
       default: return 'other';
     }
   };
@@ -48,7 +47,7 @@
     project: 'Projects',
     person: 'People',
     goal: 'Goals',
-    org: $profile === 'home' ? 'Groups' : 'Teams and departments',
+    org: 'Groups',
     other: 'Wiki and other'
   };
 
@@ -122,14 +121,14 @@
   <header class="section-header">
     <h2>
       Around <a href={graph.focus.href}>{graph.focus.label}</a>
-      <span class="muted text-sm">{entityTypeLabel(graph.focus.type, $profile)}</span>
+      <span class="muted text-sm">{entityTypeLabel(graph.focus.type)}</span>
     </h2>
     <div class="actions">
       {#if picking}
         <SearchPicker
           label="Focus on"
-          options={options.filter((o) => !$hiddenTypes.has(o.scope))}
-          scopes={ENTITY_SEARCH_SCOPES.filter((s) => !$hiddenTypes.has(s.id))}
+          options={options.filter((o) => $model.shows(o.scope))}
+          scopes={ENTITY_SEARCH_SCOPES.filter((s) => $model.shows(s.id))}
           loading={loadingOptions}
           onPick={pick}
           onCancel={() => (picking = false)}
@@ -205,13 +204,13 @@
                 class="pill"
                 data-colour={colourOf(n.type)}
                 class:dim={hovered !== null && !innerLit(gi, ni)}
-                aria-label="{n.label} ({entityTypeLabel(n.type, $profile)}, {group.label.toLowerCase()})"
+                aria-label="{n.label} ({entityTypeLabel(n.type)}, {group.label.toLowerCase()})"
                 onpointerenter={() => (hovered = `${gi}:${ni}`)}
                 onpointerleave={() => (hovered = null)}
                 onfocus={() => (hovered = `${gi}:${ni}`)}
                 onblur={() => (hovered = null)}
               >
-                <title>{n.label} · {entityTypeLabel(n.type, $profile)}{n.focusable ? '' : ' (opens)'}</title>
+                <title>{n.label} · {entityTypeLabel(n.type)}{n.focusable ? '' : ' (opens)'}</title>
                 <rect x={p.x - w / 2} y={p.y - PILL_H / 2} width={w} height={PILL_H} rx={PILL_H / 2} />
                 <circle cx={p.x - w / 2 + 13} cy={p.y} r="4" />
                 <text x={p.x - w / 2 + 23} y={p.y + 4}>{text}</text>
@@ -250,13 +249,13 @@
                     class="pill outer"
                     data-colour={colourOf(n.type)}
                     class:dim={hovered !== null && !outerLit(gi, ni, ci)}
-                    aria-label="{n.label} ({entityTypeLabel(n.type, $profile)}, via {parent.label})"
+                    aria-label="{n.label} ({entityTypeLabel(n.type)}, via {parent.label})"
                     onpointerenter={() => (hovered = `o:${gi}:${ni}:${ci}`)}
                     onpointerleave={() => (hovered = null)}
                     onfocus={() => (hovered = `o:${gi}:${ni}:${ci}`)}
                     onblur={() => (hovered = null)}
                   >
-                    <title>{n.label} · {entityTypeLabel(n.type, $profile)}, via {parent.label}{n.focusable ? '' : ' (opens)'}</title>
+                    <title>{n.label} · {entityTypeLabel(n.type)}, via {parent.label}{n.focusable ? '' : ' (opens)'}</title>
                     <rect x={p.x - w / 2} y={p.y - PILL_H / 2} width={w} height={PILL_H} rx={PILL_H / 2} />
                     <circle cx={p.x - w / 2 + 13} cy={p.y} r="4" />
                     <text x={p.x - w / 2 + 23} y={p.y + 4}>{text}</text>

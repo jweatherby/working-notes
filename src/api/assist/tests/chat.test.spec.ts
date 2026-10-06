@@ -25,7 +25,7 @@ interface Row {
   readonly messages: string;
 }
 
-// An in-memory page_chat table (one row per entity) plus the team lookup `resolveEntityLabel` does.
+// An in-memory page_chat table (one row per entity) plus the group lookup `resolveEntityLabel` does.
 const fakeRegistry = (initial: Row | null = null, teamExists = true) => {
   let row: Row | null = initial;
   const pageChat = {
@@ -33,13 +33,13 @@ const fakeRegistry = (initial: Row | null = null, teamExists = true) => {
     create: vi.fn(async ({ data }: { data: { messages: string } }) => (row = { id: 'chat-1', messages: data.messages })),
     update: vi.fn(async ({ data }: { data: { messages: string } }) => (row = { ...(row as Row), messages: data.messages }))
   };
-  const team = { findUnique: vi.fn(async () => (teamExists ? { name: 'Platform' } : null)) };
-  const reg = createTestRegistry({ prisma: { pageChat, team } as unknown as Registry['prisma'] });
+  const group = { findUnique: vi.fn(async () => (teamExists ? { name: 'Platform' } : null)) };
+  const reg = createTestRegistry({ prisma: { pageChat, group } as unknown as Registry['prisma'] });
   return { reg, stored: () => (row ? parseMessages(row.messages) : null) };
 };
 
 const input = {
-  entityType: 'TEAM' as const,
+  entityType: 'GROUP' as const,
   entityId: 'team-1',
   entityName: 'Platform',
   pageText: 'Owns the build',

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { EntityOwner } from '$shared/types/owner';
 import { buildWorkMap, layoutWorkMap, teamDepartments, NO_DEPARTMENT, type WorkMapInput } from './work-map';
 
-const team = (id: string, label = id): EntityOwner => ({ type: 'TEAM', id, label, path: `/app/teams/${id}` });
+const team = (id: string, label = id): EntityOwner => ({ type: 'GROUP', id, label, path: `/app/groups/${id}` });
 const person = (id: string): EntityOwner => ({ type: 'PERSON', id, label: id, path: `/app/people/${id}` });
 
 const input = (overrides: Partial<WorkMapInput> = {}): WorkMapInput => ({
@@ -44,7 +44,7 @@ describe('buildWorkMap', () => {
   const map = buildWorkMap(input());
 
   it('orders lanes teams, then departments, then people, then unowned; busiest first', () => {
-    expect(map.lanes.map((l) => l.key)).toEqual(['TEAM:core', 'TEAM:web', 'PERSON:ana', 'NONE']);
+    expect(map.lanes.map((l) => l.key)).toEqual(['GROUP:core', 'GROUP:web', 'PERSON:ana', 'NONE']);
     expect(map.lanes.at(-1)?.label).toBe('No owner');
   });
 
@@ -74,7 +74,7 @@ describe('layoutWorkMap', () => {
       const prev = layout.lanes[i - 1]!;
       expect(layout.lanes[i]!.y).toBe(prev.y + prev.height);
     }
-    const core = layout.items.filter((i) => i.lane === 'TEAM:core');
+    const core = layout.items.filter((i) => i.lane === 'GROUP:core');
     expect(new Set(core.map((i) => i.y)).size).toBe(Math.ceil(core.length / layout.perRow));
     for (const item of layout.items) expect(item.x + 200).toBeLessThanOrEqual(layout.width);
     expect(layout.edges.every((e) => e.path.startsWith('M '))).toBe(true);

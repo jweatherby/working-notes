@@ -1,10 +1,11 @@
-// The Org Map's Work view: one lane per team, department or person that owns
+// The Org Map's Work view: one lane per group (teams, then departments, then
+// other kinds) or person that owns
 // work, with the projects and goals it owns laid out to the right, and the
 // dependencies and goal links between them drawn across lanes. Teams aren't
 // part of a department, so a team lane shows where its people come from,
 // counted from department membership. Pure.
 
-import type { GoalStatus, OwnerType } from '$shared/types/enums';
+import type { GoalStatus } from '$shared/types/enums';
 import type { EntityOwner } from '$shared/types/owner';
 import type { ProjectDependencies } from '$shared/types/project-dependencies';
 import { entityPath } from '$shared/utils/entity';
@@ -56,9 +57,10 @@ export interface DepartmentCount {
 }
 
 export interface WorkLane {
-  /** `TEAM:<id>`, `DEPARTMENT:<id>`, `PERSON:<id>`, or `NONE` for unowned work. */
+  /** `GROUP:<id>`, `PERSON:<id>`, or `NONE` for unowned work. */
   readonly key: string;
-  readonly kind: OwnerType | 'NONE';
+  /** A group lane reads as its kind: TEAM, DEPARTMENT, or GROUP for any other kind. */
+  readonly kind: 'TEAM' | 'DEPARTMENT' | 'GROUP' | 'PERSON' | 'NONE';
   readonly label: string;
   readonly href: string | null;
   /** For a team: its members by department, most first. */
@@ -80,7 +82,7 @@ export interface WorkMap {
 
 export const NO_DEPARTMENT = 'No department';
 
-const KIND_ORDER: Readonly<Record<WorkLane['kind'], number>> = { TEAM: 0, DEPARTMENT: 1, PERSON: 2, NONE: 3 };
+const KIND_ORDER: Readonly<Record<WorkLane['kind'], number>> = { TEAM: 0, DEPARTMENT: 1, GROUP: 2, PERSON: 3, NONE: 4 };
 const STATUS_ORDER: Readonly<Record<string, number>> = { active: 0, planning: 1 };
 
 /** A team's members counted by department, most first; people in none count as `NO_DEPARTMENT`. */
@@ -99,11 +101,18 @@ export const teamDepartments = (team: Group, departments: readonly Group[]): rea
 };
 
 export const buildWorkMap = (input: WorkMapInput): WorkMap => {
+  const teams = new Map(input.teams.map((t) => [t.id, t]));
+  const departmentIds = new Set(input.departments.map((d) => d.id));
+  const laneKind = (owner: EntityOwner | null): WorkLane['kind'] => {
+    if (!owner) return 'NONE';
+    if (owner.type === 'PERSON') return 'PERSON';
+    return teams.has(owner.id) ? 'TEAM' : departmentIds.has(owner.id) ? 'DEPARTMENT' : 'GROUP';
+  };
   const lanes = new Map<string, { kind: WorkLane['kind']; id: string | null; label: string; href: string | null; items: WorkItem[] }>();
   const laneFor = (owner: EntityOwner | null) => {
     const key = owner ? `${owner.type}:${owner.id}` : 'NONE';
     const lane = lanes.get(key) ?? {
-      kind: owner?.type ?? ('NONE' as const),
+      kind: laneKind(owner),
       id: owner?.id ?? null,
       label: owner ? owner.label ?? 'Unknown owner' : 'No owner',
       href: owner?.path ?? null,
@@ -139,7 +148,6 @@ export const buildWorkMap = (input: WorkMapInput): WorkMap => {
     });
   }
 
-  const teams = new Map(input.teams.map((t) => [t.id, t]));
   const ordered: WorkLane[] = [...lanes.entries()]
     .map(([key, lane]) => {
       const team = lane.kind === 'TEAM' && lane.id ? teams.get(lane.id) : undefined;

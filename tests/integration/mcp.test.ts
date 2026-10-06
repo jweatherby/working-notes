@@ -80,12 +80,12 @@ describe('remry mcp', () => {
   });
 
   it('writes and reads the notebook, keeping schema types', async () => {
-    const created = await callTool('person_create', { name: 'Mika Tanaka', title: '2024' });
+    const created = await callTool('person_create', { name: '2024 Mika Tanaka', extensions: { org: { title: '2024' } } });
     expect(created.isError).toBe(false);
     const id = (JSON.parse(created.text) as { id: string }).id;
 
-    const person = JSON.parse((await callTool('person_get', { id })).text) as { name: string; title: string };
-    expect(person).toMatchObject({ name: 'Mika Tanaka', title: '2024' });
+    const person = JSON.parse((await callTool('person_get', { id })).text) as { name: string };
+    expect(person).toMatchObject({ name: '2024 Mika Tanaka', extensions: { org: { title: '2024' } } });
 
     // Full-text search is Remry Pro: refused, with the way out, until a license is added.
     const locked = await callTool('search_query', { q: 'tanaka' });
@@ -97,11 +97,11 @@ describe('remry mcp', () => {
     const found = JSON.parse((await callTool('search_query', { q: 'tanaka' })).text) as { results: Array<{ entityId: string }> };
     expect(found.results.map((r) => r.entityId)).toContain(id);
     const recall = JSON.parse((await callTool('search_recall', { entityType: 'PERSON', entityId: id })).text) as { name: string };
-    expect(recall.name).toBe('Mika Tanaka');
+    expect(recall.name).toBe('2024 Mika Tanaka');
   });
 
   it('returns invalid input and failed operations as tool errors', async () => {
-    const missing = await callTool('person_create', { title: 'Engineer' });
+    const missing = await callTool('person_create', { email: 'mika@example.com' });
     expect(missing.isError).toBe(true);
     expect(missing.text).toContain('name');
 

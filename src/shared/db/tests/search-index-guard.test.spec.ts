@@ -29,7 +29,9 @@ describe('search index triggers', () => {
     if (name === '(none yet)') return;
     const sql = sqlOf(name);
     for (const table of indexedTables) {
-      if (!new RegExp(`DROP TABLE "${table}"`).test(sql)) continue;
+      // Only a table that's redefined (copied to new_x, then renamed back) needs its triggers again;
+      // one that's dropped for good (team and department, which became groups) takes them along.
+      if (!new RegExp(`DROP TABLE "${table}"`).test(sql) || !new RegExp(`RENAME TO "${table}"`).test(sql)) continue;
       for (const event of ['ai', 'au', 'ad']) {
         expect(
           sql,

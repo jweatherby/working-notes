@@ -1,10 +1,10 @@
 # CLAUDE.md — Remry
 
-A local-only, single-user structured notebook: an org chart (people, teams, departments), projects, notes, docs, todos, tags, and branded reports with charts. A more opinionated Obsidian, backed by SQLite.
+A local-only, single-user structured notebook: people and groups (teams, departments, families), projects, notes, docs, todos, tags, and branded reports with charts. A more opinionated Obsidian, backed by SQLite.
 
 The user keeps several **notebooks** (work, home life, a side project), each with its own database and files. The app, the CLI and the MCP server work on one notebook at a time.
 
-A notebook's **profile** (`work` or `home`, in its `notebook.json`) changes only what the UI shows: a home notebook hides goals, departments, leads and the org map, and calls teams Groups (`src/shared/settings/base/profile.ts`). The API is the same for both. Wiki **page kinds** are data, defined per notebook (`page_kind`), and a kind's pages work as a dataset (`page.query`, `/app/wiki?kind=<key>`): that is how a notebook keeps expenses, recipes, places and the like without new tables.
+A notebook's **profile** (`work` or `home`, in its `notebook.json`) is a list of **modules** on top of a shared core (`notebookModel` in `src/shared/modules/model.ts`): `work` has `org` (a person's title and lead, Team and Department groups, the org map) and `goals`; `home` has `personal` (birthday and how you know someone, Family and Friends groups, partner/parent/sibling/friend relations). The core (people, **groups** of kinds the notebook defines, projects, pages, docs, notes, todos, relations, search) never reads a module's tables; modules plug in through person extensions (`src/api/modules/`) and the model, and procedures a notebook's modules don't include are refused (`moduleGate` in `src/shared/trpc/init.ts`). Wiki **page kinds** are data, defined per notebook (`page_kind`), and a kind's pages work as a dataset (`page.query`, `/app/wiki?kind=<key>`): that is how a notebook keeps expenses, recipes, places and the like without new tables.
 
 **Claude is the primary way data gets in**, through the CLI, which calls the app's tRPC API. The web UI is mainly for looking at the data (usually in the Claude desktop browser pane) and for printing reports to PDF.
 
@@ -56,18 +56,19 @@ The CLI runs the tRPC router in-process against the local database, with the sam
 ```bash
 remry help                                   # every procedure
 remry help todo.create                       # one procedure's inputs, types and limits
-remry person.create --name "Alice Johnson" --title "Staff Engineer"
-remry person.update --id <personId> --leadId <leadPersonId>
-remry team.addMember --teamId <teamId> --personId <personId>
+remry person.create --name "Alice Johnson" --extensions '{"org":{"title":"Staff Engineer"}}'
+remry person.update --id <personId> --extensions '{"org":{"leadId":"<leadPersonId>"}}'
+remry group.create --kind TEAM --name Platform
+remry group.addMember --groupId <groupId> --personId <personId>
 remry note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
 remry todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
 remry report.create --entityType PERSON --entityId <personId> --title "Q3 review" --content-file q3.md
-remry goal.create --title "99.9% uptime" --ownerType TEAM --ownerId <teamId> --period 2026-H2 --target 99.9
+remry goal.create --title "99.9% uptime" --ownerType GROUP --ownerId <groupId> --period 2026-H2 --target 99.9
 remry goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK
 remry pageKind.create --input '{"key":"EXPENSE","name":"Expense","fields":[{"key":"amount","label":"Amount","input":"number","format":"money","currency":"USD"}]}'
 remry page.create --title "Datadog" --kind SOFTWARE --properties '{"vendor":"Datadog","seats":40}'
 remry page.query --kind EXPENSE --filters '["amount:gte:100"]' --groupBy category --aggregates '["amount:sum"]'
-remry relation.add --fromType TEAM --fromId <teamId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
+remry relation.add --fromType GROUP --fromId <groupId> --toType PAGE --toId <pageId> --note "Uses it for alerting"
 remry relation.add --fromType PROJECT --fromId <projectId> --toType PROJECT --toId <otherProjectId> --kind DEPENDS_ON
 remry search.query --q "vendor renewal -draft"             # full-text search over everything
 remry search.recall --entityType PERSON --entityId <personId>  # everything about one entity, in one call
@@ -75,9 +76,9 @@ remry search.recall --entityType PERSON --entityId <personId>  # everything abou
 
 - **Output:** stdout is JSON (logs go to stderr). Operations return `{ "ok": true, "value": ... }` or `{ "ok": false, "error": { "message": ... } }`, and the CLI exits 1 on `ok: false`, invalid input or an unknown procedure. The error text is written to be actionable.
 - **Notebooks:** every call runs against the default notebook, unless it passes `--notebook <id or name>` (anywhere in the arguments) or `REMRY_NOTEBOOK` is set. `notebook.list`, `notebook.create --name`, `notebook.rename` and `notebook.setDefault` manage them. There is deliberately no delete: the user moves a folder out of `Notebooks/` by hand.
-- **Typing:** values are coerced by each procedure's JSON Schema. `--title 2024` stays a string, `--priority 2` becomes a number, and `--leadId null` clears a field.
+- **Typing:** values are coerced by each procedure's JSON Schema. `--title 2024` stays a string, `--priority 2` becomes a number, and `null` clears a field (`--email null`).
 - **Input:** `--<field>-file <path>` reads a value from a file (use it for markdown), and `--input '<json>'` passes the whole input.
-- **Entity types:** `PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
+- **Entity types:** `PERSON GROUP PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
 - **Search and recall:** `search.query` is full-text search (SQLite FTS5, kept current by triggers) over names, notes, docs, pages, todos, comments, links and check-ins; `search.recall` returns an entity with everything attached to it and the text elsewhere that names it without linking it. See `src/api/CLAUDE.md` § Search.
 - **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities as `RELATED` (no direction) or `DEPENDS_ON`, with an optional note; in the UI, "+" in an entity's Related section adds one. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
 - **The Claude skill** in `plugin/skills/remry/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).

@@ -4,8 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { createDepartment } from '../../src/api/org/department/operations';
-import { createTeam } from '../../src/api/org/team/operations';
+import { createDepartment, createTeam } from './org-helpers';
 import { createProject, getProject, listProjects, updateProject } from '../../src/api/project/operations';
 import { addCheckIn, addGoalProject, createGoal, getGoal, listGoals, updateGoal } from '../../src/api/goal/operations';
 import { createPage, deletePage, getPage, updatePage } from '../../src/api/page/operations';
@@ -28,13 +27,13 @@ describe('goals', () => {
     expect(detail.ok && detail.value.owner).toEqual({ type: 'PERSON', id: 'person_alice', label: 'Alice Johnson', path: '/app/people/person_alice' });
     const owned = await listProjects(reg, { ownerType: 'PERSON', ownerId: 'person_alice' });
     expect(owned.ok && owned.value.map((p) => p.name)).toEqual(['Checkout v2']);
-    expect((await updateProject(reg, project.value.id, { ownerType: 'TEAM', ownerId: 'no_such_team' })).ok).toBe(false);
+    expect((await updateProject(reg, project.value.id, { ownerType: 'GROUP', ownerId: 'no_such_team' })).ok).toBe(false);
 
     const parent = await createGoal(reg, {
-      title: 'Grow revenue 20%', ownerType: 'DEPARTMENT', ownerId: dept.value.id, period: '2026-H2', unit: '%', baseline: 0, target: 20
+      title: 'Grow revenue 20%', ownerType: 'GROUP', ownerId: dept.value.id, period: '2026-H2', unit: '%', baseline: 0, target: 20
     });
     const child = await createGoal(reg, {
-      title: 'Checkout conversion to 4%', ownerType: 'TEAM', ownerId: team.value.id, parentId: parent.ok ? parent.value.id : undefined, unit: '%', baseline: 2, target: 4
+      title: 'Checkout conversion to 4%', ownerType: 'GROUP', ownerId: team.value.id, parentId: parent.ok ? parent.value.id : undefined, unit: '%', baseline: 2, target: 4
     });
     if (!parent.ok || !child.ok) throw new Error('goal create failed');
     expect(child.value.path).toBe(`/app/goals/${child.value.id}`);
@@ -97,14 +96,14 @@ describe('wiki pages and relations', () => {
 
     const team = await createTeam(reg, { name: 'Billing' });
     if (!team.ok) throw new Error('team create failed');
-    const related = await addRelation(reg, { fromType: 'TEAM', fromId: team.value.id, toType: 'PAGE', toId: page.value.id, kind: 'RELATED', note: 'Card payments' });
+    const related = await addRelation(reg, { fromType: 'GROUP', fromId: team.value.id, toType: 'PAGE', toId: page.value.id, kind: 'RELATED', note: 'Card payments' });
     expect(related.ok).toBe(true);
-    const teamRelations = await listRelationsForEntity(reg, 'TEAM', team.value.id);
+    const teamRelations = await listRelationsForEntity(reg, 'GROUP', team.value.id);
     expect(teamRelations.ok && teamRelations.value.map((g) => [g.label, g.items.map((i) => [i.other.label, i.note])])).toEqual([
       ['Related to', [['Stripe Billing', 'Card payments']]]
     ]);
     // RELATED has no direction, so the reverse is the same link.
-    const duplicate = await addRelation(reg, { fromType: 'PAGE', fromId: page.value.id, toType: 'TEAM', toId: team.value.id, kind: 'RELATED' });
+    const duplicate = await addRelation(reg, { fromType: 'PAGE', fromId: page.value.id, toType: 'GROUP', toId: team.value.id, kind: 'RELATED' });
     expect(!duplicate.ok && duplicate.error.message).toContain('relation.update');
 
     await addNote(reg, 'PAGE', page.value.id, { content: 'Contract renews in January' });

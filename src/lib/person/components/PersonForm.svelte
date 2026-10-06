@@ -1,75 +1,73 @@
 <script lang="ts">
+  // Create or edit a person: name and email, then each field the notebook's
+  // modules add (org: title, lead; personal: how we know them, birthday).
   import { trpc } from '$shared/trpc/client';
   import Field from '$lib/ui/Field.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import { submit } from '$lib/ui/submit';
-  import { profileFlags } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
+  import { fieldRaw } from '$lib/person/fields';
+  import type { PersonExtensions, PersonExtensionsPatch } from '$shared/types/person';
 
   interface PersonData {
     readonly id?: string;
     readonly name?: string;
     readonly email?: string | null;
-    readonly title?: string | null;
-    readonly leadId?: string | null;
-    readonly birthday?: string | null;
+    readonly extensions?: PersonExtensions;
   }
 
-  interface LeadOption {
+  interface PersonOption {
     readonly id: string;
     readonly name: string;
   }
 
   interface Props {
     readonly initial?: PersonData;
-    readonly leadOptions?: readonly LeadOption[];
+    /** Choices for person fields (a lead); leave out to skip them. */
+    readonly personOptions?: readonly PersonOption[];
     readonly onSuccess: (result: { readonly id: string }) => void;
     readonly onCancel?: () => void;
     readonly onDelete?: () => Promise<void> | void;
   }
 
-  const { initial = {}, leadOptions: allLeadOptions, onSuccess, onCancel, onDelete }: Props = $props();
-
-  // A home notebook has no reporting lines.
-  const leadOptions = $derived($profileFlags.orgLead ? allLeadOptions : undefined);
+  const { initial = {}, personOptions, onSuccess, onCancel, onDelete }: Props = $props();
 
   const isEdit = $derived(!!initial.id);
+  const fields = $derived($model.personFields.filter((f) => f.input !== 'person' || personOptions));
+
+  const startValues = (): Record<string, string> =>
+    Object.fromEntries($model.personFields.map((f) => [`${f.module}.${f.key}`, fieldRaw(initial.extensions ?? {}, f) ?? '']));
 
   let name = $state(initial.name ?? '');
   let email = $state(initial.email ?? '');
-  let title = $state(initial.title ?? '');
-  let leadId = $state(initial.leadId ?? '');
-  let birthday = $state(initial.birthday ?? '');
+  let values = $state<Record<string, string>>(startValues());
   let submitting = $state(false);
   let error = $state('');
 
   $effect(() => {
     name = initial.name ?? '';
     email = initial.email ?? '';
-    title = initial.title ?? '';
-    leadId = initial.leadId ?? '';
-    birthday = initial.birthday ?? '';
+    values = startValues();
   });
+
+  // Each module's fields under its id; empty clears a field on edit and is left out on create.
+  const extensionsPatch = (): PersonExtensionsPatch => {
+    const patch: Record<string, Record<string, string | null>> = {};
+    for (const f of fields) {
+      const value = values[`${f.module}.${f.key}`]?.trim() ?? '';
+      if (!value && !isEdit) continue;
+      patch[f.module] = { ...patch[f.module], [f.key]: value || null };
+    }
+    return patch as PersonExtensionsPatch;
+  };
 
   const handleSubmit = async () => {
     submitting = true;
     error = '';
-    const lead = leadOptions ? { leadId: leadId || null } : {};
+    const extensions = extensionsPatch();
     const outcome = isEdit
-      ? await submit(() => trpc().person.update.mutate({
-          id: initial.id!,
-          name: name.trim(),
-          email: email.trim() || null,
-          title: title.trim() || null,
-          birthday: birthday.trim() || null,
-          ...lead,
-        }))
-      : await submit(() => trpc().person.create.mutate({
-          name: name.trim(),
-          email: email.trim() || undefined,
-          title: title.trim() || undefined,
-          birthday: birthday.trim() || undefined,
-          ...(leadOptions && leadId ? { leadId } : {}),
-        }));
+      ? await submit(() => trpc().person.update.mutate({ id: initial.id!, name: name.trim(), email: email.trim() || null, extensions }))
+      : await submit(() => trpc().person.create.mutate({ name: name.trim(), email: email.trim() || undefined, extensions }));
     submitting = false;
     if (!outcome.ok) {
       error = outcome.error;
@@ -78,24 +76,17 @@
     if (!isEdit) {
       name = '';
       email = '';
-      title = '';
-      leadId = '';
-      birthday = '';
+      values = startValues();
     }
     onSuccess(outcome.value);
   };
 </script>
 
 <form class="form-grid" onsubmit={(e: SubmitEvent) => { e.preventDefault(); handleSubmit(); }}>
-  <Field label="Name">
-    {#snippet children({ id })}
-      <input {id} type="text" bind:value={name} required placeholder="Full name" />
-    {/snippet}
-  </Field>
   <div class="form-row">
-    <Field label="Title">
+    <Field label="Name">
       {#snippet children({ id })}
-        <input {id} type="text" bind:value={title} placeholder="e.g. Senior Engineer" />
+        <input {id} type="text" bind:value={name} required placeholder="Full name" />
       {/snippet}
     </Field>
     <Field label="Email">
@@ -104,23 +95,25 @@
       {/snippet}
     </Field>
   </div>
-  <Field label="Birthday">
-    {#snippet children({ id })}
-      <input {id} type="text" bind:value={birthday} pattern={'(\\d{4}-|--)\\d{2}-\\d{2}'} placeholder="1990-05-03, or --05-03 without the year" />
-    {/snippet}
-  </Field>
-  {#if leadOptions}
-    <Field label="Lead">
+  {#each fields as field (`${field.module}.${field.key}`)}
+    {@const key = `${field.module}.${field.key}`}
+    <Field label={field.label}>
       {#snippet children({ id })}
-        <select {id} bind:value={leadId}>
-          <option value="">No lead</option>
-          {#each leadOptions as p (p.id)}
-            <option value={p.id}>{p.name}</option>
-          {/each}
-        </select>
+        {#if field.input === 'person'}
+          <select {id} bind:value={values[key]}>
+            <option value="">None</option>
+            {#each (personOptions ?? []).filter((p) => p.id !== initial.id) as p (p.id)}
+              <option value={p.id}>{p.name}</option>
+            {/each}
+          </select>
+        {:else if field.input === 'birthday'}
+          <input {id} type="text" bind:value={values[key]} pattern={'(\\d{4}-|--)\\d{2}-\\d{2}'} placeholder={field.placeholder} />
+        {:else}
+          <input {id} type="text" bind:value={values[key]} placeholder={field.placeholder} />
+        {/if}
       {/snippet}
     </Field>
-  {/if}
+  {/each}
 
   {#if error}<p class="form-error">{error}</p>{/if}
 

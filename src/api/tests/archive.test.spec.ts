@@ -17,7 +17,7 @@ describe('notAttachedToArchived', () => {
   });
 
   it('excludes rows attached to each archived entity type', () => {
-    expect(notAttachedToArchived(new Map([['PERSON', ['p1']], ['TEAM', []], ['PROJECT', ['x1', 'x2']]]))).toEqual({
+    expect(notAttachedToArchived(new Map([['PERSON', ['p1']], ['GROUP', []], ['PROJECT', ['x1', 'x2']]]))).toEqual({
       NOT: {
         OR: [
           { entityType: 'PERSON', entityId: { in: ['p1'] } },
@@ -79,17 +79,17 @@ describe('setArchived', () => {
 describe('ensureWritable', () => {
   const archivedTeam = () => createTestRegistry({
     prisma: {
-      team: { findUnique: vi.fn().mockResolvedValue({ name: 'Platform', archivedAt: new Date() }) },
+      group: { findUnique: vi.fn().mockResolvedValue({ name: 'Platform', archivedAt: new Date() }) },
       person: { findUnique: vi.fn().mockResolvedValue({ name: 'Alice', archivedAt: null }) }
     } as unknown as Registry['prisma']
   });
 
   it('refuses an archived entity and says how to unarchive it', async () => {
-    const result = await ensureWritable(archivedTeam(), 'TEAM', 't1');
+    const result = await ensureWritable(archivedTeam(), 'GROUP', 't1');
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.message).toContain('Team "Platform" is archived');
-      expect(result.error.message).toContain('team.unarchive --id t1');
+      expect(result.error.message).toContain('Group "Platform" is archived');
+      expect(result.error.message).toContain('group.unarchive --id t1');
     }
   });
 
@@ -104,7 +104,7 @@ describe('ensureWritable', () => {
   });
 
   it('fails when any of several entities is archived', async () => {
-    const result = await ensureAllWritable(archivedTeam(), [['PERSON', 'p1'], ['TEAM', 't1']]);
+    const result = await ensureAllWritable(archivedTeam(), [['PERSON', 'p1'], ['GROUP', 't1']]);
     expect(result.ok).toBe(false);
   });
 });

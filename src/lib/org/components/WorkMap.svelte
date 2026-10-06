@@ -3,7 +3,6 @@
   // work, its projects and goals as cards, and dependencies and goal links drawn
   // between them. Hovering a card lights up its upstream and downstream chain;
   // hovering a lane lights up the chains of everything it owns.
-  import { entityTypeLabel } from '$shared/utils/entity';
   import { truncateMiddle } from '$shared/utils/text';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { chainOf } from '$lib/project/dependency-map';
@@ -30,8 +29,8 @@
 
   const departmentsText = (lane: (typeof layout.lanes)[number]): string =>
     lane.departments.map((d) => `${d.name} ${d.count}`).join(' · ');
-  const kindLabel = (kind: (typeof layout.lanes)[number]['kind']): string =>
-    kind === 'NONE' ? 'Unowned' : entityTypeLabel(kind);
+  const KIND_LABELS = { TEAM: 'Team', DEPARTMENT: 'Department', GROUP: 'Group', PERSON: 'Person', NONE: 'Unowned' } as const;
+  const kindLabel = (kind: (typeof layout.lanes)[number]['kind']): string => KIND_LABELS[kind];
 </script>
 
 {#if layout.lanes.length === 0}

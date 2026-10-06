@@ -6,11 +6,14 @@
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
   import PersonForm from '$lib/person/components/PersonForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
-  import { profileFlags } from '$lib/stores/profile';
-  import { formatBirthday } from '$shared/utils/birthday';
+  import { model } from '$lib/stores/notebook-model';
+  import { fieldText } from '$lib/person/fields';
+  import type { PersonSummary } from '$shared/types/person';
 
   const { data } = $props<{ data: PageData }>();
-  const persons = $derived(data.persons.ok ? data.persons.value : []);
+  const persons = $derived((data.persons.ok ? data.persons.value : []) as readonly PersonSummary[]);
+  // Each column a module adds (Title and Lead, or How we know them and Birthday).
+  const fields = $derived($model.personFields);
 
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
@@ -18,7 +21,7 @@
 <svelte:head><title>People</title></svelte:head>
 
 <div class="page">
-  <PageHeader title="People" description={$profileFlags.orgLead ? 'Everyone in the org, their titles, and reporting lines.' : 'Family, friends and everyone else worth remembering.'}>
+  <PageHeader title="People" description="Everyone in this notebook. Groups (teams, family, friends) are on the Groups page.">
     <button type="button" class="btn primary" onclick={() => openPopup('new-person')}>Add person</button>
   </PageHeader>
 
@@ -32,22 +35,16 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Title</th>
+            {#each fields as f (`${f.module}.${f.key}`)}<th>{f.label}</th>{/each}
             <th>Email</th>
-            {#if $profileFlags.orgLead}<th>Lead</th>{:else}<th>Birthday</th>{/if}
           </tr>
         </thead>
         <tbody>
           {#each persons as person (person.id)}
             <tr>
-              <td><a href="/app/people/{person.id}">{person.name}</a>{#if person.archivedAt} <span class="badge muted">Archived</span>{/if}</td>
-              <td class="text-2">{person.title ?? ''}</td>
+              <td><a href={person.path}>{person.name}</a>{#if person.archivedAt} <span class="badge muted">Archived</span>{/if}</td>
+              {#each fields as f (`${f.module}.${f.key}`)}<td class="text-2">{fieldText(person.extensions, f) ?? ''}</td>{/each}
               <td class="text-2">{person.email ?? ''}</td>
-              {#if $profileFlags.orgLead}
-                <td class="text-2">{person.leadName ?? ''}</td>
-              {:else}
-                <td class="text-2">{person.birthday ? formatBirthday(person.birthday) : ''}</td>
-              {/if}
             </tr>
           {/each}
         </tbody>
@@ -61,5 +58,5 @@
 </div>
 
 <Popup id="new-person" title="Add person">
-  <PersonForm onSuccess={handleCreated} onCancel={() => closePopup()} />
+  <PersonForm personOptions={persons} onSuccess={handleCreated} onCancel={() => closePopup()} />
 </Popup>

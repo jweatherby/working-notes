@@ -10,8 +10,8 @@ import type { NotebookInfo, NotebookProfile, NotebookSummary } from '$shared/typ
 export interface NotebookDeps {
   readonly notebooks: NotebookStore;
   readonly now: () => Date;
-  /** Adds the work starter page kinds to a new notebook's database. */
-  readonly addStarterKinds?: (notebookId: string) => Promise<void>;
+  /** Gives a notebook what its profile's modules start with (group kinds; page kinds for work). */
+  readonly setUpModules?: (notebookId: string, profile: NotebookProfile) => Promise<void>;
 }
 
 const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -49,7 +49,7 @@ export const createNotebook = async (
 
   const notebook: NotebookInfo = { id, name, profile: input.profile ?? 'work', createdAt: deps.now().toISOString() };
   await deps.notebooks.create(notebook);
-  if (notebook.profile === 'work') await deps.addStarterKinds?.(notebook.id);
+  await deps.setUpModules?.(notebook.id, notebook.profile);
   return ok(notebook);
 };
 
@@ -70,8 +70,9 @@ export const renameNotebook = async (
   return ok({ ...notebook, name: trimmed });
 };
 
+/** Also adds the new profile's starting group kinds; nothing is removed. */
 export const setNotebookProfile = async (
-  deps: Pick<NotebookDeps, 'notebooks'>,
+  deps: Pick<NotebookDeps, 'notebooks' | 'setUpModules'>,
   id: string,
   profile: NotebookProfile
 ): Promise<Result<NotebookInfo>> => {
@@ -79,6 +80,7 @@ export const setNotebookProfile = async (
   const notebook = existing.find((n) => n.id === id);
   if (!notebook) return err(notFound(id, existing));
   await deps.notebooks.setProfile(id, profile);
+  await deps.setUpModules?.(id, profile);
   return ok({ ...notebook, profile });
 };
 

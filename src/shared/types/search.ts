@@ -7,8 +7,7 @@ import type { RelationGroup } from './relations';
 /** What the index holds rows for. GOAL_CHECKIN is a goal check-in's comment; it opens on its goal. */
 export const SEARCH_TYPES = [
   'PERSON',
-  'TEAM',
-  'DEPARTMENT',
+  'GROUP',
   'PROJECT',
   'GOAL',
   'PAGE',

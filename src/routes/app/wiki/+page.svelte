@@ -12,7 +12,7 @@
   import DatasetTable from '$lib/page/components/DatasetTable.svelte';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { formatPropertyValue, kindName } from '$lib/page/utils';
-  import { profile } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
 
   const { data } = $props<{ data: PageData }>();
   const pages = $derived(data.pages as readonly PageSummary[]);
@@ -60,7 +60,7 @@
 <div class="page">
   <PageHeader
     title={currentKind ? currentKind.name : 'Wiki'}
-    description={currentKind?.description ?? ($profile === 'home'
+    description={currentKind?.description ?? ($model.profile === 'home'
       ? 'Recipes, places, bills, home things and anything else worth keeping. Each kind of page has its own fields.'
       : 'Policies, products, software, decisions and anything else worth writing down.')}
   >

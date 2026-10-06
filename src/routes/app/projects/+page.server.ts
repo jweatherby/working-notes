@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { trpc } from '$shared/trpc/client';
-import { profileFeatures } from '$shared/settings/base/profile';
+import { notebookModel } from '$shared/modules/model';
 import { parseArchiveFilter } from '$shared/utils/archive';
 import { loadOwnerOptions } from '$shared/trpc/load-owner-options';
 
@@ -15,6 +15,6 @@ export const load: PageServerLoad = async ({ fetch, url, locals }) => {
   ]);
   const deps = dependencies?.ok ? dependencies.value : null;
   // A home notebook has no goals, so its map shows only project dependencies.
-  const showGoals = profileFeatures(locals.notebook.profile).goals;
+  const showGoals = notebookModel(locals.notebook.profile).shows('GOAL');
   return { projects, ownerOptions, dependencies: deps && !showGoals ? { ...deps, goals: [], goalLinks: [] } : deps };
 };

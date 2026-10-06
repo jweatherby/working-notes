@@ -33,71 +33,102 @@ model Branding {
   @@map("branding")
 }
 
-// ----- Entities: Person, Team, Department -----
+// ----- Core entities: Person, Group (groups have kinds, defined per notebook) -----
+// A person holds only what every module shares. Modules keep their own fields in
+// 1:1 extension tables (org_person, personal_person); core code never reads them.
 
 model Person {
-  id           String   @id @default(cuid())
-  name         String
-  email        String?
-  title        String?
-  leadId       String?  @map("lead_id")
-  departmentId String?  @map("department_id")
-  birthday     String?
-  archivedAt   DateTime? @map("archived_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id         String    @id @default(cuid())
+  name       String
+  email      String?
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  lead            Person?      @relation("PersonLead", fields: [leadId], references: [id], onDelete: SetNull)
-  reports         Person[]     @relation("PersonLead")
-  department      Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  teamMemberships TeamMember[]
+  org              OrgPerson?      @relation("OrgPersonPerson")
+  personal         PersonalPerson?
+  orgReports       OrgPerson[]     @relation("OrgLead")
+  groupMemberships GroupMember[]
 
-  @@index([leadId])
-  @@index([departmentId])
   @@index([archivedAt])
   @@map("person")
 }
 
-model Team {
-  id          String   @id @default(cuid())
+model GroupKind {
+  key       String   @id
+  name      String
+  plural    String
+  /** A person is in at most one group of an exclusive kind (a department). */
+  exclusive Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  groups Group[]
+
+  @@map("group_kind")
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  kind        String
   name        String
   description String?
   archivedAt  DateTime? @map("archived_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  members TeamMember[]
+  groupKind GroupKind     @relation(fields: [kind], references: [key], onUpdate: Cascade, onDelete: Restrict)
+  members   GroupMember[]
 
+  @@index([kind])
   @@index([archivedAt])
-  @@map("team")
+  @@map("group")
 }
 
-model Department {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  archivedAt  DateTime? @map("archived_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  members Person[]
-
-  @@index([archivedAt])
-  @@map("department")
-}
-
-model TeamMember {
+model GroupMember {
   id        String   @id @default(cuid())
-  teamId    String   @map("team_id")
+  groupId   String   @map("group_id")
   personId  String   @map("person_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
-  @@unique([teamId, personId])
+  @@unique([groupId, personId])
   @@index([personId])
-  @@map("team_member")
+  @@map("group_member")
+}
+
+// ----- Module: org (titles and reporting lines) -----
+
+model OrgPerson {
+  personId  String   @id @map("person_id")
+  title     String?
+  leadId    String?  @map("lead_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  person Person  @relation("OrgPersonPerson", fields: [personId], references: [id], onDelete: Cascade)
+  lead   Person? @relation("OrgLead", fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@map("org_person")
+}
+
+// ----- Module: personal (birthdays and how you know someone) -----
+
+model PersonalPerson {
+  personId  String   @id @map("person_id")
+  /** `YYYY-MM-DD`, or `--MM-DD` when the year isn't known. */
+  birthday  String?
+  knownAs   String?  @map("known_as")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@map("personal_person")
 }
 
 // ----- Assets: Doc, Note, Report (polymorphic via entityType + entityId) -----

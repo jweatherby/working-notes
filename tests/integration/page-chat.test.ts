@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
 import { clearChat, getChat, sendChat } from '../../src/api/assist/chat';
-import { deletePerson } from '../../src/api/org/person/operations';
+import { deletePerson } from '../../src/api/person/operations';
 import { ok } from '../../src/shared/utils/result';
 import type { PageChat, PageChatJob } from '../../src/shared/types/page-chat';
 import { TEST_NOTEBOOK } from './test-notebooks';

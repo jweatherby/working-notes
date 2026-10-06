@@ -10,9 +10,9 @@ import { pageRouter } from '$api/page/routes';
 import { pageKindRouter } from '$api/page-kind/routes';
 import { relationRouter } from '$api/relation/routes';
 import { todoRouter } from '$api/attached/todo/routes';
-import { personRouter } from '$api/org/person/routes';
-import { teamRouter } from '$api/org/team/routes';
-import { departmentRouter } from '$api/org/department/routes';
+import { personRouter } from '$api/person/routes';
+import { groupRouter } from '$api/group/routes';
+import { groupKindRouter } from '$api/group-kind/routes';
 import { docRouter } from '$api/attached/doc/routes';
 import { reportRouter } from '$api/attached/report/routes';
 import { noteRouter } from '$api/attached/note/routes';
@@ -41,8 +41,8 @@ export const appRouter = router({
   relation: relationRouter,
   todo: todoRouter,
   person: personRouter,
-  team: teamRouter,
-  department: departmentRouter,
+  group: groupRouter,
+  groupKind: groupKindRouter,
   doc: docRouter,
   report: reportRouter,
   note: noteRouter,

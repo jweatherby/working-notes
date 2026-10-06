@@ -4,7 +4,7 @@
   import GoalRows from './GoalRows.svelte';
   import type { GoalSummary } from '$shared/types/goals';
   import { statusBadgeClass } from '$lib/project/utils';
-  import { profileFlags } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
 
   interface OwnedProject {
     readonly id: string;
@@ -22,7 +22,7 @@
 </script>
 
 <!-- A home notebook has no goals. -->
-{#if $profileFlags.goals}
+{#if $model.has('goals')}
 <section class="section">
   <div class="section-header">
     <h4>Goals <span class="count">{goals.length}</span></h4>

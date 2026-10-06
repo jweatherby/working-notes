@@ -15,7 +15,7 @@
 - Coverage:
   - `health`
   - `notebooks`: isolation of data and files, the `notebook` procedures, resolving the current notebook, `notebookHandle` (`?notebook=`, cookie, fallback), the files route, and moving a pre-notebooks data directory
-  - `notebook`: person → team → note → todo → tag
+  - `notebook`: person → group (team) → note → todo → tag
   - `reports`: branding resolution, chart validation
   - `goals-wiki`: project owner, goal cascade, check-ins and progress, project links, page properties, mentions from content, relation and attachment cleanup on delete
   - `page-chat`: the Chat tab's saved conversation per entity, Clear, and cleanup when the entity is deleted

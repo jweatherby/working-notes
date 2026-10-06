@@ -2,21 +2,29 @@
 
 Everything belongs to one user; there are no accounts, orgs or permissions. Ids are opaque strings. Always look them up; never guess.
 
-## Org chart
+## People and groups
 
 | Entity | Fields | Relationships |
 |---|---|---|
-| **Person** | `name`, `email?`, `title?`, `birthday?` (`1990-05-03`, or `--05-03` without the year) | `leadId` → Person (their manager; reports are the inverse). `departmentId` → one Department. Many Teams through membership. |
-| **Team** | `name`, `description?` | Members are People (many-to-many): `team.addMember` / `team.removeMember` / `team.listMembers` |
-| **Department** | `name`, `description?` | Members are People (each person has at most one): `department.addMember` sets it, `department.removeMember` clears it |
+| **Person** | `name`, `email?`, and each module's fields under `extensions` | Groups through membership (any number, of any kind) |
+| **Group** | `kind` (a group kind key), `name`, `description?` | Members are People: `group.addMember` / `group.removeMember` / `group.listMembers` |
+| **Group kind** | `key` (`TEAM`, `FAMILY`), `name`, `plural`, `exclusive` | `groupKind.list/get/create/update/delete`. In an **exclusive** kind (DEPARTMENT) a person is in one group at most: `group.addMember` moves them, and `replaced` in the result names the group they left |
 
-- `person.get` returns `leadName`, `reports`, `teamMemberships` and `department`.
-- Deleting a person clears their reports' `leadId` and their department link, and removes their team memberships.
-- In a `home` notebook the UI calls teams **groups** and hides goals, departments, leads and the org map; the procedures are the same, and the home page lists birthdays in the next 30 days.
+**Person fields by module.** Write them with `person.create` / `person.update --extensions '{"<module>":{...}}'`; `null` clears one. A module the notebook doesn't use is refused.
+
+| Module (profile) | Fields |
+|---|---|
+| `org` (work) | `title`, `leadId` (their manager; `person.get` returns `leadName` and `reports`) |
+| `personal` (home) | `birthday` (`1990-05-03`, or `--05-03` without the year), `knownAs` (how you know them) |
+
+- `person.get` returns `groups` (each with `kind` and `kindName`) and `extensions` (each module's data).
+- A work notebook starts with the group kinds TEAM and DEPARTMENT (exclusive); a home notebook with FAMILY and FRIENDS. Add others with `groupKind.create` when the user agrees.
+- Deleting a person removes their memberships and their module data, and clears them as anyone's lead. Deleting a group kind is refused while groups use it, unless `--moveTo` names another kind.
+- A home notebook has no goals (the `goal.*` tools are refused there) and no org fields; the home page lists birthdays in the next 30 days.
 
 ## Projects
 
-**Project**: `name`, `description?`, `status?` (free text, e.g. `planning`, `active`, `done`), `startDate?`, `endDate?`, `parentId?` (sub-projects), an owner (`ownerType` `PERSON`, `TEAM` or `DEPARTMENT` + `ownerId`), and three-point estimates `daysOptimistic?`, `daysLikely?`, `daysPessimistic?`.
+**Project**: `name`, `description?`, `status?` (free text, e.g. `planning`, `active`, `done`), `startDate?`, `endDate?`, `parentId?` (sub-projects), an owner (`ownerType` `PERSON` or `GROUP` + `ownerId`), and three-point estimates `daysOptimistic?`, `daysLikely?`, `daysPessimistic?`.
 
 - Set `ownerType` and `ownerId` together. Set both to `null` to clear the owner. The owner must exist.
 - `project.list` filters by `ownerType` + `ownerId`. `project.get` returns the `owner` with its name and path. `project.create` returns `{ id, path }`.
@@ -24,7 +32,7 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 ## Goals
 
-**Goal**: `title`, `description?`, an owner (`ownerType` `PERSON`, `TEAM` or `DEPARTMENT` + `ownerId`; no owner means org-wide), `parentId?` (the cascade, e.g. a team goal under a department goal), `period?`, `status`, and an optional metric: `unit?`, `baseline?`, `target?`.
+**Goal**: `title`, `description?`, an owner (`ownerType` `PERSON` or `GROUP` + `ownerId`; no owner means the whole notebook), `parentId?` (the cascade, e.g. a team's goal under a department's), `period?`, `status`, and an optional metric: `unit?`, `baseline?`, `target?`.
 
 - `period` is `2026`, `2026-H2` or `2026-Q3`: a calendar year, half or quarter. The app reads it as dates (`2026-H2` is 1 Jul to 31 Dec 2026), shows how much of it has gone by, draws a pace line from `baseline` to `target` across it, and flags a goal "Behind pace" when `progress` trails the time elapsed by more than 10 points, or "Period ended" when the period is over and the goal isn't `DONE` or `DROPPED`. The flags are hints; they never change `status`.
 - `status` is one of `NOT_STARTED ON_TRACK AT_RISK OFF_TRACK DONE DROPPED` (default `NOT_STARTED`).
@@ -61,7 +69,7 @@ A field is `{ "key": "amount", "label": "Amount", "input": "number" }` (key came
 
 ## Relations
 
-A relation links two entities, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE`, `REPORT` or `TODO`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
+A relation links two entities, with a `kind` and an optional `note` (up to 1000 characters). Either end is `PERSON`, `GROUP`, `PROJECT`, `GOAL`, `PAGE`, `DOC`, `NOTE`, `REPORT` or `TODO`. Procedures: `relation.add` (`fromType`, `fromId`, `toType`, `toId`, `kind`, `note`), `relation.update` (`id`, `kind?`, `note?`), `relation.remove`, `relation.forEntity` (`entityType`, `entityId`).
 
 | Kind | From the `from` side | From the `to` side |
 |---|---|---|
@@ -77,13 +85,13 @@ A relation links two entities, with a `kind` and an optional `note` (up to 1000 
 - For a link that's neither ("uses", "replaces"), use `RELATED` with a `note`.
 - `relation.forEntity` returns both directions, grouped by the label from that entity's side, and each item has the other entity's name and `path`.
 - `project.dependencies` (`--archived`) lists every project-to-project `DEPENDS_ON` link (`fromId` depends on `toId`), every goal–project link, and those goals' status and progress in one call. It feeds the projects page's dependency map (`/app/projects?view=map`).
-- **`MENTIONS` is derived.** When a page, doc, note or report's content is saved, each markdown link to an app path (`/app/wiki/<id>`, relative or on `http://127.0.0.1:5173`) becomes a `MENTIONS` relation from that page, doc, note or report to the target. Paths are `/app/people/`, `/app/teams/`, `/app/departments/`, `/app/projects/`, `/app/goals/`, `/app/wiki/` and `/app/reports/`, each followed by the id. Links in code blocks and links to ids that don't exist are ignored. `relation.add`, `update` and `remove` refuse `MENTIONS`.
+- **`MENTIONS` is derived.** When a page, doc, note or report's content is saved, each markdown link to an app path (`/app/wiki/<id>`, relative or on `http://127.0.0.1:5173`) becomes a `MENTIONS` relation from that page, doc, note or report to the target. Paths are `/app/people/`, `/app/groups/`, `/app/projects/`, `/app/goals/`, `/app/wiki/` and `/app/reports/`, each followed by the id. Links in code blocks and links to ids that don't exist are ignored. `relation.add`, `update` and `remove` refuse `MENTIONS`.
 
 ## Things attached to any entity
 
-These use `entityType` + `entityId`, where `entityType` is `PERSON`, `TEAM`, `DEPARTMENT`, `PROJECT`, `GOAL` or `PAGE` (also `DOC`, `NOTE`, `REPORT`, `TODO`, `LINK`, `TAG`, `COMMENT`, `EMOJI`).
+These use `entityType` + `entityId`, where `entityType` is `PERSON`, `GROUP`, `PROJECT`, `GOAL` or `PAGE` (also `DOC`, `NOTE`, `REPORT`, `TODO`, `LINK`, `TAG`, `COMMENT`, `EMOJI`).
 
-Deleting a person, team, department, project, goal, page or report also deletes everything attached to it and its relations, and clears any goal or project owner that pointed at it. Removing a doc, note or todo deletes its relations.
+Deleting a person, group, project, goal, page or report also deletes everything attached to it and its relations, and clears any goal or project owner that pointed at it. Removing a doc, note or todo deletes its relations.
 
 | Entity | Fields | Procedures |
 |---|---|---|
@@ -94,7 +102,7 @@ Deleting a person, team, department, project, goal, page or report also deletes 
 | **Tag** | `name` (unique), `color` | `tag.list`, `tag.create`, `tag.delete`; `tag.forEntity`, `tag.attach`, `tag.detach` |
 | **Comment** | `content` | `comment.list`, `comment.add`, `comment.remove` |
 
-Todo `status` is one of `PENDING ACTIVE COMPLETE CANCELLED`. `todo.list` returns each todo's `entityLabel` (the person/team/project name) and `entityPath`.
+Todo `status` is one of `PENDING ACTIVE COMPLETE CANCELLED`. `todo.list` returns each todo's `entityLabel` (the person, group or project name) and `entityPath`.
 
 `link.find --url` compares URLs normalized: protocol, `www.`, host case, a trailing slash, the fragment and tracking parameters (`utm_*` and similar) don't matter, but the path's case and other query parameters do. `--contains` matches any part of the URL, ignoring case. Either returns at most 50 links, newest first, leaving out links on deleted entities. Use it to find the entity an imported item (a Linear issue, a Notion page) already lives on. A link with a `syncedAt` is the entity's source: `syncedAt` is when the entity was last brought up to date from it, set to the current time by `link.add --synced true` or `link.markSynced --id <link>`. A plain link (a reference, a dashboard) has none.
 
@@ -105,7 +113,7 @@ Docs are for longer reference material (a career plan, an imported PDF). They at
 | Procedure | Inputs | Returns |
 |---|---|---|
 | `search.query` | `q` (1–200 chars; words, `"phrase"`, `OR`, `-exclude`), `types?`, `within?` (`{entityType, entityId}`), `includeArchived?`, `limit?` 1–50 | `results`: `entityType`, `entityId`, `name`, `path`, `on` (the entity an attachment hangs off: `entityType`, `entityId`, `name`), `snippet` (matches in `**bold**`), `score` (lower is more relevant) |
-| `search.recall` | `entityType` (`PERSON TEAM DEPARTMENT PROJECT GOAL PAGE DOC NOTE REPORT TODO`), `entityId`, `limit?` 1–50 (default 10) | `name`, `path`, `archived`, `entity` (what the type's `get` returns), `notes`, `comments`, `todos` (open only), `docs` (`excerpt` of the start), `links`, `tags`, `relations`, `ownedGoals` (with `latestCheckIn`), `ownedProjects`, `unlinkedMentions` (search results naming it without linking it). Each list is `{items, truncated}` |
+| `search.recall` | `entityType` (`PERSON GROUP PROJECT GOAL PAGE DOC NOTE REPORT TODO`), `entityId`, `limit?` 1–50 (default 10) | `name`, `path`, `archived`, `entity` (what the type's `get` returns), `notes`, `comments`, `todos` (open only), `docs` (`excerpt` of the start), `links`, `tags`, `relations`, `ownedGoals` (with `latestCheckIn`), `ownedProjects`, `unlinkedMentions` (search results naming it without linking it). Each list is `{items, truncated}` |
 
 Search result types are the entity types plus `GOAL_CHECKIN`, a goal check-in's comment, which opens on its goal. Chats with Claude, relation notes and tag names aren't searched.
 
@@ -119,9 +127,9 @@ Pass ISO dates (`2026-10-01` or `2026-10-01T09:00:00Z`). Results come back as IS
 
 ## Archiving
 
-People, teams, departments, projects, goals and pages can be archived: `<type>.archive --id` and `<type>.unarchive --id` (for example `person.archive`, `project.unarchive`). Archiving sets `archivedAt`; archiving twice keeps the first date.
+People, groups, projects, goals and pages can be archived: `<type>.archive --id` and `<type>.unarchive --id` (for example `person.archive`, `project.unarchive`). Archiving sets `archivedAt`; archiving twice keeps the first date.
 
-- **Hidden:** `person.list`, `team.list`, `department.list`, `project.list`, `goal.list` and `page.list` leave archived entities out. Pass `--archived only` for just the archived ones, or `--archived include` for both. The org map, the home feed, the home focus graph and `todo.list` leave out archived entities and what's attached to them.
+- **Hidden:** `person.list`, `group.list`, `project.list`, `goal.list` and `page.list` leave archived entities out. Pass `--archived only` for just the archived ones, or `--archived include` for both. The org map, the home feed, the home focus graph and `todo.list` leave out archived entities and what's attached to them.
 - **Still readable:** `get` returns an archived entity with its `archivedAt`, and its docs, notes, todos, reports and relations stay as they were.
 - **Read-only:** updates, membership changes, check-ins, goal–project links, and adding, editing or removing docs, notes, todos, reports, links, tags, comments and emoji on an archived entity fail, and the error says to unarchive it first. A relation can point *to* an archived entity (a project that supersedes an archived one) but not start from one.
 - **Delete still works** on an archived entity, and removes everything attached to it, as for any delete.

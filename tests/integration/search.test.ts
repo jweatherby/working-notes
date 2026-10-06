@@ -4,8 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { createPerson, deletePerson, updatePerson } from '../../src/api/org/person/operations';
-import { createTeam } from '../../src/api/org/team/operations';
+import { createPerson, deletePerson, updatePerson } from '../../src/api/person/operations';
+import { createTeam } from './org-helpers';
 import { addCheckIn, createGoal } from '../../src/api/goal/operations';
 import { createPage } from '../../src/api/page/operations';
 import { addDoc, updateDoc } from '../../src/api/attached/doc/operations';
@@ -33,7 +33,7 @@ describe('search index triggers', () => {
     const rows = await reg.prisma.$queryRawUnsafe<{ name: string }[]>(
       "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name GLOB 'search_*' ORDER BY name"
     );
-    const tables = ['comment', 'department', 'doc', 'goal', 'goal_check_in', 'link', 'note', 'page', 'person', 'project', 'report', 'team', 'todo'];
+    const tables = ['comment', 'doc', 'goal', 'goal_check_in', 'group', 'link', 'note', 'org_person', 'page', 'person', 'personal_person', 'project', 'report', 'todo'];
     expect(rows.map((r) => r.name)).toEqual(tables.flatMap((t) => ['ad', 'ai', 'au'].map((e) => `search_${t}_${e}`)).sort());
   });
 
@@ -51,12 +51,12 @@ describe('search.query', () => {
     if (!team.ok || !page.ok || !goal.ok) throw new Error('setup failed');
 
     const note = await addNote(reg, 'PERSON', 'person_alice', { content: 'Worried about people leaving the platform team' });
-    const doc = await addDoc(reg, 'TEAM', team.value.id, { title: 'Onboarding guide' });
+    const doc = await addDoc(reg, 'GROUP', team.value.id, { title: 'Onboarding guide' });
     if (!note.ok || !doc.ok) throw new Error('setup failed');
     await updateDoc(reg, doc.value.id, { content: '# Setup\nInstall the toolchain and request VPN access.' });
     const todo = await createTodo(reg, { title: 'Renew the vendor contract', description: 'Before the quarterly review', entityType: 'PAGE', entityId: page.value.id });
-    const comment = await addComment(reg, 'TEAM', team.value.id, { content: 'Consider a hackathon in spring' });
-    const link = await addLink(reg, 'TEAM', team.value.id, { url: 'https://linear.app/acme/issue/ENG-123', title: 'Flaky build' });
+    const comment = await addComment(reg, 'GROUP', team.value.id, { content: 'Consider a hackathon in spring' });
+    const link = await addLink(reg, 'GROUP', team.value.id, { url: 'https://linear.app/acme/issue/ENG-123', title: 'Flaky build' });
     const checkIn = await addCheckIn(reg, { goalId: goal.value.id, value: 1, comment: 'Deploy pipeline is the bottleneck' });
     if (!todo.ok || !comment.ok || !link.ok || !checkIn.ok) throw new Error('setup failed');
 
@@ -73,7 +73,7 @@ describe('search.query', () => {
     expect(await ids('inc')).toEqual([page.value.id]); // property values, not keys
     expect(await ids('seats')).toEqual([]);
     expect(await ids('toolchain')).toEqual([doc.value.id]);
-    expect((await search('toolchain'))[0]?.path).toBe(`/app/teams/${team.value.id}?doc=${doc.value.id}`);
+    expect((await search('toolchain'))[0]?.path).toBe(`/app/groups/${team.value.id}?doc=${doc.value.id}`);
     expect(await ids('quarterly')).toEqual([todo.value.id]);
     expect(await ids('hackath')).toEqual([comment.value.id]);
     expect(await ids('ENG-123')).toEqual([link.value.id]);
@@ -107,12 +107,12 @@ describe('search.query', () => {
   });
 
   it('re-indexes an update and forgets a delete, including what the delete cleaned up', async () => {
-    const person = await createPerson(reg, { name: 'Dmitri Ivanov', title: 'Designer' });
+    const person = await createPerson(reg, { name: 'Dmitri Ivanov', extensions: { org: { title: 'Designer' } } });
     if (!person.ok) throw new Error('setup failed');
     await addNote(reg, 'PERSON', person.value.id, { content: 'Dmitri sketches wireframes' });
     expect(await ids('designer')).toContain(person.value.id);
 
-    await updatePerson(reg, person.value.id, { title: 'Researcher' });
+    await updatePerson(reg, person.value.id, { extensions: { org: { title: 'Researcher' } } });
     expect(await ids('designer')).not.toContain(person.value.id);
     expect(await ids('researcher')).toContain(person.value.id);
 
@@ -124,19 +124,19 @@ describe('search.query', () => {
   it('hides archived entities and their attachments unless asked', async () => {
     const team = await createTeam(reg, { name: 'Legacy Ops' });
     if (!team.ok) throw new Error('setup failed');
-    await addNote(reg, 'TEAM', team.value.id, { content: 'Mainframe decommission plan' });
-    await setArchived(reg, 'TEAM', team.value.id, true);
+    await addNote(reg, 'GROUP', team.value.id, { content: 'Mainframe decommission plan' });
+    await setArchived(reg, 'GROUP', team.value.id, true);
 
     expect(await search('legacy')).toHaveLength(0);
     expect(await search('mainframe')).toHaveLength(0);
     expect(await search('mainframe', { includeArchived: true })).toHaveLength(1);
-    expect(await search('mainframe', { within: { entityType: 'TEAM', entityId: team.value.id } })).toHaveLength(1);
+    expect(await search('mainframe', { within: { entityType: 'GROUP', entityId: team.value.id } })).toHaveLength(1);
   });
 });
 
 describe('search.recall', () => {
   it('gathers an entity and finds mentions that do not link to it', async () => {
-    const person = await createPerson(reg, { name: 'Priya Nair', title: 'Staff Engineer' });
+    const person = await createPerson(reg, { name: 'Priya Nair', extensions: { org: { title: 'Staff Engineer' } } });
     const team = await createTeam(reg, { name: 'Payments Core' });
     if (!person.ok || !team.ok) throw new Error('setup failed');
     const id = person.value.id;
@@ -150,15 +150,15 @@ describe('search.recall', () => {
     if (tag.ok) await attachTag(reg, tag.value.id, 'PERSON', id);
     await createGoal(reg, { title: 'Mentor two engineers', ownerType: 'PERSON', ownerId: id });
 
-    const unlinked = await addNote(reg, 'TEAM', team.value.id, { content: 'Ask Priya Nair about the ledger design' });
-    const linked = await addNote(reg, 'TEAM', team.value.id, { content: `[Priya Nair](/app/people/${id}) reviewed the ledger` });
+    const unlinked = await addNote(reg, 'GROUP', team.value.id, { content: 'Ask Priya Nair about the ledger design' });
+    const linked = await addNote(reg, 'GROUP', team.value.id, { content: `[Priya Nair](/app/people/${id}) reviewed the ledger` });
     if (!unlinked.ok || !linked.ok) throw new Error('setup failed');
 
     const result = await recallEntity(reg, 'PERSON', id);
     if (!result.ok) throw result.error;
     const recall = result.value;
     expect(recall).toMatchObject({ name: 'Priya Nair', path: `/app/people/${id}`, archived: false, tags: ['high-potential'] });
-    expect(recall.entity).toMatchObject({ id, title: 'Staff Engineer' });
+    expect(recall.entity).toMatchObject({ id, extensions: { org: { title: 'Staff Engineer' } } });
     expect(recall.notes.items.map((n) => n.content)).toEqual(['Priya Nair wants to lead the migration']);
     expect(recall.todos.items.map((t) => t.title)).toEqual(['Book 1:1']);
     expect(recall.docs.items[0]?.excerpt.length).toBeLessThanOrEqual(301);

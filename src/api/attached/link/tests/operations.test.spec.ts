@@ -85,13 +85,13 @@ describe('findLinks', () => {
 
 describe('syncedAt', () => {
   const now = new Date('2026-09-30T12:00:00Z');
-  const team = { findUnique: vi.fn().mockResolvedValue({ name: 'Platform', archivedAt: null }) };
+  const group = { findUnique: vi.fn().mockResolvedValue({ name: 'Platform', archivedAt: null }) };
 
   it('link.add stamps syncedAt only when the link is a sync source', async () => {
     const create = vi.fn().mockResolvedValue({ id: 'l1' });
-    const reg = createTestRegistry({ now: () => now, prisma: { team, link: { create } } as unknown as Registry['prisma'] });
-    await addLink(reg, 'TEAM', 't1', { url: 'https://linear.app/acme', synced: true });
-    await addLink(reg, 'TEAM', 't1', { url: 'https://example.com' });
+    const reg = createTestRegistry({ now: () => now, prisma: { group, link: { create } } as unknown as Registry['prisma'] });
+    await addLink(reg, 'GROUP', 't1', { url: 'https://linear.app/acme', synced: true });
+    await addLink(reg, 'GROUP', 't1', { url: 'https://example.com' });
     expect(create.mock.calls.map(([arg]) => arg.data.syncedAt)).toEqual([now, null]);
   });
 
@@ -100,8 +100,8 @@ describe('syncedAt', () => {
     const reg = createTestRegistry({
       now: () => now,
       prisma: {
-        team,
-        link: { findUnique: vi.fn().mockResolvedValue({ id: 'l1', entityType: 'TEAM', entityId: 't1' }), update }
+        group,
+        link: { findUnique: vi.fn().mockResolvedValue({ id: 'l1', entityType: 'GROUP', entityId: 't1' }), update }
       } as unknown as Registry['prisma']
     });
     const result = await markLinkSynced(reg, 'l1');

@@ -1,4 +1,5 @@
-// The projects list page: team filter, grouping by team, and collapsed rows.
+// The projects list page: filter and grouping by owning group (`?team=`, kept
+// from when only teams owned work), and collapsed rows.
 import { buildTree, scopeTree, type ScopedNode, type TreeNode } from '$shared/utils/hierarchy';
 import type { EntityOwner } from '$shared/types/owner';
 
@@ -41,21 +42,21 @@ export interface ProjectGroup {
 
 export type CollapseBase = 'collapsed' | 'expanded';
 
-/** A project's team is the team that owns it. Person, department and unowned projects have none. */
+/** A project's group is the group that owns it. Person-owned and unowned projects have none. */
 export const projectTeamKey = (project: Pick<ProjectListItem, 'owner'>): string =>
-  project.owner?.type === 'TEAM' ? project.owner.id : TEAM_NONE;
+  project.owner?.type === 'GROUP' ? project.owner.id : TEAM_NONE;
 
 /** The teams that own at least one of the projects, by name, then "No team" if any project has none. */
 export const projectTeamOptions = (projects: readonly ProjectListItem[]): readonly ProjectTeamOption[] => {
   const teams = new Map<string, ProjectTeamOption>();
   for (const { owner } of projects) {
-    if (owner?.type === 'TEAM' && !teams.has(owner.id)) {
-      teams.set(owner.id, { id: owner.id, name: owner.label ?? 'Unknown team', path: owner.path });
+    if (owner?.type === 'GROUP' && !teams.has(owner.id)) {
+      teams.set(owner.id, { id: owner.id, name: owner.label ?? 'Unknown group', path: owner.path });
     }
   }
   const sorted = [...teams.values()].sort((a, b) => a.name.localeCompare(b.name));
   const hasNone = projects.some((project) => projectTeamKey(project) === TEAM_NONE);
-  return hasNone ? [...sorted, { id: TEAM_NONE, name: 'No team', path: null }] : sorted;
+  return hasNone ? [...sorted, { id: TEAM_NONE, name: 'No group', path: null }] : sorted;
 };
 
 /** Reads `?team=` and `?group=`. A team that owns none of the listed projects means every team. */

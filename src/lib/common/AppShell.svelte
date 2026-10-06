@@ -4,8 +4,7 @@
   import NotebookSwitcher from '$lib/notebook/components/NotebookSwitcher.svelte';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
-  import { features } from '$shared/settings/base/features';
-  import { navLabels, profileFeatures } from '$shared/settings/base/profile';
+  import { notebookModel } from '$shared/modules/model';
 
   interface Props {
     readonly children: any;
@@ -26,20 +25,10 @@
     readonly exact?: boolean;
   }
 
-  // A home notebook has no org map: People and Groups take its place.
-  const profile = $derived(notebook?.profile ?? 'work');
-  const names = $derived(navLabels(profile));
-  const LINKS: readonly NavLink[] = $derived([
-    { href: '/app', label: 'Home', exact: true },
-    ...(profileFeatures(profile).orgMap
-      ? [{ href: '/app/orgmap', label: names.people }]
-      : [{ href: '/app/people', label: names.people }, { href: '/app/teams', label: names.teams }]),
-    { href: '/app/projects', label: 'Projects' },
-    ...(profileFeatures(profile).goals ? [{ href: '/app/goals', label: 'Goals' }] : []),
-    { href: '/app/wiki', label: 'Wiki' },
-    ...(features.reports ? [{ href: '/app/reports', label: 'Reports' }] : []),
-    { href: '/app/todos', label: 'Todos' },
-  ]);
+  // The notebook's modules decide the nav: the org module's Org Map stands in for People and Groups.
+  const LINKS: readonly NavLink[] = $derived(
+    notebookModel(notebook?.profile ?? 'work').nav.map((item) => ({ href: item.href, label: item.label, exact: item.href === '/app' }))
+  );
 
   const isActive = (link: NavLink, pathname: string): boolean =>
     link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);

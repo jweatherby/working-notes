@@ -41,8 +41,7 @@ export const summarizeContent = (content: string, max = 80): string => {
 const updateHref = (u: RawUpdate): string => {
   switch (u.kind) {
     case 'PERSON':
-    case 'TEAM':
-    case 'DEPARTMENT':
+    case 'GROUP':
     case 'PROJECT':
     case 'GOAL':
     case 'PAGE':
@@ -117,9 +116,8 @@ export const listRecentUpdates = async (
 
   // People and notes about people are left out: the feed is for everything else.
   const titled = { ...active, select: { id: true, title: true, createdAt: true, updatedAt: true } };
-  const [teams, departments, projects, goals, pages, docs, notes, reports, todos] = await Promise.all([
-    p.team.findMany(active),
-    p.department.findMany(active),
+  const [groups, projects, goals, pages, docs, notes, reports, todos] = await Promise.all([
+    p.group.findMany(active),
     p.project.findMany(active),
     p.goal.findMany(titled),
     p.page.findMany(titled),
@@ -141,8 +139,7 @@ export const listRecentUpdates = async (
 
   const merged = mergeUpdates(
     [
-      teams.map((x) => ({ ...base(x), kind: 'TEAM' as const, title: x.name, parent: null })),
-      departments.map((x) => ({ ...base(x), kind: 'DEPARTMENT' as const, title: x.name, parent: null })),
+      groups.map((x) => ({ ...base(x), kind: 'GROUP' as const, title: x.name, parent: null })),
       projects.map((x) => ({ ...base(x), kind: 'PROJECT' as const, title: x.name, parent: null })),
       goals.map((x) => ({ ...base(x), kind: 'GOAL' as const, title: x.title, parent: null })),
       pages.map((x) => ({ ...base(x), kind: 'PAGE' as const, title: x.title, parent: null })),

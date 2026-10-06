@@ -29,9 +29,9 @@ const project = (id: string, parentId: string | null, projectOwner: EntityOwner 
   archivedAt: null
 });
 
-const pps = owner('TEAM', 'pps', 'PPS');
-const ppa = owner('TEAM', 'ppa', 'PPA');
-const lcp = owner('TEAM', 'lcp', 'LCP');
+const pps = owner('GROUP', 'pps', 'PPS');
+const ppa = owner('GROUP', 'ppa', 'PPA');
+const lcp = owner('GROUP', 'lcp', 'LCP');
 
 // Mirrors the work notebook: an unowned parent with children in two teams, and a team parent with its own team's children.
 const projects: readonly ProjectListItem[] = [
@@ -58,7 +58,7 @@ const rows = (group: ProjectGroup | undefined) =>
   flattenTree(group?.nodes ?? []).map((n) => [n.item.id, n.depth, n.context]);
 
 describe('projectTeamOptions', () => {
-  it('lists owner teams by name, then "No team"', () => {
+  it('lists owner teams by name, then "No group"', () => {
     expect(teams.map((t) => t.id)).toEqual(['lcp', 'ppa', 'pps', TEAM_NONE]);
   });
 });
@@ -90,20 +90,20 @@ describe('projectListGroups', () => {
     expect(group.count).toBe(2);
   });
 
-  it('shows an unowned parent under "No team" without its team children', () => {
+  it('shows an unowned parent under "No group" without its team children', () => {
     expect(rows(onlyGroup(`team=${TEAM_NONE}`))).toEqual([
       ['exchange', 0, false],
       ['solo', 0, false]
     ]);
   });
 
-  it('groups by team with "No team" last and counts that skip context rows', () => {
+  it('groups by team with "No group" last and counts that skip context rows', () => {
     const groups = groupsFor('group=team');
     expect(groups.map((g) => [g.label, g.count])).toEqual([
       ['LCP', 2],
       ['PPA', 1],
       ['PPS', 2],
-      ['No team', 2]
+      ['No group', 2]
     ]);
     expect(rows(groups[1])).toEqual([
       ['exchange', 0, true],

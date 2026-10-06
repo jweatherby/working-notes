@@ -30,7 +30,7 @@ describe('applyMigrations', () => {
     expect(Number(first[3])).toBe(1);
 
     const tables = (await client.execute("SELECT name FROM sqlite_master WHERE type = 'table'")).rows.map((r) => r[0]);
-    expect(tables).toEqual(expect.arrayContaining(['person', 'team', 'report', 'branding']));
+    expect(tables).toEqual(expect.arrayContaining(['person', 'group', 'group_member', 'org_person', 'personal_person', 'report', 'branding']));
     client.close();
   });
 
@@ -101,6 +101,52 @@ describe('applyMigrations', () => {
     expect(await hits('lovelace')).toEqual([['PERSON', 'p1', null]]);
     expect(await hits('engine')).toEqual([['NOTE', 'n1', 'p1']]);
     expect(await hits('difference')).toEqual([['PAGE', 'w1', null]]);
+    client.close();
+  });
+
+  it('turns teams and departments into groups and moves person fields to their modules, keeping ids', async () => {
+    const { dir, client } = freshDb();
+    const migrations = join(dir, 'migrations');
+    const groupsMigration = onDisk.find((name) => name.endsWith('_add_groups_and_person_modules'))!;
+    const later = onDisk.slice(onDisk.indexOf(groupsMigration));
+    cpSync('prisma/migrations', migrations, { recursive: true });
+    for (const name of later) rmSync(join(migrations, name), { recursive: true });
+    await applyMigrations(client, migrations, quiet);
+
+    await client.executeMultiple(`
+      INSERT INTO department (id, name, updated_at) VALUES ('d1', 'Engineering', CURRENT_TIMESTAMP);
+      INSERT INTO team (id, name, description, updated_at) VALUES ('t1', 'Platform', 'Runs the build farm', CURRENT_TIMESTAMP);
+      INSERT INTO person (id, name, title, updated_at) VALUES ('p1', 'Ada', 'CTO', CURRENT_TIMESTAMP);
+      INSERT INTO person (id, name, title, lead_id, department_id, birthday, updated_at) VALUES ('p2', 'Bo', 'Engineer', 'p1', 'd1', '--05-03', CURRENT_TIMESTAMP);
+      INSERT INTO team_member (id, team_id, person_id) VALUES ('m1', 't1', 'p2');
+      INSERT INTO note (id, entity_type, entity_id, content, updated_at) VALUES ('n1', 'TEAM', 't1', 'Hiring two', CURRENT_TIMESTAMP);
+      INSERT INTO project (id, name, owner_type, owner_id, updated_at) VALUES ('pr1', 'Checkout', 'DEPARTMENT', 'd1', CURRENT_TIMESTAMP);
+      INSERT INTO relation (id, from_type, from_id, to_type, to_id, kind, updated_at) VALUES ('r1', 'PROJECT', 'pr1', 'TEAM', 't1', 'RELATED', CURRENT_TIMESTAMP);
+    `);
+    for (const name of later) cpSync(join('prisma/migrations', name), join(migrations, name), { recursive: true });
+    const result = await applyMigrations(client, migrations, quiet);
+    expect(result.ok && result.value.applied).toEqual(later);
+
+    const rows = async (sql: string) => (await client.execute(sql)).rows.map((r) => Object.values(r));
+    expect(await rows('SELECT key, exclusive FROM group_kind ORDER BY sort_order')).toEqual([['TEAM', 0], ['DEPARTMENT', 1]]);
+    expect(await rows('SELECT id, kind, name FROM "group" ORDER BY id')).toEqual([['d1', 'DEPARTMENT', 'Engineering'], ['t1', 'TEAM', 'Platform']]);
+    expect(await rows('SELECT group_id, person_id FROM group_member ORDER BY group_id')).toEqual([['d1', 'p2'], ['t1', 'p2']]);
+    expect(await rows('SELECT person_id, title, lead_id FROM org_person ORDER BY person_id')).toEqual([['p1', 'CTO', null], ['p2', 'Engineer', 'p1']]);
+    expect(await rows('SELECT person_id, birthday FROM personal_person')).toEqual([['p2', '--05-03']]);
+    expect(await rows('SELECT entity_type FROM note')).toEqual([['GROUP']]);
+    expect(await rows('SELECT owner_type FROM project')).toEqual([['GROUP']]);
+    expect(await rows('SELECT to_type FROM relation')).toEqual([['GROUP']]);
+
+    const hits = async (match: string) =>
+      (await client.execute({ sql: 'SELECT entity_type, entity_id, parent_type FROM search_index WHERE search_index MATCH ? ORDER BY entity_id', args: [match] })).rows
+        .map((r) => [r[0], r[1], r[2]]);
+    expect(await hits('farm')).toEqual([['GROUP', 't1', null]]);
+    expect(await hits('hiring')).toEqual([['NOTE', 'n1', 'GROUP']]);
+    expect(await hits('engineer')).toContainEqual(['PERSON', 'p2', null]);
+    // A module's field reindexes the person when it changes.
+    await client.execute("UPDATE org_person SET title = 'Architect' WHERE person_id = 'p2'");
+    expect(await hits('architect')).toEqual([['PERSON', 'p2', null]]);
+    expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual([]);
     client.close();
   });
 });

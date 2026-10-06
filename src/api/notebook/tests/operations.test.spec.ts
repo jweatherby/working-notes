@@ -78,13 +78,13 @@ describe('notebook operations', () => {
     expect(await d.notebooks.getDefault()).toBe('garden');
   });
 
-  it('adds the starter page kinds to a new work notebook, not to a home one', async () => {
+  it('sets up a new notebook for its profile', async () => {
     const seeded: string[] = [];
-    const d = { ...deps(), addStarterKinds: async (id: string) => { seeded.push(id); } };
+    const d = { ...deps(), setUpModules: async (id: string, profile: string) => { seeded.push(`${id}:${profile}`); } };
     await createNotebook(d, { name: 'Office' });
     const home = await createNotebook(d, { name: 'Home', profile: 'home' });
     expect(home.ok && home.value.profile).toBe('home');
-    expect(seeded).toEqual(['office']);
+    expect(seeded).toEqual(['office:work', 'home:home']);
   });
 
   it('changes a notebook\'s profile', async () => {

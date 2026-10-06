@@ -9,7 +9,7 @@ const item = (overrides: Partial<RelationItem>): RelationItem => ({
   kind: 'RELATED',
   direction: 'outgoing',
   label: 'Related to',
-  other: { entityType: 'TEAM', entityId: 't1', label: 'Payments', path: '/app/teams/t1' },
+  other: { entityType: 'GROUP', entityId: 't1', label: 'Payments', path: '/app/groups/t1' },
   note: null,
   createdAt: new Date(0),
   ...overrides
@@ -35,10 +35,10 @@ describe('groupRelations', () => {
 });
 
 describe('addRelation', () => {
-  const input = { fromType: 'PAGE', fromId: 'p1', toType: 'TEAM', toId: 't1', kind: 'DEPENDS_ON' } as const;
+  const input = { fromType: 'PAGE', fromId: 'p1', toType: 'GROUP', toId: 't1', kind: 'DEPENDS_ON' } as const;
   const labels = {
     page: { findUnique: vi.fn().mockResolvedValue({ title: 'Checkout' }) },
-    team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
+    group: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) }
   };
 
   it('treats RELATED in the other direction as the same link', async () => {
@@ -50,7 +50,7 @@ describe('addRelation', () => {
     const result = await addRelation(reg, { ...input, kind: 'RELATED' });
     expect(!result.ok && result.error.message).toContain('relation rel_2');
     expect(findUnique).toHaveBeenLastCalledWith(expect.objectContaining({
-      where: { fromType_fromId_toType_toId_kind: { fromType: 'TEAM', fromId: 't1', toType: 'PAGE', toId: 'p1', kind: 'RELATED' } }
+      where: { fromType_fromId_toType_toId_kind: { fromType: 'GROUP', fromId: 't1', toType: 'PAGE', toId: 'p1', kind: 'RELATED' } }
     }));
     expect(create).not.toHaveBeenCalled();
   });
@@ -82,7 +82,7 @@ describe('addRelation', () => {
     const reg = createTestRegistry({
       prisma: {
         page: { findUnique: vi.fn().mockResolvedValue(null) },
-        team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) },
+        group: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) },
         relation: { findUnique: vi.fn(), create }
       } as unknown as Registry['prisma']
     });
@@ -95,7 +95,7 @@ describe('addRelation', () => {
     const reg = createTestRegistry({
       prisma: {
         page: { findUnique: vi.fn().mockResolvedValue({ title: 'Checkout' }) },
-        team: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) },
+        group: { findUnique: vi.fn().mockResolvedValue({ name: 'Payments' }) },
         relation: { findUnique: vi.fn().mockResolvedValue({ id: 'rel_1' }), create: vi.fn() }
       } as unknown as Registry['prisma']
     });
@@ -125,7 +125,7 @@ describe('listRelationsForEntity', () => {
       prisma: {
         relation: {
           findMany: vi.fn().mockResolvedValue([
-            { id: 'rel_1', fromType: 'TODO', fromId: 'td1', toType: 'TEAM', toId: 't1', kind: 'RELATED', note: null, createdAt: new Date(0) }
+            { id: 'rel_1', fromType: 'TODO', fromId: 'td1', toType: 'GROUP', toId: 't1', kind: 'RELATED', note: null, createdAt: new Date(0) }
           ])
         },
         todo: {
@@ -134,7 +134,7 @@ describe('listRelationsForEntity', () => {
         }
       } as unknown as Registry['prisma']
     });
-    const result = await listRelationsForEntity(reg, 'TEAM', 't1');
+    const result = await listRelationsForEntity(reg, 'GROUP', 't1');
     expect(result.ok && result.value[0]?.items[0]?.other).toEqual({
       entityType: 'TODO',
       entityId: 'td1',

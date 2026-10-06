@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { relationChoices, relationEnd, toRelationInput } from '../relations';
 
-const team = { entityType: 'TEAM', entityId: 't1' } as const;
+const team = { entityType: 'GROUP', entityId: 't1' } as const;
 const project = { entityType: 'PROJECT', entityId: 'p1' } as const;
 
 describe('relationChoices', () => {
@@ -14,7 +14,7 @@ describe('relationChoices', () => {
   });
 
   it('adds the personal kinds when asked: parent from both sides, the rest once', () => {
-    expect(relationChoices({ personal: true }).map((c) => c.id)).toEqual([
+    expect(relationChoices(['PARTNER_OF', 'PARENT_OF', 'SIBLING_OF', 'FRIEND_OF']).map((c) => c.id)).toEqual([
       'RELATED:out', 'DEPENDS_ON:out', 'DEPENDS_ON:in',
       'PARTNER_OF:out', 'PARENT_OF:out', 'PARENT_OF:in', 'SIBLING_OF:out', 'FRIEND_OF:out'
     ]);
@@ -24,13 +24,13 @@ describe('relationChoices', () => {
 describe('toRelationInput', () => {
   it('points a forward choice from this entity to the target', () => {
     expect(toRelationInput('DEPENDS_ON:out', team, project)).toEqual({
-      fromType: 'TEAM', fromId: 't1', toType: 'PROJECT', toId: 'p1', kind: 'DEPENDS_ON'
+      fromType: 'GROUP', fromId: 't1', toType: 'PROJECT', toId: 'p1', kind: 'DEPENDS_ON'
     });
   });
 
   it('swaps the ends for an inverse choice', () => {
     expect(toRelationInput('DEPENDS_ON:in', team, project)).toEqual({
-      fromType: 'PROJECT', fromId: 'p1', toType: 'TEAM', toId: 't1', kind: 'DEPENDS_ON'
+      fromType: 'PROJECT', fromId: 'p1', toType: 'GROUP', toId: 't1', kind: 'DEPENDS_ON'
     });
   });
 
@@ -45,9 +45,9 @@ describe('toRelationInput', () => {
 
 describe('relationEnd', () => {
   it('accepts relatable types only', () => {
-    expect(relationEnd('TEAM', 't1')).toEqual(team);
+    expect(relationEnd('GROUP', 't1')).toEqual(team);
     expect(relationEnd('TODO', 'x1')).toEqual({ entityType: 'TODO', entityId: 'x1' });
     expect(relationEnd('LINK', 'l1')).toBeNull();
-    expect(relationEnd('TEAM', '')).toBeNull();
+    expect(relationEnd('GROUP', '')).toBeNull();
   });
 });

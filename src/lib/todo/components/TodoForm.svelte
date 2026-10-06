@@ -8,10 +8,9 @@
   import { submit } from '$lib/ui/submit';
   import { toRelationInput, type PickedLink } from '$shared/utils/relations';
   import TodoLinks from './TodoLinks.svelte';
-  import { profileFlags } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { entityTypeLabel } from '$shared/utils/entity';
-  import { profile } from '$lib/stores/profile';
   import { TODO_RECURRENCES, type TodoRecurrence } from '$shared/types/enums';
   import { RECURRENCE_LABELS } from '$shared/utils/recurrence';
 
@@ -80,7 +79,7 @@
       status = todo.status;
       pickedEntityType = todo.entityType;
       pickedEntityId = todo.entityId;
-      owner = { label: todo.entityLabel ?? `Missing ${entityTypeLabel(todo.entityType, $profile).toLowerCase()}`, path: todo.entityPath };
+      owner = { label: todo.entityLabel ?? `Missing ${entityTypeLabel(todo.entityType).toLowerCase()}`, path: todo.entityPath };
       targetDate = todo.targetDate ? new Date(todo.targetDate).toISOString().slice(0, 10) : '';
       recurrence = todo.recurrence ?? '';
       error = '';
@@ -171,7 +170,7 @@
     {#if owner}
       <dl class="meta-list">
         <div>
-          <dt>{entityTypeLabel(pickedEntityType, $profile)}</dt>
+          <dt>{entityTypeLabel(pickedEntityType)}</dt>
           <dd><a href={owner.path}>{owner.label}</a></dd>
         </div>
       </dl>
@@ -241,9 +240,8 @@
             <select {id} bind:value={pickedEntityType}>
               <option value="PROJECT">Project</option>
               <option value="PERSON">Person</option>
-              <option value="TEAM">Team</option>
-              {#if $profileFlags.departments}<option value="DEPARTMENT">Department</option>{/if}
-              {#if $profileFlags.goals}<option value="GOAL">Goal</option>{/if}
+              <option value="GROUP">Group</option>
+              {#if $model.has('goals')}<option value="GOAL">Goal</option>{/if}
               <option value="PAGE">Page</option>
             </select>
           {/snippet}

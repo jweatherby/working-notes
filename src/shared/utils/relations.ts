@@ -1,10 +1,9 @@
 // Adding a relation from an entity's own page: the kind is chosen as it reads
 // from that side ("Depends on" or "Needed by"), so an inverse choice swaps the ends.
 
-import { MANUAL_RELATION_KINDS, RELATABLE_TYPES, type RelatableType } from '$shared/types/enums';
+import { MANUAL_RELATION_KINDS, RELATABLE_TYPES, type ManualRelationKind, type RelatableType } from '$shared/types/enums';
 import { RELATION_LABELS, isPersonalKind, isSymmetricKind } from '$shared/types/relations';
 
-type ManualRelationKind = (typeof MANUAL_RELATION_KINDS)[number];
 
 export interface RelationEnd {
   readonly entityType: RelatableType;
@@ -40,11 +39,12 @@ export const relationEnd = (entityType: string, entityId: string): RelationEnd |
 
 /**
  * Kind options from this entity's side: kinds with no direction once, other kinds
- * forward (`KIND:out`) and inverse (`KIND:in`). The personal kinds are offered
- * only with `personal` (a person's page in a home notebook); they link two people.
+ * forward (`KIND:out`) and inverse (`KIND:in`). RELATED and DEPENDS_ON always; the
+ * personal kinds only when listed in `extra` (the notebook model's `relationKinds`,
+ * on a person's page), since they link two people.
  */
-export const relationChoices = (options: { readonly personal?: boolean } = {}): readonly RelationChoice[] =>
-  MANUAL_RELATION_KINDS.filter((kind) => options.personal || !isPersonalKind(kind)).flatMap((kind) =>
+export const relationChoices = (extra: readonly ManualRelationKind[] = []): readonly RelationChoice[] =>
+  MANUAL_RELATION_KINDS.filter((kind) => !isPersonalKind(kind) || extra.includes(kind)).flatMap((kind) =>
     isSymmetricKind(kind)
       ? [{ id: `${kind}:out`, name: RELATION_LABELS[kind].forward }]
       : [

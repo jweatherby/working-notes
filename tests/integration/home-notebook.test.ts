@@ -8,7 +8,13 @@ import { ensureDatabase } from '../../src/shared/db/bootstrap.server';
 import { createPageKind, deletePageKind, listPageKinds, updatePageKind } from '../../src/api/page-kind/operations';
 import { createPage, getPage, queryPages, updatePage } from '../../src/api/page/operations';
 import { createTodo, listTodosForEntity, updateTodo } from '../../src/api/attached/todo/operations';
-import { createPerson, getPerson } from '../../src/api/org/person/operations';
+import { createPerson, getPerson } from '../../src/api/person/operations';
+import { addGroupMember, createGroup } from '../../src/api/group/operations';
+import { seedGroupKinds } from '../../src/api/group-kind/operations';
+import { createCallerFactory } from '../../src/shared/trpc/init';
+import { appRouter } from '../../src/shared/trpc/router';
+import { createNotebookContext } from '../../src/shared/trpc/context.server';
+import { PERSONAL_MODULE } from '../../src/shared/modules/personal';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
 import { createProject } from '../../src/api/project/operations';
 import { OTHER_NOTEBOOK } from './test-notebooks';
@@ -110,9 +116,9 @@ describe('recurring todos', () => {
 describe('people at home', () => {
   it('keeps birthdays and personal relations, which link only people', async () => {
     const r = reg();
-    const sam = must(await createPerson(r, { name: 'Sam', birthday: '--05-03' }));
-    const alex = must(await createPerson(r, { name: 'Alex', birthday: '1990-01-31' }));
-    expect(must(await getPerson(r, sam.id)).birthday).toBe('--05-03');
+    const sam = must(await createPerson(r, { name: 'Sam', extensions: { personal: { birthday: '--05-03', knownAs: 'Sister' } } }));
+    const alex = must(await createPerson(r, { name: 'Alex', extensions: { personal: { birthday: '1990-01-31' } } }));
+    expect(must(await getPerson(r, sam.id)).extensions.personal).toEqual({ birthday: '--05-03', knownAs: 'Sister' });
 
     must(await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PERSON', toId: alex.id, kind: 'SIBLING_OF' }));
     const again = await addRelation(r, { fromType: 'PERSON', fromId: alex.id, toType: 'PERSON', toId: sam.id, kind: 'SIBLING_OF' });
@@ -125,5 +131,37 @@ describe('people at home', () => {
     const project = must(await createProject(r, { name: 'Garden' }));
     const wrong = await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PROJECT', toId: project.id, kind: 'FRIEND_OF' });
     expect(!wrong.ok && wrong.error.message).toContain('FRIEND_OF links two people');
+  });
+});
+
+describe('groups and modules', () => {
+  it('keeps a person in groups of several kinds, and one group of an exclusive kind', async () => {
+    const r = reg();
+    await seedGroupKinds(r, [...PERSONAL_MODULE.groupKinds, { key: 'HOUSE', name: 'House', plural: 'Houses', exclusive: true }]);
+    const kim = must(await createPerson(r, { name: 'Kim' }));
+    const family = must(await createGroup(r, { kind: 'FAMILY', name: 'Parks' }));
+    const friends = must(await createGroup(r, { kind: 'FRIENDS', name: 'Climbing crew' }));
+    const flat = must(await createGroup(r, { kind: 'HOUSE', name: 'Flat on Elm St' }));
+    const house = must(await createGroup(r, { kind: 'HOUSE', name: 'House on Oak Ave' }));
+    for (const g of [family, friends, flat]) must(await addGroupMember(r, g.id, kim.id));
+
+    const moved = must(await addGroupMember(r, house.id, kim.id));
+    expect(moved.replaced).toEqual(['Flat on Elm St']);
+    expect(must(await getPerson(r, kim.id)).groups.map((g) => [g.kindName, g.name])).toEqual([
+      ['Family', 'Parks'],
+      ['Friends', 'Climbing crew'],
+      ['House', 'House on Oak Ave']
+    ]);
+  });
+
+  it('refuses what a notebook\'s modules don\'t include', async () => {
+    const caller = async (profile: 'home' | 'work') =>
+      createCallerFactory(appRouter)(await createNotebookContext({ id: OTHER_NOTEBOOK, name: 'Other', profile, createdAt: '' }));
+    const home = await caller('home');
+    await expect(home.goal.create({ title: 'Run a marathon' })).rejects.toThrow(/Goals module/);
+    const orgPatch = await home.person.create({ name: 'Lee', extensions: { org: { title: 'CTO' } } });
+    expect(!orgPatch.ok && orgPatch.error.message).toContain('Org chart module');
+    const work = await caller('work');
+    expect((await work.goal.list({})).ok).toBe(true);
   });
 });

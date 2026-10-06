@@ -328,8 +328,7 @@
     const input = { id: entityId };
     switch (entityType) {
       case 'PERSON': return archived ? c.person.archive.mutate(input) : c.person.unarchive.mutate(input);
-      case 'TEAM': return archived ? c.team.archive.mutate(input) : c.team.unarchive.mutate(input);
-      case 'DEPARTMENT': return archived ? c.department.archive.mutate(input) : c.department.unarchive.mutate(input);
+      case 'GROUP': return archived ? c.group.archive.mutate(input) : c.group.unarchive.mutate(input);
       case 'PROJECT': return archived ? c.project.archive.mutate(input) : c.project.unarchive.mutate(input);
       case 'GOAL': return archived ? c.goal.archive.mutate(input) : c.goal.unarchive.mutate(input);
       case 'PAGE': return archived ? c.page.archive.mutate(input) : c.page.unarchive.mutate(input);

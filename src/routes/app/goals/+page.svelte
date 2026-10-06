@@ -99,8 +99,7 @@
       <select class="sm" bind:value={ownerTypeFilter} onchange={() => (ownerFilter = 'ALL')} aria-label="Filter by owner type">
         <option value="ALL">All owners</option>
         <option value="PERSON">Individuals</option>
-        <option value="TEAM">Teams</option>
-        <option value="DEPARTMENT">Departments</option>
+        <option value="GROUP">Groups</option>
       </select>
       {#if ownerTypeFilter !== 'ALL'}
         <select class="sm" bind:value={ownerFilter} aria-label="Filter by owner">

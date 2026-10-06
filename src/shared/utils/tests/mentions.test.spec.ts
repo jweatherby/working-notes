@@ -4,7 +4,7 @@ import { extractEntityLinks } from '../mentions';
 
 describe('parseEntityPath', () => {
   it('round-trips every entity type that has a page', () => {
-    for (const entityType of ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE', 'REPORT'] as const) {
+    for (const entityType of ['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE', 'REPORT'] as const) {
       expect(parseEntityPath(entityPath(entityType, 'abc_123'))).toEqual({ entityType, entityId: 'abc_123' });
     }
   });
@@ -31,7 +31,7 @@ describe('extractEntityLinks', () => {
     expect(extractEntityLinks(md)).toEqual([
       { entityType: 'PAGE', entityId: 'jira' },
       { entityType: 'PAGE', entityId: 'linear' },
-      { entityType: 'TEAM', entityId: 't1' }
+      { entityType: 'GROUP', entityId: 't1' }
     ]);
   });
 

@@ -14,7 +14,7 @@ The database is created on first use. Try it:
 
 ```bash
 remry help
-remry person.create --name "Alice Johnson" --title "Staff Engineer"
+remry person.create --name "Alice Johnson" --extensions '{"org":{"title":"Staff Engineer"}}'
 ```
 
 Dev and prod share the same notebooks in your app data folder. Integration tests use `./data/test`

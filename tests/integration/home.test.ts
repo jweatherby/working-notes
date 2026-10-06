@@ -2,7 +2,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { createTeam } from '../../src/api/org/team/operations';
+import { createTeam } from './org-helpers';
+import { notebookModel } from '../../src/shared/modules/model';
+
+const work = notebookModel('work');
+const home = notebookModel('home');
 import { createTodo } from '../../src/api/attached/todo/operations';
 import { addNote } from '../../src/api/attached/note/operations';
 import { listOpenTodos, listRecentUpdates } from '../../src/api/home/operations';
@@ -39,7 +43,7 @@ describe('home smoke', () => {
     const updates = await listRecentUpdates(reg);
     expect(updates.ok).toBe(true);
     if (!updates.ok) return;
-    expect(updates.value.some((u) => u.kind === 'TEAM' && u.id === team.value.id)).toBe(true);
+    expect(updates.value.some((u) => u.kind === 'GROUP' && u.id === team.value.id)).toBe(true);
     expect(updates.value.some((u) => u.kind === 'PERSON')).toBe(false);
     expect(updates.value.some((u) => u.kind === 'NOTE' && u.title === 'Private person note')).toBe(false);
 
@@ -50,10 +54,13 @@ describe('home smoke', () => {
     const p = reg.prisma;
 
     const lead = await p.person.create({ data: { name: 'Focus Lead' } });
-    await p.person.create({ data: { name: 'Focus Report', leadId: lead.id } });
-    const gone = await p.person.create({ data: { name: 'Focus Gone', leadId: lead.id, archivedAt: new Date() } });
-    const team = await p.team.create({ data: { name: 'Focus Team' } });
-    await p.teamMember.create({ data: { teamId: team.id, personId: lead.id } });
+    const report = await p.person.create({ data: { name: 'Focus Report' } });
+    const gone = await p.person.create({ data: { name: 'Focus Gone', archivedAt: new Date() } });
+    await p.orgPerson.createMany({ data: [{ personId: report.id, leadId: lead.id }, { personId: gone.id, leadId: lead.id }] });
+    const team = await p.group.create({ data: { name: 'Focus Team', kind: 'TEAM' } });
+    const family = await p.groupKind.upsert({ where: { key: 'FAMILY' }, create: { key: 'FAMILY', name: 'Family', plural: 'Families' }, update: {} });
+    const cousins = await p.group.create({ data: { name: 'Focus Cousins', kind: family.key } });
+    await p.groupMember.createMany({ data: [{ groupId: team.id, personId: lead.id }, { groupId: cousins.id, personId: lead.id }] });
     const project = await p.project.create({ data: { name: 'Focus Project', ownerType: 'PERSON', ownerId: lead.id } });
     const upstream = await p.project.create({ data: { name: 'Focus Upstream' } });
     await p.relation.create({ data: { fromType: 'PROJECT', fromId: project.id, toType: 'PROJECT', toId: upstream.id, kind: 'DEPENDS_ON' } });
@@ -64,36 +71,41 @@ describe('home smoke', () => {
     const labelsOf = (graph: Awaited<ReturnType<typeof getFocusGraph>>) =>
       graph.ok ? Object.fromEntries(graph.value.groups.map((g) => [g.label, g.nodes.map((n) => n.label)])) : null;
 
-    const person = await getFocusGraph(reg, { type: 'PERSON', id: lead.id });
+    // Every group, under its kind's name; the org module adds the reporting line.
+    const person = await getFocusGraph(reg, work, { type: 'PERSON', id: lead.id });
     expect(person.ok && person.value.focus?.label).toBe('Focus Lead');
     expect(labelsOf(person)).toEqual({
       'Direct reports': ['Focus Report'],
-      'Member of': ['Focus Team'],
+      Family: ['Focus Cousins'],
+      Team: ['Focus Team'],
       Owns: ['Focus Project']
     });
+    expect(person.ok && person.value.groups.map((g) => g.label).slice(0, 3)).toEqual(['Direct reports', 'Family', 'Team']);
+    // Without the org module (a home notebook) there are no reporting lines.
+    expect(Object.keys(labelsOf(await getFocusGraph(reg, home, { type: 'PERSON', id: lead.id })) ?? {})).toEqual(['Family', 'Team', 'Owns']);
     expect(labelsOf(person)?.['Direct reports']).not.toContain(gone.name);
 
     // Attached todos are not neighbours; goal–project links read as dependencies.
-    expect(labelsOf(await getFocusGraph(reg, { type: 'PROJECT', id: project.id }))).toEqual({
+    expect(labelsOf(await getFocusGraph(reg, work, { type: 'PROJECT', id: project.id }))).toEqual({
       'Owned by': ['Focus Lead'],
       'Depends on': ['Focus Upstream'],
       'Needed by': ['Focus Goal']
     });
-    expect(labelsOf(await getFocusGraph(reg, { type: 'TEAM', id: team.id }))).toEqual({ Members: ['Focus Lead'] });
+    expect(labelsOf(await getFocusGraph(reg, work, { type: 'GROUP', id: team.id }))).toEqual({ Members: ['Focus Lead'] });
 
     // One link further: the team's other member, the project's upstream and goal.
-    const second = await getFocusGraph(reg, { type: 'PERSON', id: lead.id });
+    const second = await getFocusGraph(reg, work, { type: 'PERSON', id: lead.id });
     const outer = second.ok ? Object.values(second.value.branches).flatMap((b) => b.nodes.map((n) => n.label)).sort() : null;
     expect(outer).toEqual(['Focus Goal', 'Focus Upstream']);
 
     // A home notebook leaves goals out of both rings.
-    const noGoals = await getFocusGraph(reg, { type: 'PROJECT', id: project.id }, { exclude: ['GOAL'] });
+    const noGoals = await getFocusGraph(reg, home, { type: 'PROJECT', id: project.id });
     expect(labelsOf(noGoals)).toEqual({ 'Owned by': ['Focus Lead'], 'Depends on': ['Focus Upstream'] });
 
-    const fallback = await getFocusGraph(reg);
+    const fallback = await getFocusGraph(reg, work);
     expect(fallback.ok && fallback.value.focus).not.toBeNull();
 
-    const missing = await getFocusGraph(reg, { type: 'TEAM', id: 'no-such-team' });
+    const missing = await getFocusGraph(reg, work, { type: 'GROUP', id: 'no-such-group' });
     expect(missing.ok).toBe(false);
   });
 });

@@ -11,8 +11,7 @@
   import type { NotebookSummary } from '$shared/types/notebook';
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
   import { ENTITY_SEARCH_SCOPES, entityPath, parseTypedIdValue } from '$shared/utils/entity';
-  import { features } from '$shared/settings/base/features';
-  import { labels, profileFlags, hiddenTypes } from '$lib/stores/profile';
+  import { model } from '$lib/stores/notebook-model';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import { switchNotebook } from '$lib/notebook/switch';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -24,20 +23,17 @@
   // One cache per notebook, so another notebook's entities never show up.
   const cacheKey = $derived(`quick-finder-cache:${$page.data.notebook?.id ?? ''}`);
 
+  // Every page the nav has, plus the ones it reaches through others (People and Groups under the Org Map).
   const ROUTES: readonly { readonly name: string; readonly href: string }[] = $derived([
-    { name: 'Home', href: '/app' },
-    { name: 'People', href: '/app/people' },
-    { name: $labels.teams, href: '/app/teams' },
-    ...($profileFlags.departments ? [{ name: 'Departments', href: '/app/departments' }] : []),
-    { name: 'Projects', href: '/app/projects' },
-    ...($profileFlags.goals ? [{ name: 'Goals', href: '/app/goals' }] : []),
-    { name: 'Wiki', href: '/app/wiki' },
-    { name: 'Page kinds', href: '/app/wiki/kinds' },
-    ...($profileFlags.orgMap ? [{ name: 'Org Map', href: '/app/orgmap' }] : []),
-    { name: 'Todos', href: '/app/todos' },
-    ...(features.reports ? [{ name: 'Reports', href: '/app/reports' }] : []),
-    { name: 'Branding', href: '/app/branding' },
-    { name: 'Notebooks', href: '/app/notebooks' }
+    ...$model.nav.map((item) => ({ name: item.label, href: item.href })),
+    ...[
+      { name: 'People', href: '/app/people' },
+      { name: 'Groups', href: '/app/groups' },
+      { name: 'Group kinds', href: '/app/groups/kinds' },
+      { name: 'Page kinds', href: '/app/wiki/kinds' },
+      { name: 'Branding', href: '/app/branding' },
+      { name: 'Notebooks', href: '/app/notebooks' }
+    ].filter((r) => !$model.nav.some((item) => item.href === r.href))
   ]);
 
   const COMMANDS = [
@@ -64,14 +60,14 @@
   let loading = $state(false);
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  // A home notebook leaves goals and departments out of the finder.
-  const scopes = $derived(ENTITY_SEARCH_SCOPES.filter((s) => !$hiddenTypes.has(s.id)));
+  // Types the notebook doesn't have (goals in a home notebook) are left out of the finder.
+  const scopes = $derived(ENTITY_SEARCH_SCOPES.filter((s) => $model.shows(s.id)));
 
   const rows = $derived(
     finderRows(query, {
       scopes,
       commands: COMMANDS,
-      entries: [...entities.filter((e) => !$hiddenTypes.has(e.scope)).map((e) => ({ ...e, meta: scopeLabel(e.scope) })), ...routeEntries, ...notebookEntries],
+      entries: [...entities.filter((e) => $model.shows(e.scope)).map((e) => ({ ...e, meta: scopeLabel(e.scope) })), ...routeEntries, ...notebookEntries],
       home: routeEntries
     })
   );

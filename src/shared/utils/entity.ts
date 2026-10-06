@@ -1,48 +1,21 @@
-import type { EntityType, RelatableType } from '$shared/types/enums';
-import type { NotebookProfile } from '$shared/types/notebook';
-import { navLabels } from '$shared/settings/base/profile';
+import { RELATABLE_TYPES, type EntityType, type RelatableType } from '$shared/types/enums';
+import { ENTITY_DESCRIPTORS, LEGACY_SEGMENTS } from '$shared/entities/descriptors';
 
 export interface EntityRef {
   readonly entityType: EntityType;
   readonly entityId: string;
 }
 
-// Entity types with their own page. entityPath and parseEntityPath both read
-// this table, so a link built from a path always parses back to its entity.
-const ROUTE_SEGMENTS: Readonly<Partial<Record<EntityType, string>>> = {
-  PERSON: 'people',
-  TEAM: 'teams',
-  DEPARTMENT: 'departments',
-  PROJECT: 'projects',
-  GOAL: 'goals',
-  PAGE: 'wiki',
-  REPORT: 'reports'
-};
-
-const SEGMENT_TYPES: ReadonlyMap<string, EntityType> = new Map(
-  (Object.entries(ROUTE_SEGMENTS) as [EntityType, string][]).map(([type, segment]) => [segment, type])
-);
-
-const TYPE_LABELS: Readonly<Record<EntityType, string>> = {
-  PERSON: 'Person',
-  TEAM: 'Team',
-  DEPARTMENT: 'Department',
-  PROJECT: 'Project',
-  GOAL: 'Goal',
-  PAGE: 'Page',
-  DOC: 'Doc',
-  NOTE: 'Note',
-  REPORT: 'Report',
-  TODO: 'Todo',
-  LINK: 'Link',
-  TAG: 'Tag',
-  COMMENT: 'Comment',
-  EMOJI: 'Emoji'
-};
+// entityPath and parseEntityPath both read the descriptors' segments, so a link
+// built from a path always parses back to its entity.
+const SEGMENT_TYPES: ReadonlyMap<string, EntityType> = new Map([
+  ...Object.values(ENTITY_DESCRIPTORS).flatMap((d): [string, EntityType][] => (d.segment ? [[d.segment, d.type]] : [])),
+  ...Object.entries(LEGACY_SEGMENTS)
+]);
 
 /** App route for a polymorphic entity reference. */
 export const entityPath = (entityType: EntityType, entityId: string): string => {
-  const segment = ROUTE_SEGMENTS[entityType];
+  const segment = ENTITY_DESCRIPTORS[entityType].segment;
   return segment ? `/app/${segment}/${entityId}` : `/app/${entityType.toLowerCase()}/${entityId}`;
 };
 
@@ -50,9 +23,8 @@ export const entityPath = (entityType: EntityType, entityId: string): string => 
 export const docPath = (entityType: EntityType, entityId: string, docId: string): string =>
   `${entityPath(entityType, entityId)}?doc=${encodeURIComponent(docId)}`;
 
-/** A home notebook calls a team a group (`navLabels`). */
-export const entityTypeLabel = (entityType: EntityType, profile: NotebookProfile = 'work'): string =>
-  entityType === 'TEAM' ? navLabels(profile).team : TYPE_LABELS[entityType];
+/** The type's singular name. A group's own page says its kind instead (Team, Family). */
+export const entityTypeLabel = (entityType: EntityType): string => ENTITY_DESCRIPTORS[entityType].singular;
 
 /** Whether docs can attach to this entity type. A wiki page is its own content, so it takes none. */
 export const acceptsDocs = (entityType: string): boolean => entityType !== 'PAGE';
@@ -72,14 +44,11 @@ export const parseTypedIdValue = <T extends string>(
 };
 
 /** Types an entity search offers (the add-link form, the ⌘K finder), in order, with the singular word `/` picks each by. */
-export const ENTITY_SEARCH_SCOPES: readonly { readonly id: RelatableType; readonly label: string; readonly slash: string }[] = [
-  { id: 'PERSON', label: 'Person', slash: 'person' },
-  { id: 'TEAM', label: 'Team', slash: 'team' },
-  { id: 'DEPARTMENT', label: 'Department', slash: 'department' },
-  { id: 'PROJECT', label: 'Project', slash: 'project' },
-  { id: 'GOAL', label: 'Goal', slash: 'goal' },
-  { id: 'PAGE', label: 'Wiki', slash: 'wiki' }
-];
+export const ENTITY_SEARCH_SCOPES: readonly { readonly id: RelatableType; readonly label: string; readonly slash: string }[] =
+  RELATABLE_TYPES.flatMap((type) => {
+    const d = ENTITY_DESCRIPTORS[type];
+    return d.slash ? [{ id: type, label: type === 'PAGE' ? 'Wiki' : d.singular, slash: d.slash }] : [];
+  });
 
 // The app only listens on loopback, so an absolute link to it uses one of these hosts.
 const LOOPBACK_ORIGIN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?=\/)/i;

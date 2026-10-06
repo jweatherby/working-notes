@@ -17,9 +17,9 @@ remry help todo.create        # one procedure's inputs, types and limits
 ## Calling a procedure
 
 ```bash
-remry person.create --name "Dana Park" --title "Senior Engineer"
-remry person.update --id <personId> --leadId <leadPersonId>
-remry team.addMember --teamId <teamId> --personId <personId>
+remry person.create --name "Dana Park" --extensions '{"org":{"title":"Senior Engineer"}}'
+remry person.update --id <personId> --extensions '{"org":{"leadId":"<leadPersonId>"}}'
+remry group.addMember --groupId <teamId> --personId <personId>
 remry note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
 remry todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> --priority 2
 ```
@@ -30,7 +30,7 @@ remry todo.create --title "Book 1:1" --entityType PERSON --entityId <personId> -
   The exit status is 1 if the call failed, if the input was invalid, or if the procedure does not
   exist. Each error message says what to fix.
 - **Each procedure types its own values.** `--priority 2` becomes a number, `--title 2024` stays a
-  string, and `--leadId null` clears the field.
+  string, and `null` clears a field (`--email null`).
 - **Pass long text in a file** with `--<field>-file <path>`, for example `--content-file review.md`.
   To pass a whole input at once, use `--input '{"...": ...}'`.
 - **A query needs at least one argument.** If you want them all, pass an optional flag, such as
@@ -58,19 +58,18 @@ To retire a notebook, move its folder out of `Notebooks/` yourself.
 
 | Entity | Notes |
 |---|---|
-| `PERSON` | `leadId` is the manager; one department, many teams |
-| `TEAM` | members are many-to-many |
-| `DEPARTMENT` | a person is in at most one |
+| `PERSON` | a name and email; each module adds fields under `extensions` (work: `title`, `leadId`; home: `birthday`, `knownAs`) |
+| `GROUP` | a team, department, family or friend group: its `kind` is one of the notebook's group kinds (`groupKind.list`); a person can be in many, but in only one group of an exclusive kind such as DEPARTMENT |
 | `PROJECT` | free-text `status`, sub-projects via `parentId`, three-point estimates, an owner |
-| `GOAL` | an owner (none = org-wide), `period` like `2026-H2`, `unit`/`baseline`/`target`, sub-goals, check-ins |
-| `PAGE` | the wiki: `kind` is `GENERAL`, `POLICY`, `PRODUCT`, `SOFTWARE` or `DECISION`, plus typed `properties` per kind |
+| `GOAL` | work notebooks only; an owner (none = the whole notebook), `period` like `2026-H2`, `unit`/`baseline`/`target`, sub-goals, check-ins |
+| `PAGE` | the wiki: `kind` is `GENERAL` or one of the notebook's page kinds (`pageKind.list`), with typed `properties` per kind |
 
 Notes, docs, todos, links, tags, comments and emoji attach to any of these through `entityType` +
 `entityId` — with one exception: **docs don't attach to a `PAGE`**, because a page's own `content`
 is the place for that material.
 
 ```bash
-remry goal.create --title "99.9% uptime" --ownerType DEPARTMENT --ownerId <eng> \
+remry goal.create --title "99.9% uptime" --ownerType GROUP --ownerId <engineering> \
   --period 2026-H2 --unit % --baseline 99.5 --target 99.9
 remry goal.checkIn --goalId <goalId> --value 99.7 --status AT_RISK --comment "Two brownouts."
 remry page.create --title Datadog --kind SOFTWARE \
@@ -96,15 +95,15 @@ error. `POLICY` takes `status`/`version`/`effectiveDate`/`reviewDate`; `PRODUCT`
 ownership relation.
 
 ```bash
-remry project.update --id <project> --ownerType TEAM --ownerId <team>
+remry project.update --id <project> --ownerType GROUP --ownerId <team>
 remry goal.addProject --goalId <goal> --projectId <project>
 ```
 
-**Relations.** `relation.add` links any two entities (people, teams, departments, projects, goals,
-pages, docs, notes and todos), with only two kinds on purpose:
+**Relations.** `relation.add` links any two entities (people, groups, projects, goals,
+pages, docs, notes and todos) as RELATED or DEPENDS_ON (and, between two people in a home notebook, partner, parent, sibling or friend):
 
 ```bash
-remry relation.add --fromType TEAM --fromId <platform> --toType PAGE --toId <datadog> \
+remry relation.add --fromType GROUP --fromId <platform> --toType PAGE --toId <datadog> \
   --note "Uses it for alerting"
 remry relation.add --fromType PROJECT --fromId <checkout> --toType PROJECT --toId <api> \
   --kind DEPENDS_ON

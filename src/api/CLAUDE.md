@@ -15,7 +15,9 @@ Split into sub-domain folders with the same shape once an operations file passes
 
 Current domains, grouped into folders:
 
-- `org/`: `person`, `team`, `department`
+- `person` (core fields only) and `group` + `group-kind` (groups of kinds the notebook defines)
+- `modules/`: what modules add to the core, today `person-extensions.ts` (org: title and lead in `org_person`; personal: birthday and known-as in `personal_person`)
+- `entities/`: `ports.ts`, each type's label and archive state, which `_entity-labels` and `_archive` dispatch to
 - `attached/` (named so, not `aux`, which Windows reserves as a device name; attach to any entity via `entityType` + `entityId`): `doc`, `note`, `todo`, `link`, `tag`, `comment`, `emoji`, `report`
 - flat (infra + top-level entities): `project`, `goal`, `page` (wiki pages), `page-kind` (each notebook's page kinds), `relation`, `branding`, `home`, `search`, `health`, `trpc-meta`
 - `notebook`: lists, creates and renames notebooks and sets the default. It works on the notebook store (`ctx.notebooks`), not on a database. See § Notebooks.
@@ -79,7 +81,7 @@ Goal and project owners (`ownerType` + `ownerId`) and both ends of a relation ar
 
 ## Deletes
 
-Nothing polymorphic has a foreign key, so a delete cleans up after itself. Every delete of a person, team, department, project, goal, page or report calls `planEntityCleanup(reg, type, id)` and runs its `ops` in the same `$transaction` as the delete:
+Nothing polymorphic has a foreign key, so a delete cleans up after itself. Every delete of a person, group, project, goal, page or report calls `planEntityCleanup(reg, type, id)` and runs its `ops` in the same `$transaction` as the delete:
 
 - delete the docs, notes, reports, todos, links, tag attachments, comments, emoji and page chat attached to the entity
 - delete relations at either end
@@ -89,7 +91,7 @@ Then call `removeFiles(reg, cleanup.files)` for the attached docs' PDFs once the
 
 ## Archiving
 
-Person, team, department, project, goal and page (`ARCHIVABLE_TYPES`) have a nullable `archivedAt`. The helpers are in `_archive.ts`:
+Person, group, project, goal and page (`ARCHIVABLE_TYPES`) have a nullable `archivedAt`. The helpers are in `_archive.ts`:
 
 - `setArchived(reg, type, id, archived)` backs every `<type>.archive` / `<type>.unarchive` procedure. It's idempotent and keeps the first archive date.
 - `archiveWhere(filter)` is the `where` fragment for a list's `archived` input (`exclude`, the default; `only`; `include`). Every top-level `list*` takes one.
@@ -131,7 +133,20 @@ A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (n
 
 There is no `notebook.delete`, on purpose: Claude should never be one tool call away from removing a whole notebook.
 
-`profile` (`work` or `home`; missing reads as `work`) is set by `notebook.create --profile` and `notebook.setProfile`. Operations never read it: it only steers the UI (`profileFeatures`, `navLabels`). `notebook.create` adds the work starter page kinds to a new work notebook through the `addStarterKinds` dep.
+`profile` (`work` or `home`; missing reads as `work`) is set by `notebook.create --profile` and `notebook.setProfile`, both of which seed the profile's group kinds (and the starter page kinds for work) through the `setUpModules` dep.
+
+## Modules
+
+A profile is a list of modules (`MODULES_BY_PROFILE`, `$shared/modules/model`): `work` = `org` + `goals`, `home` = `personal`. `notebookModel(profile)` merges the core with them: entity types shown, nav, person fields, relation kinds, group kind seeds, home widgets, and which module owns a route or procedure.
+
+- **The core never reads module data.** `person` has only name and email; a module's person fields live in its own table and go through its `PersonExtension` (`modules/person-extensions.ts`: `load`, `detail`, `update`, `structuralLinks`). `person.create/update --extensions '{"org":{…}}'` validates each module's patch (`personExtensionsPatch`, `$shared/types/person`), and the route refuses a module the notebook doesn't have.
+- **Gate:** `ctx.model` is on the tRPC context; `moduleGate` in `$shared/trpc/init.ts` throws FORBIDDEN, with `notInModelMessage`, for a procedure an absent module owns (`goal.*` in a home notebook). The CLI and MCP keep one tool list.
+- **Graph:** `getFocusGraph(reg, model, focus?)` leaves out types the model doesn't show and adds only active modules' person links. A person's groups appear under their kind's name (Team, Family).
+- **Adding a module:** a `ModuleDefinition` in `$shared/modules/`, its entry in `MODULES` and a profile; a person extension (and an extension table, its search triggers, and its columns in the `person_search` view) when it adds person fields.
+
+## Groups
+
+`group` rows have a `kind` (a key into `group_kind`: name, plural, `exclusive`). Teams and departments are groups of kind TEAM and DEPARTMENT (exclusive); old `/app/teams/<id>` and `/app/departments/<id>` links parse as GROUP and redirect. `group.addMember` in an exclusive kind removes the person's other membership of that kind in the same transaction and returns `replaced`. `groupKind.update --exclusive true` is refused while someone is in two groups of the kind; `groupKind.delete` while groups use it, unless `moveTo`.
 
 ## Page kinds and datasets
 

@@ -1,6 +1,7 @@
-// Every active person, team, department, project, goal and wiki page as a
-// search option: id `TYPE:id`, scope the type. The add-link form leaves out the
-// entity it's on; the ⌘K finder takes them all.
+// Every active person, group, project, goal and wiki page as a search option:
+// id `TYPE:id`, scope the type. The add-link form leaves out the entity it's on;
+// the ⌘K finder takes them all. A type the notebook doesn't have (goals in a home
+// notebook) is refused by its procedure and simply left out.
 
 import type { CreateTRPCClient } from '@trpc/client';
 import type { AppRouter } from './router';
@@ -17,13 +18,13 @@ export const loadEntityOptions = async (
   client: CreateTRPCClient<AppRouter>,
   exclude: { readonly entityType: RelatableType; readonly entityId: string } | null = null
 ): Promise<readonly EntityOption[]> => {
-  const [people, teams, departments, projects, goals, pages] = await Promise.all([
-    client.person.list.query(),
-    client.team.list.query(),
-    client.department.list.query(),
-    client.project.list.query(),
-    client.goal.list.query(),
-    client.page.list.query()
+  const none = () => null;
+  const [people, groups, projects, goals, pages] = await Promise.all([
+    client.person.list.query().catch(none),
+    client.group.list.query().catch(none),
+    client.project.list.query().catch(none),
+    client.goal.list.query().catch(none),
+    client.page.list.query().catch(none)
   ]);
   const options = (type: RelatableType, rows: readonly { readonly id: string; readonly name: string }[]) =>
     rows
@@ -32,11 +33,10 @@ export const loadEntityOptions = async (
   const titled = (rows: readonly { readonly id: string; readonly title: string }[]) =>
     rows.map((row) => ({ id: row.id, name: row.title }));
   return [
-    ...options('PERSON', people.ok ? people.value : []),
-    ...options('TEAM', teams.ok ? teams.value : []),
-    ...options('DEPARTMENT', departments.ok ? departments.value : []),
-    ...options('PROJECT', projects.ok ? projects.value : []),
-    ...options('GOAL', goals.ok ? titled(goals.value) : []),
-    ...options('PAGE', pages.ok ? titled(pages.value) : [])
+    ...options('PERSON', people?.ok ? people.value : []),
+    ...options('GROUP', groups?.ok ? groups.value : []),
+    ...options('PROJECT', projects?.ok ? projects.value : []),
+    ...options('GOAL', goals?.ok ? titled(goals.value) : []),
+    ...options('PAGE', pages?.ok ? titled(pages.value) : [])
   ];
 };

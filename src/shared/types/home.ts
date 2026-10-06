@@ -4,8 +4,7 @@ import type { RelatableType } from './enums';
 
 export const UPDATE_KINDS = [
   'PERSON',
-  'TEAM',
-  'DEPARTMENT',
+  'GROUP',
   'PROJECT',
   'GOAL',
   'PAGE',
@@ -46,7 +45,7 @@ export interface RecentUpdate {
 // what each of those links to in turn.
 
 /** Types that can sit in the middle of the focus graph. */
-export const FOCUS_TYPES = ['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE'] as const;
+export const FOCUS_TYPES = ['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE'] as const;
 
 export type FocusType = (typeof FOCUS_TYPES)[number];
 

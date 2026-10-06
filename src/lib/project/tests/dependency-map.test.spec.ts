@@ -8,7 +8,7 @@ const project = (id: string, team: string | null = null, status: string | null =
   name: id.toUpperCase(),
   status,
   parentId: null,
-  owner: team ? { type: 'TEAM', id: team, label: team, path: `/app/teams/${team}` } : null,
+  owner: team ? { type: 'GROUP', id: team, label: team, path: `/app/teams/${team}` } : null,
   childCount: 0,
   archivedAt: null
 });

@@ -2,8 +2,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { getRegistry } from '../../src/shared/registry.server';
-import { getPerson } from '../../src/api/org/person/operations';
-import { createTeam, addTeamMember, getTeam } from '../../src/api/org/team/operations';
+import { getPerson } from '../../src/api/person/operations';
+import { getGroup as getTeam } from '../../src/api/group/operations';
+import { createTeam, addTeamMember } from './org-helpers';
 import { addNote, listNotes } from '../../src/api/attached/note/operations';
 import { createTodo, listTodosForEntity } from '../../src/api/attached/todo/operations';
 import { createTag, attachTag, listTagsForEntity } from '../../src/api/attached/tag/operations';
@@ -22,7 +23,7 @@ describe('notebook smoke', () => {
     expect(detail.ok && detail.value.members.map((m) => m.personName)).toEqual(['Alice Johnson']);
 
     const person = await getPerson(reg, 'person_alice');
-    expect(person.ok && person.value.teamMemberships.map((t) => t.teamName)).toEqual(['Platform']);
+    expect(person.ok && person.value.groups.map((g) => g.name)).toEqual(['Platform']);
 
     await addNote(reg, 'PERSON', 'person_alice', { content: 'Wants to lead the Q4 migration.' });
     const notes = await listNotes(reg, 'PERSON', 'person_alice');

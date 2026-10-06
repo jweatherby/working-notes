@@ -1,29 +1,16 @@
-// Cross-domain helper (not a domain): archiving. An archived person, team,
-// department, project, goal or page keeps its history but leaves lists and the
+// Cross-domain helper (not a domain): archiving. An archived person, group,
+// project, goal or page keeps its history but leaves lists and the
 // home page, and it and everything attached to it are read-only until it's
 // unarchived. Deletes stay allowed.
 
 import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import { ARCHIVABLE_TYPES, type ArchivableType, type ArchiveFilter } from '$shared/types/enums';
+import { ENTITY_DESCRIPTORS } from '$shared/entities/descriptors';
+import { ARCHIVABLE_PORTS } from '$api/entities/ports';
 
-const PROCEDURE_PREFIX: Readonly<Record<ArchivableType, string>> = {
-  PERSON: 'person',
-  TEAM: 'team',
-  DEPARTMENT: 'department',
-  PROJECT: 'project',
-  GOAL: 'goal',
-  PAGE: 'page'
-};
-
-const TYPE_NAMES: Readonly<Record<ArchivableType, string>> = {
-  PERSON: 'Person',
-  TEAM: 'Team',
-  DEPARTMENT: 'Department',
-  PROJECT: 'Project',
-  GOAL: 'Goal',
-  PAGE: 'Page'
-};
+const procedurePrefix = (type: ArchivableType): string => type.toLowerCase();
+const typeName = (type: ArchivableType): string => ENTITY_DESCRIPTORS[type].singular;
 
 export const isArchivableType = (entityType: string): entityType is ArchivableType =>
   (ARCHIVABLE_TYPES as readonly string[]).includes(entityType);
@@ -36,37 +23,8 @@ export const archiveWhere = (
   return filter === 'only' ? { archivedAt: { not: null } } : { archivedAt: null };
 };
 
-interface ArchiveState {
-  readonly name: string;
-  readonly archivedAt: Date | null;
-}
-
-const loadState = async (
-  reg: Pick<Registry, 'prisma'>,
-  entityType: ArchivableType,
-  id: string
-): Promise<ArchiveState | null> => {
-  const where = { where: { id } };
-  const p = reg.prisma;
-  switch (entityType) {
-    case 'PERSON':
-      return p.person.findUnique({ ...where, select: { name: true, archivedAt: true } });
-    case 'TEAM':
-      return p.team.findUnique({ ...where, select: { name: true, archivedAt: true } });
-    case 'DEPARTMENT':
-      return p.department.findUnique({ ...where, select: { name: true, archivedAt: true } });
-    case 'PROJECT':
-      return p.project.findUnique({ ...where, select: { name: true, archivedAt: true } });
-    case 'GOAL': {
-      const row = await p.goal.findUnique({ ...where, select: { title: true, archivedAt: true } });
-      return row && { name: row.title, archivedAt: row.archivedAt };
-    }
-    case 'PAGE': {
-      const row = await p.page.findUnique({ ...where, select: { title: true, archivedAt: true } });
-      return row && { name: row.title, archivedAt: row.archivedAt };
-    }
-  }
-};
+const loadState = (reg: Pick<Registry, 'prisma'>, entityType: ArchivableType, id: string) =>
+  ARCHIVABLE_PORTS[entityType].state(reg, id);
 
 /**
  * Refuses a write to an archived entity, or to something attached to one.
@@ -82,8 +40,8 @@ export const ensureWritable = async (
   const state = await loadState(reg, entityType, entityId);
   if (!state?.archivedAt) return ok(undefined);
   return err(new Error(
-    `${TYPE_NAMES[entityType]} "${state.name}" is archived, so it and what's attached to it are read-only. ` +
-    `Unarchive it first with ${PROCEDURE_PREFIX[entityType]}.unarchive --id ${entityId}`
+    `${typeName(entityType)} "${state.name}" is archived, so it and what's attached to it are read-only. ` +
+    `Unarchive it first with ${procedurePrefix(entityType)}.unarchive --id ${entityId}`
   ));
 };
 
@@ -112,20 +70,11 @@ export const setArchived = async (
   archived: boolean
 ): Promise<Result<ArchiveResult>> => {
   const state = await loadState(reg, entityType, id);
-  if (!state) return err(new Error(`${TYPE_NAMES[entityType]} ${id} not found`));
+  if (!state) return err(new Error(`${typeName(entityType)} ${id} not found`));
   if (archived === (state.archivedAt !== null)) return ok({ id, archivedAt: state.archivedAt });
 
   const archivedAt = archived ? reg.now() : null;
-  const args = { where: { id }, data: { archivedAt } };
-  const p = reg.prisma;
-  switch (entityType) {
-    case 'PERSON': await p.person.update(args); break;
-    case 'TEAM': await p.team.update(args); break;
-    case 'DEPARTMENT': await p.department.update(args); break;
-    case 'PROJECT': await p.project.update(args); break;
-    case 'GOAL': await p.goal.update(args); break;
-    case 'PAGE': await p.page.update(args); break;
-  }
+  await ARCHIVABLE_PORTS[entityType].setArchivedAt(reg, id, archivedAt);
   return ok({ id, archivedAt });
 };
 
@@ -133,17 +82,8 @@ export type ArchivedIds = ReadonlyMap<ArchivableType, readonly string[]>;
 
 /** Ids of every archived entity, by type. For hiding what's attached to them. */
 export const loadArchivedIds = async (reg: Pick<Registry, 'prisma'>): Promise<ArchivedIds> => {
-  const archived = { where: { archivedAt: { not: null } }, select: { id: true } };
-  const p = reg.prisma;
-  const rows = await Promise.all([
-    p.person.findMany(archived),
-    p.team.findMany(archived),
-    p.department.findMany(archived),
-    p.project.findMany(archived),
-    p.goal.findMany(archived),
-    p.page.findMany(archived)
-  ]);
-  return new Map(ARCHIVABLE_TYPES.map((type, i) => [type, rows[i]!.map((r) => r.id)]));
+  const rows = await Promise.all(ARCHIVABLE_TYPES.map((type) => ARCHIVABLE_PORTS[type].archivedIds(reg)));
+  return new Map(ARCHIVABLE_TYPES.map((type, i) => [type, rows[i]!]));
 };
 
 interface AttachedToArchivedWhere {

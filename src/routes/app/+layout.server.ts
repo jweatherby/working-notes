@@ -9,9 +9,12 @@ import { getReadyRegistry } from '$shared/db/bootstrap.server';
 import { currentLicense } from '$shared/license/store.server';
 import { isProActive } from '$shared/types/license';
 import { getNotebookStore } from '$shared/notebooks/current.server';
+import { requireRoute } from '$lib/modules/guard';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, url }) => {
+  // Pages a module owns (/app/goals, /app/orgmap) aren't there in a notebook without it.
+  requireRoute(locals.notebook, url.pathname);
   const [defaultBranding, notebooks, license] = await Promise.all([
     getReadyRegistry(locals.notebook.id).then((reg) => getDefaultBranding(reg)),
     listNotebooks({ notebooks: getNotebookStore() }, locals.notebook.id),

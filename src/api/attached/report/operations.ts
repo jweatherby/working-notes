@@ -35,7 +35,7 @@ interface ReportRow {
   readonly branding: BrandingRow | null;
 }
 
-const NAMED_ENTITIES: ReadonlySet<EntityType> = new Set(['PERSON', 'TEAM', 'DEPARTMENT', 'PROJECT', 'GOAL', 'PAGE']);
+const NAMED_ENTITIES: ReadonlySet<EntityType> = new Set(['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE']);
 
 const toProfile = (b: BrandingRow): ReportBrandingProfile => ({
   id: b.id,
