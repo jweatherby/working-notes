@@ -1,4 +1,4 @@
-// The Model Context Protocol side of `wono mcp`: newline-delimited JSON-RPC 2.0
+// The Model Context Protocol side of `remry mcp`: newline-delimited JSON-RPC 2.0
 // over stdio, serving the notebook's procedures as tools. Pure: the tool call is
 // passed in, so this is tested without a database or a process.
 
@@ -82,8 +82,8 @@ export const toolFromProcedure = (procedure: ProcedureMeta): McpTool => {
   return {
     name: toolName(procedure.name),
     description: scoped
-      ? `${verb} one of the user's Wonos notebooks (the default unless you pass \`notebook\`): the \`${procedure.name}\` procedure, with the same inputs as \`wono ${procedure.name}\`.`
-      : `Manages the user's Wonos notebooks: the \`${procedure.name}\` procedure, with the same inputs as \`wono ${procedure.name}\`.`,
+      ? `${verb} one of the user's Remry notebooks (the default unless you pass \`notebook\`): the \`${procedure.name}\` procedure, with the same inputs as \`remry ${procedure.name}\`.`
+      : `Manages the user's Remry notebooks: the \`${procedure.name}\` procedure, with the same inputs as \`remry ${procedure.name}\`.`,
     inputSchema: base,
     annotations: { readOnlyHint: reads, destructiveHint: destructive, openWorldHint: false }
   };

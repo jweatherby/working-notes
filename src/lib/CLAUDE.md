@@ -13,7 +13,7 @@ src/lib/
 
 ## Data access
 
-Components call the API through `trpc()` from `$shared/trpc/client` (a browser singleton; pass SvelteKit's `fetch` in load functions). The client always sends the `x-wono` header; never call `/api/trpc` with a bare `fetch`.
+Components call the API through `trpc()` from `$shared/trpc/client` (a browser singleton; pass SvelteKit's `fetch` in load functions). The client always sends the `x-remry` header; never call `/api/trpc` with a bare `fetch`.
 
 There is no session, user or org anywhere in the UI, and nothing is gated on ownership: everything is editable.
 

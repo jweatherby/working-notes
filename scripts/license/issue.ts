@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Issues a Wonos Pro license key, good for a year by default:
+// Issues a Remry Pro license key, good for a year by default:
 //   bun run license:issue --name "Dana Park" --email dana@example.com [--months 12] [--from YYYY-MM-DD]
 //                         [--renews <license id>] [--key <private key path>]
 // --from starts the year on a given day; for a renewal, pass the old license's expiry day
@@ -41,5 +41,5 @@ if (!privateKey) {
 
 const id = option('renews') ?? randomUUID();
 const key = signLicenseKey({ v: 1, id, name, email, plan: 'pro', issued: period.value.issued, expires: period.value.expires }, privateKey);
-console.error(`Wonos Pro for ${name} <${email}>, ${period.value.issued} through ${period.value.expires} (license ${id})`);
+console.error(`Remry Pro for ${name} <${email}>, ${period.value.issued} through ${period.value.expires} (license ${id})`);
 console.log(key);

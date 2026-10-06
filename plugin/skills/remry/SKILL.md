@@ -1,11 +1,11 @@
 ---
-name: wonos
-description: Read and write the user's local Wonos notebooks (separate ones for work, home life and personal projects) — their org chart (people, reporting lines, teams, departments), friends and family and how they're related, projects and who owns them, goals with targets and check-ins, a library of pages of kinds the notebook defines (policies, software, expenses, recipes, places, home things, tax records) that work as filterable tables with totals, relations between any of these, notes, docs (with charts), recurring todos and tags. Use whenever the user talks about the people or teams they work with, friends, family, birthdays, who is whose partner, sibling or parent, bills, subscriptions, recurring expenses, taxes, recipes, places to visit, things around the house, personal projects, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, wants a PDF imported into their notes, or wants projects, issues, pages or people from Linear, Notion, Jira, GitHub or another tool brought into their notes.
+name: remry
+description: Read and write the user's local Remry notebooks (separate ones for work, home life and personal projects) — their org chart (people, reporting lines, teams, departments), friends and family and how they're related, projects and who owns them, goals with targets and check-ins, a library of pages of kinds the notebook defines (policies, software, expenses, recipes, places, home things, tax records) that work as filterable tables with totals, relations between any of these, notes, docs (with charts), recurring todos and tags. Use whenever the user talks about the people or teams they work with, friends, family, birthdays, who is whose partner, sibling or parent, bills, subscriptions, recurring expenses, taxes, recipes, places to visit, things around the house, personal projects, 1:1s, who reports to whom, org changes ("X moved to team Y", "Z is now X's manager"), projects, goals, OKRs, targets or progress ("we're at 80%", "that goal is at risk"), policies, products, the software or vendors they use, decisions, wiki pages, links between things ("link X to Y", "X depends on Y", "team X uses Y"), follow-ups or reminders about their work, asks you to "remember", "note", "log" or "track" something about their org, wants a report or write-up about a person, team, project or goal, wants a PDF imported into their notes, or wants projects, issues, pages or people from Linear, Notion, Jira, GitHub or another tool brought into their notes.
 ---
 
-# Wonos
+# Remry
 
-Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Wonos` on macOS, `%LOCALAPPDATA%\Wonos` on Windows, `~/.local/share/wonos` on Linux). Each notebook (their work, their home life, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
+Local notebooks on this computer, stored in SQLite in the user's app data folder (`~/Library/Application Support/Remry` on macOS, `%LOCALAPPDATA%\Remry` on Windows, `~/.local/share/remry` on Linux). Each notebook (their work, their home life, a side project) has its own people, projects, notes and files, and nothing is shared between notebooks. You are the main way data gets in. The user browses them in a web UI.
 
 On a phone, the user can reach you through Claude desktop's Remote Control: the session runs on their Mac, so these tools work the same way.
 
@@ -13,26 +13,26 @@ On a phone, the user can reach you through Claude desktop's Remote Control: the 
 
 The notebooks are reachable in two ways, and the app does **not** need to be running for either. Use whichever this session has; if it has both, use the MCP tools.
 
-**MCP tools** from the `wonos` server, in Claude desktop Chat, Cowork and Claude Code. Each tool is one procedure, with `_` in place of `.`: `person_list`, `person_create`, `note_add`. Pass inputs as the tool's arguments, and long text inline (there are no `-file` inputs). Every tool except `notebook_*` also takes an optional `notebook`. `backup_snapshot` and `backup_list` handle snapshots, `app_open` starts the app on this computer and returns its link, and `app_restart` stops and starts it again (when the user asks, or the app is stuck or out of date). From a terminal, `wono app restart` does the same.
+**MCP tools** from the `remry` server, in Claude desktop Chat, Cowork and Claude Code. Each tool is one procedure, with `_` in place of `.`: `person_list`, `person_create`, `note_add`. Pass inputs as the tool's arguments, and long text inline (there are no `-file` inputs). Every tool except `notebook_*` also takes an optional `notebook`. `backup_snapshot` and `backup_list` handle snapshots, `app_open` starts the app on this computer and returns its link, and `app_restart` stops and starts it again (when the user asks, or the app is stuck or out of date). From a terminal, `remry app restart` does the same.
 
-**In Cowork, or any other sandbox, use only the MCP tools.** The notebooks live on the user's Mac, in `~/Library/Application Support/Wonos`, which a sandbox can't see, and `wono` isn't installed there.
-- Never read, list, copy or `cat` that folder, open its database, or run `wono` from a sandbox.
+**In Cowork, or any other sandbox, use only the MCP tools.** The notebooks live on the user's Mac, in `~/Library/Application Support/Remry`, which a sandbox can't see, and `remry` isn't installed there.
+- Never read, list, copy or `cat` that folder, open its database, or run `remry` from a sandbox.
 - Don't ask the user to attach that folder to the session: the database must not be opened from the sandbox and the Mac at once.
-- If the Wonos tools (`notebook_list`, `person_list` and so on) aren't in this session, stop and tell the user. They need the current Wonos plugin installed, and the Cowork session started on their Mac, not in the cloud, with the Claude desktop app open. Local MCP servers don't run in cloud sessions.
+- If the Remry tools (`notebook_list`, `person_list` and so on) aren't in this session, stop and tell the user. They need the current Remry plugin installed, and the Cowork session started on their Mac, not in the cloud, with the Claude desktop app open. Local MCP servers don't run in cloud sessions.
 
-**The `wono` CLI**, only in a shell on the user's own Mac (for example Claude Code), not in a sandbox:
+**The `remry` CLI**, only in a shell on the user's own Mac (for example Claude Code), not in a sandbox:
 
 ```bash
-wono help                    # every procedure
-wono help person.create      # one procedure's inputs, types and limits
-wono person.list
-wono person.create --name "Dana Park" --title "Senior Engineer"
+remry help                    # every procedure
+remry help person.create      # one procedure's inputs, types and limits
+remry person.list
+remry person.create --name "Dana Park" --title "Senior Engineer"
 ```
 
-- If the shell says `wono: command not found`, use the first of these that exists, wherever this skill says `wono`:
-  - the app a release installed: `"$HOME/Library/Application Support/Wonos/App/current/wono"`
-  - a clone set up with `bun run setup`: `"$(cat "$HOME/Library/Application Support/Wonos/app-path")/bin/wono"` (on Linux, `"$(cat "${XDG_DATA_HOME:-$HOME/.local/share}/wonos/app-path")/bin/wono"`)
-- If neither the tools nor `wono` work, or they say Wonos isn't set up, tell the user what you saw and stop. Setup is theirs to do: install the Wonos plugin from a release, which includes the app. Don't look for the data folder yourself.
+- If the shell says `remry: command not found`, use the first of these that exists, wherever this skill says `remry`:
+  - the app a release installed: `"$HOME/Library/Application Support/Remry/App/current/remry"`
+  - a clone set up with `bun run setup`: `"$(cat "$HOME/Library/Application Support/Remry/app-path")/bin/remry"` (on Linux, `"$(cat "${XDG_DATA_HOME:-$HOME/.local/share}/remry/app-path")/bin/remry"`)
+- If neither the tools nor `remry` work, or they say Remry isn't set up, tell the user what you saw and stop. Setup is theirs to do: install the Remry plugin from a release, which includes the app. Don't look for the data folder yourself.
 - stdout is JSON. Most calls return `{"ok": true, "value": ...}` or `{"ok": false, "error": {"message": ...}}`. Exit code 1 means failure; read the message and fix the call.
 - Values are typed by each procedure's schema: `--priority 2` is a number, `--title 2024` stays a string, and `--leadId null` clears a field.
 - For long text, write it to a file and pass `--content-file path.md` (any `--<field>-file`). For awkward input, pass `--input '{"...": ...}'`.
@@ -55,7 +55,7 @@ Every call works on one notebook: the default, unless you name another.
 2. **Ask when it's ambiguous.** For example, two people match "Sam", or it's unclear which project a note belongs to.
 3. **Confirm before deleting anything**, and say exactly what will be removed. When someone leaves, or a team, project, goal or page is finished, offer to **archive** it instead: archiving keeps its history, and deleting removes everything attached to it.
 4. **Snapshot before bulk or destructive changes.** That means any delete, or more than about five writes in one go:
-   `backup_snapshot` with a reason like "before <what>", or `wono backup --force --reason "before <what>"`
+   `backup_snapshot` with a reason like "before <what>", or `remry backup --force --reason "before <what>"`
 5. **Report back by name.** Say "Added Dana Park to Platform, reporting to Alice Johnson", not ids.
 6. **Keep the user's words.** A note records what they said. Don't embellish or summarise it unless asked.
 7. **Link everything you created or changed.** End every reply that wrote something with a markdown link to each item, by name, so the user can open it: `[Dana Park](http://127.0.0.1:5173/app/people/<id>?notebook=<notebook id>)`. See **Links to what you changed** below.
@@ -131,7 +131,7 @@ Entity types for notes, docs, todos, links and tags: `PERSON TEAM DEPARTMENT PRO
 
 ## Searching
 
-**Full-text search is part of Wonos Pro.** Without an active license, `search.query` and `search.recall` return an error saying so. Then don't retry: answer with the list and get procedures instead (`person.get`, `note.list`, `todo.forEntity`, `doc.list`, `relation.forEntity`, and `<type>.list` to find ids by name), and mention once that full-text search comes with Pro. `license.status` says whether this computer has a license; if the user gives you a key (it starts `WN1.`), add it with `license.activate --key <key>`.
+**Full-text search is part of Remry Pro.** Without an active license, `search.query` and `search.recall` return an error saying so. Then don't retry: answer with the list and get procedures instead (`person.get`, `note.list`, `todo.forEntity`, `doc.list`, `relation.forEntity`, and `<type>.list` to find ids by name), and mention once that full-text search comes with Pro. `license.status` says whether this computer has a license; if the user gives you a key (it starts `WN1.`), add it with `license.activate --key <key>`.
 
 `search.query --q "<words>"` searches the text of everything in the notebook: names and titles, notes, docs, wiki pages (content and property values), todos, comments, links and goal check-in comments. Matches in names and titles rank first.
 
@@ -153,8 +153,8 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
-3. `wono doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wono doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then link the doc: the entity's page with `?doc=<doc id>&notebook=<notebook id>`. Its "Export PDF" button makes a PDF with the notebook's branding (Wonos Pro).
+3. `remry doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `remry doc.update --id <doc> --content-file /tmp/q3.md`.
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then link the doc: the entity's page with `?doc=<doc id>&notebook=<notebook id>`. Its "Export PDF" button makes a PDF with the notebook's branding (Remry Pro).
 
 ## Importing from other tools
 
@@ -177,17 +177,17 @@ Say what you did by name and source: "Updated the Checkout project from Linear (
 The app stores PDFs but can't read them; you do the reading.
 
 1. Read the PDF and convert it to clean markdown, keeping headings, lists and tables.
-2. `wono doc.add --entityType PERSON --entityId <id> --title "<title>"`, then `wono doc.update --id <doc> --content-file /tmp/doc.md`
-3. To keep the original attached, when you have a shell: `base64 -i file.pdf > /tmp/pdf.b64`, then `wono doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64`
+2. `remry doc.add --entityType PERSON --entityId <id> --title "<title>"`, then `remry doc.update --id <doc> --content-file /tmp/doc.md`
+3. To keep the original attached, when you have a shell: `base64 -i file.pdf > /tmp/pdf.b64`, then `remry doc.attachSource --docId <doc> --contentType application/pdf --dataBase64-file /tmp/pdf.b64`
 
-## Wonos Pro
+## Remry Pro
 
 A yearly license unlocks three things: full-text search (`search.*`), branding (creating or changing brandings, and the app wearing them), and PDF export of docs and wiki pages. Everything else is free. Without a license, those procedures return an error that says so, and the app shows a Pro notice; nothing stored is lost, and it all comes back with the license. The license belongs to the computer, so it covers every notebook. Never look for, edit or work around the license file.
 
 ## Backups
 
-Snapshots are kept on this computer in the `Backups` folder, per notebook. Every notebook that changed is snapshotted hourly while the Wonos tools or the app are running, and on macOS also by the LaunchAgent if the user ran `wono backup install`.
+Snapshots are kept on this computer in the `Backups` folder, per notebook. Every notebook that changed is snapshotted hourly while the Remry tools or the app are running, and on macOS also by the LaunchAgent if the user ran `remry backup install`.
 
-- A snapshot covers one notebook: `backup_snapshot` with `notebook`, or `wono backup --force --reason "<why>" --notebook <id>`. Snapshot the notebook you're about to change.
-- `backup_list` (with `notebook`), or `wono backup list` for every notebook
-- Restore **only when the user asks**, and only from a shell on the user's computer: `wono backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their computer, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Wonos/App/current/wono" backup restore <id|latest> --notebook <id>` on a Mac, or in PowerShell on Windows: `& "$env:LOCALAPPDATA\Wonos\App\current\wono.exe" backup restore <id|latest> --notebook <id>`.
+- A snapshot covers one notebook: `backup_snapshot` with `notebook`, or `remry backup --force --reason "<why>" --notebook <id>`. Snapshot the notebook you're about to change.
+- `backup_list` (with `notebook`), or `remry backup list` for every notebook
+- Restore **only when the user asks**, and only from a shell on the user's computer: `remry backup restore <id|latest> --notebook <id>`. The app must be closed. Restore snapshots the current data first, so it can be undone. In Cowork, or without a shell on their computer, give the user the command to run in Terminal: `"$HOME/Library/Application Support/Remry/App/current/remry" backup restore <id|latest> --notebook <id>` on a Mac, or in PowerShell on Windows: `& "$env:LOCALAPPDATA\Remry\App\current\remry.exe" backup restore <id|latest> --notebook <id>`.

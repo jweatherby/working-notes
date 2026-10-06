@@ -6,7 +6,7 @@ import { SEARCH_TYPES } from '$shared/types/search';
 import { searchNotebook, SEARCH_LIMITS } from './operations';
 import { recallEntity, RECALL_LIMITS } from './recall';
 
-// Full-text search and recall are Wonos Pro (src/api/_license.ts).
+// Full-text search and recall are Remry Pro (src/api/_license.ts).
 export const searchRouter = router({
   query: procedure
     .input(z.object({

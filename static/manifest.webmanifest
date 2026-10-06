@@ -1,7 +1,7 @@
 {
   "id": "/app",
-  "name": "Wonos",
-  "short_name": "Wonos",
+  "name": "Remry",
+  "short_name": "Remry",
   "description": "A local notebook for your org chart, projects, goals, wiki and notes.",
   "start_url": "/app",
   "scope": "/",

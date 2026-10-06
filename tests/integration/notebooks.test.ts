@@ -149,25 +149,25 @@ describe('notebooks', () => {
     expect(await migrateLayout({ dataDir, licensePublicKey: "" })).toEqual([]);
   });
 
-  it('moves the data from before the rename to Wonos, and refuses to start over in the old folder', async () => {
+  it('moves the data from before the rename to Remry (from Wonos), and refuses to start over in the old folder', async () => {
     const root = mkdtempSync(join(resolve('data/test'), 'rename-'));
-    const legacy = join(root, 'Working Notes');
-    const current = join(root, 'Wonos');
+    const legacy = join(root, 'Wonos');
+    const current = join(root, 'Remry');
     await migrateLayout({ dataDir: legacy, licensePublicKey: '' });
     const before = JSON.parse(readFileSync(join(legacy, 'settings.json'), 'utf8')) as { defaultNotebook: string };
 
-    expect(moveLegacyDataDir(legacy, current)).toBe(current);
+    expect(moveLegacyDataDir(legacy, current, 'Wonos')).toBe(current);
     expect(await migrateLayout({ dataDir: current, licensePublicKey: '' })).toEqual([]);
     expect(JSON.parse(readFileSync(join(current, 'settings.json'), 'utf8'))).toEqual(before);
     expect(existsSync(join(current, 'Notebooks', before.defaultNotebook, 'notebook.json'))).toBe(true);
 
-    await expect(migrateLayout({ dataDir: legacy, licensePublicKey: '' })).rejects.toThrow(/moved to the Wonos folder/);
+    await expect(migrateLayout({ dataDir: legacy, licensePublicKey: '' })).rejects.toThrow(/moved to the Remry folder/);
     expect(existsSync(join(legacy, 'Notebooks'))).toBe(false);
   });
 
   it.skipIf(process.platform === 'win32')('keeps using the old folder while an older process has a database open', async () => {
     const root = mkdtempSync(join(resolve('data/test'), 'rename-busy-'));
-    const legacy = join(root, 'Working Notes');
+    const legacy = join(root, 'Wonos');
     await migrateLayout({ dataDir: legacy, licensePublicKey: '' });
     const id = (JSON.parse(readFileSync(join(legacy, 'settings.json'), 'utf8')) as { defaultNotebook: string }).defaultNotebook;
     const db = join(legacy, 'Notebooks', id, 'working-notes.db');
@@ -175,7 +175,7 @@ describe('notebooks', () => {
     const holder = spawn(process.execPath, ['-e', `require('node:fs').openSync(${JSON.stringify(db)}, 'r'); console.log('open'); setTimeout(() => {}, 30000)`], { stdio: ['ignore', 'pipe', 'ignore'] });
     try {
       await new Promise((ready) => holder.stdout.once('data', ready));
-      expect(moveLegacyDataDir(legacy, join(root, 'Wonos'))).toBe(legacy);
+      expect(moveLegacyDataDir(legacy, join(root, 'Remry'), 'Wonos')).toBe(legacy);
       expect(existsSync(join(legacy, 'Notebooks', id))).toBe(true);
     } finally {
       holder.kill();

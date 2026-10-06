@@ -1,5 +1,5 @@
 {
-  "name": "wonos",
+  "name": "remry",
   "version": "0.11.3",
   "private": true,
   "type": "module",
@@ -31,7 +31,7 @@
     "desktop:dev": "cd desktop && tauri dev",
     "desktop:build": "cd desktop && tauri build",
     "icons": "bun scripts/icons/render.ts",
-    "wono": "bun cli/main.ts"
+    "remry": "bun cli/main.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

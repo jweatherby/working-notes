@@ -36,7 +36,7 @@ describe('verifyLicenseKey', () => {
   });
 
   it('refuses things that aren\'t keys, and signed payloads that aren\'t licenses', () => {
-    expect(verifyLicenseKey('hello', keys.publicKey, now).problem).toContain("isn't a Wonos license key");
+    expect(verifyLicenseKey('hello', keys.publicKey, now).problem).toContain("isn't a Remry license key");
     const odd = signLicenseKey({ ...payload, plan: 'free' } as unknown as LicensePayload, keys.privateKey);
     expect(verifyLicenseKey(odd, keys.publicKey, now).state).toBe('invalid');
   });
@@ -65,10 +65,10 @@ describe('daysLeft', () => {
 describe('lockedMessage', () => {
   it('says what to do, for each state', () => {
     expect(lockedMessage('search', { state: 'none', licensee: null, expires: null, daysLeft: null, problem: null }))
-      .toBe('Full-text search is part of Wonos Pro. Add a license key in the app (License) or with license.activate.');
+      .toBe('Full-text search is part of Remry Pro. Add a license key in the app (License) or with license.activate.');
     expect(lockedMessage('pdf-export', { state: 'expired', licensee: { name: 'Dana', email: 'd@x' }, expires: '2027-10-03', daysLeft: -2, problem: null }))
       .toContain('expired on 2027-10-03. Renew it');
     expect(lockedMessage('branding', { state: 'none', licensee: null, expires: null, daysLeft: null, problem: null }, 'app'))
-      .toBe('Branding is part of Wonos Pro. Add a license key on the License page.');
+      .toBe('Branding is part of Remry Pro. Add a license key on the License page.');
   });
 });

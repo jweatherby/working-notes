@@ -39,7 +39,7 @@ export const legacyDatabasePath = (s: ServerSettings): string => resolve(s.dataD
 export const legacyFilesDir = (s: ServerSettings): string => resolve(s.dataDir, 'files');
 
 /**
- * The migrations: next to the standalone binary (it sets WONO_MIGRATIONS_DIR), or in the
+ * The migrations: next to the standalone binary (it sets REMRY_MIGRATIONS_DIR), or in the
  * repo, since processes from a clone run from its root (the CLI chdirs there).
  */
-export const migrationsDir = (): string => process.env['WONO_MIGRATIONS_DIR'] || resolve('prisma', 'migrations');
+export const migrationsDir = (): string => process.env['REMRY_MIGRATIONS_DIR'] || resolve('prisma', 'migrations');

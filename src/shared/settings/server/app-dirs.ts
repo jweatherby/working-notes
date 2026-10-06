@@ -7,11 +7,13 @@ import { moveLegacyDataDir } from './legacy-data-dir';
 
 const { join } = posix;
 
-const APP_NAME = 'Wonos';
-const APP_SLUG = 'wonos';
-/** The names before the rename to Wonos. moveLegacyDataDir (legacy-data-dir.ts) moves the data from there. */
-const LEGACY_APP_NAME = 'Working Notes';
-const LEGACY_APP_SLUG = 'working-notes';
+const APP_NAME = 'Remry';
+const APP_SLUG = 'remry';
+/** Earlier names, newest first. moveLegacyDataDir (legacy-data-dir.ts) moves the data from there. */
+const LEGACY_APP_NAMES: readonly { readonly name: string; readonly slug: string }[] = [
+  { name: 'Wonos', slug: 'wonos' },
+  { name: 'Working Notes', slug: 'working-notes' }
+];
 
 export interface AppDirsHost {
   readonly platform: NodeJS.Platform;
@@ -22,8 +24,8 @@ export interface AppDirsHost {
 const currentHost = (): AppDirsHost => ({ platform: platform(), home: homedir(), env: process.env });
 
 /**
- * Pure. `~/Library/Application Support/Wonos` on macOS,
- * `%LOCALAPPDATA%\Wonos` on Windows (local, not roaming: a SQLite database
+ * Pure. `~/Library/Application Support/Remry` on macOS,
+ * `%LOCALAPPDATA%\Remry` on Windows (local, not roaming: a SQLite database
  * must not follow a roaming profile), and the XDG data dir elsewhere.
  */
 export const dataDirFor = (host: AppDirsHost, name = APP_NAME, slug = APP_SLUG): string => {
@@ -32,10 +34,11 @@ export const dataDirFor = (host: AppDirsHost, name = APP_NAME, slug = APP_SLUG):
   return join(host.env['XDG_DATA_HOME'] || join(host.home, '.local', 'share'), slug);
 };
 
-/** Pure. Where the data lived before the rename to Wonos. */
-export const legacyDataDirFor = (host: AppDirsHost): string => dataDirFor(host, LEGACY_APP_NAME, LEGACY_APP_SLUG);
+/** Pure. Where the data lived under each earlier name, newest first. */
+export const legacyDataDirsFor = (host: AppDirsHost): readonly { readonly name: string; readonly dir: string }[] =>
+  LEGACY_APP_NAMES.map(({ name, slug }) => ({ name, dir: dataDirFor(host, name, slug) }));
 
-/** Pure. `~/Library/Logs/Wonos` on macOS; `<data dir>/Logs` on Windows; `<data dir>/logs` elsewhere. */
+/** Pure. `~/Library/Logs/Remry` on macOS; `<data dir>/Logs` on Windows; `<data dir>/logs` elsewhere. */
 export const logsDirFor = (host: AppDirsHost): string => {
   if (host.platform === 'darwin') return join(host.home, 'Library', 'Logs', APP_NAME);
   if (host.platform === 'win32') return win32.join(dataDirFor(host), 'Logs');
@@ -44,9 +47,19 @@ export const logsDirFor = (host: AppDirsHost): string => {
 
 let resolvedDataDir: string | undefined;
 
-/** The data directory, after moving it from its name before the rename, once per process. */
+/** Moves the data from each earlier folder in turn; stops at one that can't move yet and uses it. */
+const moveFromLegacyDirs = (host: AppDirsHost): string => {
+  const current = dataDirFor(host);
+  for (const legacy of legacyDataDirsFor(host)) {
+    const used = moveLegacyDataDir(legacy.dir, current, legacy.name);
+    if (used !== current) return used;
+  }
+  return current;
+};
+
+/** The data directory, after moving it from its earlier names, once per process. */
 export const appDataDir = (): string => {
-  resolvedDataDir ??= moveLegacyDataDir(legacyDataDirFor(currentHost()), dataDirFor(currentHost()));
+  resolvedDataDir ??= moveFromLegacyDirs(currentHost());
   return resolvedDataDir;
 };
 

@@ -8,9 +8,9 @@ import { dirname, join, resolve } from 'node:path';
 import { appDataDir, appLogsDir } from '$shared/settings/server/app-dirs';
 import { ok, err, type Result } from '$shared/utils/result';
 
-export const LABEL = 'dev.jweatherby.wonos.backup';
-/** The agent's label before the rename to Wonos. */
-export const LEGACY_LABEL = 'dev.jweatherby.working-notes.backup';
+export const LABEL = 'dev.jweatherby.remry.backup';
+/** The agent's labels before the renames to Remry and Wonos. */
+export const LEGACY_LABELS: readonly string[] = ['dev.jweatherby.wonos.backup', 'dev.jweatherby.working-notes.backup'];
 
 /** What the LaunchAgent runs. */
 export interface BackupCommand {
@@ -84,9 +84,9 @@ export const plistPath = (label = LABEL): string => join(homedir(), 'Library', '
 /** What this process would schedule: its release binary (through App/current), or this clone's backup script. */
 export const thisBackupCommand = (): BackupCommand => {
   // A release runs through App/current, which the plugin shim repoints on every update.
-  const current = join(appDataDir(), 'App', 'current', process.platform === 'win32' ? 'wono.exe' : 'wono');
+  const current = join(appDataDir(), 'App', 'current', process.platform === 'win32' ? 'remry.exe' : 'remry');
   return backupCommand({
-    standaloneBinary: process.env['WONO_STANDALONE'] === '1' ? (existsSync(current) ? current : process.execPath) : null,
+    standaloneBinary: process.env['REMRY_STANDALONE'] === '1' ? (existsSync(current) ? current : process.execPath) : null,
     dataDir: appDataDir(),
     // The Homebrew symlink survives `brew upgrade`; process.execPath points into a versioned Cellar folder.
     bunPath: Bun.which('bun') ?? process.execPath,
@@ -102,7 +102,7 @@ export const installAgent = async (
   command: BackupCommand,
   logFile: string
 ): Promise<Result<{ readonly plist: string }>> => {
-  if (platform() !== 'darwin') return err(new Error('The backup LaunchAgent is macOS-only; schedule `wono backup` with cron instead'));
+  if (platform() !== 'darwin') return err(new Error('The backup LaunchAgent is macOS-only; schedule `remry backup` with cron instead'));
 
   const plist = plistPath();
   await mkdir(join(homedir(), 'Library', 'LaunchAgents'), { recursive: true });
@@ -123,12 +123,13 @@ export const uninstallAgent = async (label = LABEL): Promise<Result<{ readonly r
 };
 
 /**
- * Replaces the agent from before the rename to Wonos, which runs an old binary against
- * the old data folder, with this one. Nothing to do if there's none.
+ * Replaces the agents from before the renames, which run an old binary against the old
+ * data folder, with this one. Nothing to do if there's none.
  */
 export const replaceLegacyAgent = async (): Promise<Result<{ readonly replaced: boolean }>> => {
-  if (platform() !== 'darwin' || !existsSync(plistPath(LEGACY_LABEL))) return ok({ replaced: false });
-  await uninstallAgent(LEGACY_LABEL);
+  const legacy = LEGACY_LABELS.filter((label) => existsSync(plistPath(label)));
+  if (platform() !== 'darwin' || legacy.length === 0) return ok({ replaced: false });
+  for (const label of legacy) await uninstallAgent(label);
   const installed = await installAgent(thisBackupCommand(), backupLogFile());
   return installed.ok ? ok({ replaced: true }) : installed;
 };

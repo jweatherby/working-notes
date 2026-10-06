@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// What bin/wono does, for a clone on a machine that can't run that shell script
-// (Windows, through plugin/scripts/wono.cmd):
+// What bin/remry does, for a clone on a machine that can't run that shell script
+// (Windows, through plugin/scripts/remry.cmd):
 //   bun cli/clone-entry.ts <procedure> [--key value] | mcp | backup [args] | app [restart]
 
 import { spawnSync } from 'node:child_process';

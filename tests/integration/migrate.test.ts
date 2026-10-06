@@ -12,7 +12,7 @@ const quiet = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {}
 const onDisk = readdirSync('prisma/migrations', { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
 
 const freshDb = () => {
-  const dir = mkdtempSync(join(tmpdir(), 'wono-migrate-'));
+  const dir = mkdtempSync(join(tmpdir(), 'remry-migrate-'));
   return { dir, client: createClient({ url: `file:${join(dir, 'db.sqlite')}` }) };
 };
 

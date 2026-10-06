@@ -1,4 +1,4 @@
-// License ids that no longer unlock Wonos Pro: refunded or charged back.
+// License ids that no longer unlock Remry Pro: refunded or charged back.
 // Each release carries this list, so a revoked key stops working once the app
 // updates; nothing is ever looked up online. Ids are random UUIDs, never names or
 // emails, so the list is safe in a public repo.

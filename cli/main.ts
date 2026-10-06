@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
-// Wonos CLI. Calls any tRPC procedure in-process against a local
+// Remry CLI. Calls any tRPC procedure in-process against a local
 // notebook, with the router's own validation. The app does not need to be running.
-//   wono help                        list procedures
-//   wono help <procedure>            show a procedure's inputs
-//   wono <procedure> [--key value]   call it; the JSON result goes to stdout
-//   --notebook <id>                    on any call: use that notebook (else WONO_NOTEBOOK, else the default)
-// See cli/args.ts for --<key>-file, --input and value coercion, and cli/mcp.ts for `wono mcp`.
+//   remry help                        list procedures
+//   remry help <procedure>            show a procedure's inputs
+//   remry <procedure> [--key value]   call it; the JSON result goes to stdout
+//   --notebook <id>                    on any call: use that notebook (else REMRY_NOTEBOOK, else the default)
+// See cli/args.ts for --<key>-file, --input and value coercion, and cli/mcp.ts for `remry mcp`.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -15,7 +15,7 @@ import type { JsonSchema } from './args';
 // binary has no repo and finds its migrations itself. Files named in arguments
 // resolve from wherever the command was run.
 const callerCwd = process.cwd();
-if (!process.env['WONO_STANDALONE']) process.chdir(resolve(import.meta.dir, '..'));
+if (!process.env['REMRY_STANDALONE']) process.chdir(resolve(import.meta.dir, '..'));
 
 // App logs go to stderr so stdout carries only the JSON result.
 console.log = console.info = console.debug = (...args: unknown[]): void => console.error(...args);
@@ -32,13 +32,13 @@ const describeType = (prop: JsonSchema): string => {
 
 const printHelp = (name: string | undefined): number => {
   if (!name) {
-    console.error('Procedures (wono help <procedure> for inputs):\n');
+    console.error('Procedures (remry help <procedure> for inputs):\n');
     for (const p of procedures) {
       const props = Object.keys((p.inputSchema as JsonSchema).properties ?? {});
       process.stdout.write(`  ${p.name} (${p.type})${props.length ? `  --${props.join(' --')}` : ''}\n`);
     }
-    console.error('\nNotebooks: every call uses the default notebook unless you add --notebook <id> (or set WONO_NOTEBOOK). wono notebook.list shows them.');
-    console.error('Also: wono backup [list | restore <id|latest> | --force --reason <why> | install | uninstall] [--notebook <id>], wono app (the UI), wono app restart, and wono mcp (the MCP server).');
+    console.error('\nNotebooks: every call uses the default notebook unless you add --notebook <id> (or set REMRY_NOTEBOOK). remry notebook.list shows them.');
+    console.error('Also: remry backup [list | restore <id|latest> | --force --reason <why> | install | uninstall] [--notebook <id>], remry app (the UI), remry app restart, and remry mcp (the MCP server).');
     return 0;
   }
   const meta = procedures.find((p) => p.name === name);
@@ -72,13 +72,13 @@ const run = async (): Promise<number> => {
 
   const meta = procedures.find((p) => p.name === command);
   if (!meta) {
-    console.error(`Unknown procedure: ${command}. Run \`wono help\` to list them.`);
+    console.error(`Unknown procedure: ${command}. Run \`remry help\` to list them.`);
     return 1;
   }
 
   const input = coerceArgs(rest, meta.inputSchema, (path) => readFileSync(resolve(callerCwd, path), 'utf8'));
   if (!input.ok) {
-    console.error(`Error: ${input.error.message}. Run \`wono help ${command}\` for its inputs.`);
+    console.error(`Error: ${input.error.message}. Run \`remry help ${command}\` for its inputs.`);
     return 1;
   }
 

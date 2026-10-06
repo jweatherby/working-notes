@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// Makes the signing keypair for Wonos Pro licenses. Run once, by the seller:
+// Makes the signing keypair for Remry Pro licenses. Run once, by the seller:
 //   bun run license:keygen [--out <private key path>]
-// The private key goes outside the repo (default ~/.wonos-license/private.pem,
+// The private key goes outside the repo (default ~/.remry-license/private.pem,
 // readable only by you) and must never be committed: anyone with it can issue keys.
 // The public key replaces src/shared/license/public-key.ts, so commit that file and
 // release; keys issued with an older private key stop working in the new release.

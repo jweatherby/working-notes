@@ -1,5 +1,5 @@
-// Moving the data directory from where it was before the rename to Wonos
-// (`Working Notes`, or `working-notes` on Linux) to where it is now.
+// Moving the data directory from where it was under an earlier name (`Wonos`, and before
+// that `Working Notes`; `wonos` and `working-notes` on Linux) to where it is now.
 // Relative imports only — prisma.config.ts and scripts load this outside SvelteKit.
 //
 // Every move is a rename within one disk, so nothing is copied or deleted. App/ stays
@@ -13,7 +13,9 @@ import { join } from 'node:path';
 /** Left in the old directory. */
 const STAYS = new Set(['App', '.notebooks.lock']);
 
-export const MOVED_NOTE = 'MOVED-TO-WONOS.txt';
+export const MOVED_NOTE = 'MOVED-TO-REMRY.txt';
+/** The notes earlier renames left behind, which stay where they are. */
+export const EARLIER_MOVED_NOTES: readonly string[] = ['MOVED-TO-WONOS.txt'];
 
 /**
  * Pure. What to move: nothing unless the old directory has notebooks and the new one
@@ -23,7 +25,7 @@ export const MOVED_NOTE = 'MOVED-TO-WONOS.txt';
  */
 export const planLegacyMove = (legacyEntries: readonly string[], currentEntries: readonly string[]): readonly string[] => {
   if (!legacyEntries.includes('Notebooks') || currentEntries.includes('Notebooks')) return [];
-  const rest = legacyEntries.filter((e) => e !== 'Notebooks' && e !== MOVED_NOTE && !STAYS.has(e) && !currentEntries.includes(e));
+  const rest = legacyEntries.filter((e) => e !== 'Notebooks' && e !== MOVED_NOTE && !EARLIER_MOVED_NOTES.includes(e) && !STAYS.has(e) && !currentEntries.includes(e));
   return ['Notebooks', ...[...rest].sort()];
 };
 
@@ -46,18 +48,19 @@ const databasesInUse = (legacy: string): boolean =>
   });
 
 /**
- * Moves the data from `legacy` to `current` if it's still there, and returns the
- * directory to use: `current`, or `legacy` while the move can't happen yet (an older
- * app or MCP server still has a database open), so nothing is lost meanwhile.
+ * Moves the data from `legacy` (the folder of `oldName`, such as Wonos) to `current` if
+ * it's still there, and returns the directory to use: `current`, or `legacy` while the
+ * move can't happen yet (an older app or MCP server still has a database open), so
+ * nothing is lost meanwhile.
  */
-export const moveLegacyDataDir = (legacy: string, current: string): string => {
+export const moveLegacyDataDir = (legacy: string, current: string, oldName: string): string => {
   const plan = planLegacyMove(entries(legacy), entries(current));
   if (plan.length === 0) return current;
 
   // An older app that was just asked to stop may take a moment to let go.
   for (let attempt = 0; attempt < 4 && databasesInUse(legacy); attempt++) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
   if (databasesInUse(legacy)) {
-    console.error(`Working Notes is now Wonos, and its data moves to ${current} once nothing older uses it. Quit the Working Notes app and restart Claude to finish.`);
+    console.error(`${oldName} is now Remry, and its data moves to ${current} once nothing older uses it. Quit the ${oldName} app and restart Claude to finish.`);
     return legacy;
   }
 
@@ -68,7 +71,7 @@ export const moveLegacyDataDir = (legacy: string, current: string): string => {
     } catch (error) {
       // Another process starting at the same time may have just moved it.
       if (entry === 'Notebooks' && !existsSync(join(current, 'Notebooks'))) {
-        console.error(`Working Notes is now Wonos, but its data couldn't move to ${current} yet (${(error as Error).message}). Quit the Working Notes app and restart Claude to finish.`);
+        console.error(`${oldName} is now Remry, but its data couldn't move to ${current} yet (${(error as Error).message}). Quit the ${oldName} app and restart Claude to finish.`);
         return legacy;
       }
       if (existsSync(join(legacy, entry))) console.error(`Couldn't move ${entry} to ${current}: ${(error as Error).message}`);
@@ -77,11 +80,11 @@ export const moveLegacyDataDir = (legacy: string, current: string): string => {
   try {
     writeFileSync(
       join(legacy, MOVED_NOTE),
-      `Working Notes is now Wonos, and your notebooks, backups and settings are in\n${current}\n\nApp/ holds older versions of the app. Once Wonos is working, you can delete this folder.\n`
+      `${oldName} is now Remry, and your notebooks, backups and settings are in\n${current}\n\nApp/ holds older versions of the app. Once Remry is working, you can delete this folder.\n`
     );
   } catch {
     // Only a note.
   }
-  console.error(`Working Notes is now Wonos: moved your data to ${current}.`);
+  console.error(`${oldName} is now Remry: moved your data to ${current}.`);
   return current;
 };

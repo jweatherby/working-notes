@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Wonos backups. Each notebook's snapshots stay on this computer in <data dir>/Backups/<notebook>.
+// Remry backups. Each notebook's snapshots stay on this computer in <data dir>/Backups/<notebook>.
 // The MCP server and the app also take them hourly by themselves (scripts/backup/schedule.ts).
 //   bun run backup                          snapshot every notebook whose data changed (what the hourly LaunchAgent runs)
 //   bun run backup --force [--reason text]  snapshot even if unchanged
@@ -16,7 +16,7 @@ import type { NotebookInfo } from '$shared/types/notebook';
 import { ok, err, type Result } from '$shared/utils/result';
 import { createSnapshot, listSnapshots } from './snapshot';
 import { restoreSnapshot } from './restore';
-import { LABEL, LEGACY_LABEL, backupLogFile, installAgent, thisBackupCommand, uninstallAgent } from './launchd';
+import { LABEL, LEGACY_LABELS, backupLogFile, installAgent, thisBackupCommand, uninstallAgent } from './launchd';
 import { runBackupsIfDue, withBackupLock } from './schedule';
 
 const args = process.argv.slice(2);
@@ -48,12 +48,12 @@ const main = async (): Promise<number> => {
         console.error(notebooks.error.message);
         return 1;
       }
-      const scheduled = process.env.XPC_SERVICE_NAME === LABEL || process.env.XPC_SERVICE_NAME === LEGACY_LABEL;
+      const scheduled = [LABEL, ...LEGACY_LABELS].includes(process.env.XPC_SERVICE_NAME ?? '');
       if (scheduled && !hasFlag('notebook') && !hasFlag('force')) {
         // The LaunchAgent shares the hour with the MCP server and the app: whoever comes first takes it.
         const result = await runBackupsIfDue();
         if (!result) {
-          console.log(`${stamp()} skipped: this hour's backup was already taken, or is being taken, by another Wonos process`);
+          console.log(`${stamp()} skipped: this hour's backup was already taken, or is being taken, by another Remry process`);
           return 0;
         }
         for (const created of result.created) console.log(`${stamp()} created ${created}`);
@@ -84,7 +84,7 @@ const main = async (): Promise<number> => {
         return failed ? 1 : 0;
       });
       if (ran === null) {
-        console.error('Another Wonos process is taking a backup. Try again in a minute.');
+        console.error('Another Remry process is taking a backup. Try again in a minute.');
         return 1;
       }
       return ran;
@@ -131,7 +131,7 @@ const main = async (): Promise<number> => {
       return 0;
     }
     case 'install': {
-      await uninstallAgent(LEGACY_LABEL);
+      for (const label of LEGACY_LABELS) await uninstallAgent(label);
       const logFile = backupLogFile();
       const command = thisBackupCommand();
       const result = await installAgent(command, logFile);
@@ -144,7 +144,7 @@ const main = async (): Promise<number> => {
     }
     case 'uninstall': {
       await uninstallAgent();
-      await uninstallAgent(LEGACY_LABEL);
+      for (const label of LEGACY_LABELS) await uninstallAgent(label);
       console.log('Hourly backups removed. Existing snapshots were left in place.');
       return 0;
     }

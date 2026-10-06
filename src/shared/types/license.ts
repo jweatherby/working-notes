@@ -1,4 +1,4 @@
-// Wonos Pro: what a license unlocks, and the status the app, CLI and MCP see.
+// Remry Pro: what a license unlocks, and the status the app, CLI and MCP see.
 // Client-safe; verifying a key is server-only (src/shared/license/verify.server.ts).
 
 export const PRO_FEATURES = ['branding', 'pdf-export', 'search'] as const;
@@ -47,7 +47,7 @@ export const isProActive = (status: LicenseStatus): boolean => status.state === 
  * procedure (`tool`, the default), or the user in the app (`app`).
  */
 export const lockedMessage = (feature: ProFeature, status: LicenseStatus, audience: 'tool' | 'app' = 'tool'): string => {
-  const what = `${PRO_FEATURE_LABELS[feature]} is part of Wonos Pro`;
+  const what = `${PRO_FEATURE_LABELS[feature]} is part of Remry Pro`;
   const where = audience === 'app' ? 'on the License page' : 'in the app (License) or with license.activate';
   switch (status.state) {
     case 'expired':

@@ -1,5 +1,5 @@
 // Starting the UI from the MCP server (the `app_open` tool), so a machine without a
-// clone or a terminal habit can still open it: runs `wono app` in the background.
+// clone or a terminal habit can still open it: runs `remry app` in the background.
 // The app keeps running after the MCP server exits, so a release also replaces an app
 // left running by an older version (see planAppLaunch).
 
@@ -7,7 +7,7 @@ import { execFile, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import pluginManifest from '../plugin/.claude-plugin/plugin.json';
-import { APP_CONTROL_PATH, APP_HOST, APP_PORT, APP_STOP_PATH, LEGACY_APP_CONTROL_PATH, LEGACY_APP_STOP_PATH } from './app-server';
+import { APP_CONTROL_PATH, APP_HOST, APP_PORT, APP_STOP_PATH, LEGACY_APP_CONTROL_PATHS, LEGACY_APP_STOP_PATHS, LEGACY_LOCAL_HEADERS } from './app-server';
 import { LOCAL_HEADER } from '../src/shared/trpc/config';
 import { isPortListening } from '../scripts/backup/port';
 
@@ -19,7 +19,7 @@ export interface LaunchCommand {
 }
 
 /**
- * A release runs its own binary. A clone runs bin/wono, which starts the dev server;
+ * A release runs its own binary. A clone runs bin/remry, which starts the dev server;
  * Windows can't run that shell script, so there Bun (this process) runs `bun run dev`
  * in the clone, which is what the script does.
  */
@@ -31,7 +31,7 @@ export const appLaunchCommand = (o: {
 }): LaunchCommand => {
   if (o.standalone) return { command: o.execPath, args: ['app'] };
   if ((o.platform ?? process.platform) === 'win32') return { command: o.execPath, args: ['run', 'dev'], cwd: o.repoDir };
-  return { command: join(o.repoDir, 'bin', 'wono'), args: ['app'] };
+  return { command: join(o.repoDir, 'bin', 'remry'), args: ['app'] };
 };
 
 /** The app's address, opening the given notebook. */
@@ -63,7 +63,7 @@ const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(do
 export const probeApp = async (): Promise<RunningApp> => {
   if (!(await isPortListening(APP_PORT))) return null;
   try {
-    for (const path of [APP_CONTROL_PATH, LEGACY_APP_CONTROL_PATH]) {
+    for (const path of [APP_CONTROL_PATH, ...LEGACY_APP_CONTROL_PATHS]) {
       const response = await fetch(`${base}${path}`, { signal: AbortSignal.timeout(1_000) });
       const body: unknown = response.ok ? await response.json().catch(() => null) : null;
       const version = typeof body === 'object' && body !== null ? (body as { version?: unknown }).version : undefined;
@@ -85,13 +85,14 @@ const waitForPort = async (listening: boolean, timeoutMs: number): Promise<boole
 };
 
 const stopApp = async (): Promise<void> => {
-  // An app from before the rename to Wonos has the old path and header.
-  for (const path of [APP_STOP_PATH, LEGACY_APP_STOP_PATH]) {
-    const response = await fetch(`${base}${path}`, { method: 'POST', headers: { [LOCAL_HEADER]: '1', 'x-working-notes': '1' }, signal: AbortSignal.timeout(2_000) }).catch(() => null);
+  // An app from before a rename has an old path and header.
+  const headers = Object.fromEntries([LOCAL_HEADER, ...LEGACY_LOCAL_HEADERS].map((header) => [header, '1']));
+  for (const path of [APP_STOP_PATH, ...LEGACY_APP_STOP_PATHS]) {
+    const response = await fetch(`${base}${path}`, { method: 'POST', headers, signal: AbortSignal.timeout(2_000) }).catch(() => null);
     if (response?.ok) break;
   }
   if (!(await waitForPort(false, 5_000))) {
-    throw new Error(`An older Wonos app is still running on ${APP_HOST}:${APP_PORT}. Quit it, then open the app again.`);
+    throw new Error(`An older Remry app is still running on ${APP_HOST}:${APP_PORT}. Quit it, then open the app again.`);
   }
 };
 
@@ -107,10 +108,10 @@ const startApp = async (launch: LaunchCommand, timeoutMs: number): Promise<void>
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await sleep(250);
-    if (failure) throw new Error(`Couldn't start Wonos: ${(failure as Error).message}`);
+    if (failure) throw new Error(`Couldn't start Remry: ${(failure as Error).message}`);
     if (await isPortListening(APP_PORT)) return;
   }
-  throw new Error(`Wonos didn't start within ${timeoutMs / 1000} seconds. Run \`wono app\` in a terminal to see why.`);
+  throw new Error(`Remry didn't start within ${timeoutMs / 1000} seconds. Run \`remry app\` in a terminal to see why.`);
 };
 
 export interface AppOwner {
@@ -121,17 +122,17 @@ export interface AppOwner {
 
 /** The app this process starts: a release's own binary, or a clone's dev server. */
 export const currentAppOwner = (repoDir: string): AppOwner => {
-  const standalone = process.env['WONO_STANDALONE'] === '1';
+  const standalone = process.env['REMRY_STANDALONE'] === '1';
   return { launch: appLaunchCommand({ standalone, execPath: process.execPath, repoDir }), standalone, version: pluginManifest.version };
 };
 
 /**
- * Whether a process's command line is Wonos: a release binary (`…/wono app`)
- * or a clone's dev server (vite, run from the wonos folder). A restart stops
+ * Whether a process's command line is Remry: a release binary (`…/remry app`)
+ * or a clone's dev server (vite, run from the remry folder). A restart stops
  * nothing else that happens to hold the port.
  */
-export const isWonoCommand = (command: string): boolean =>
-  /(^|[\\/"])(wono|wnotes)(\.exe)?(["\s]|$)/i.test(command) || /wonos|working-notes/i.test(command);
+export const isRemryCommand = (command: string): boolean =>
+  /(^|[\\/"])(remry|wono|wnotes)(\.exe)?(["\s]|$)/i.test(command) || /[\\/](remry|wonos|working-notes)[^\\/]*[\\/]/i.test(command);
 
 const run = promisify(execFile);
 
@@ -158,18 +159,18 @@ const commandLine = async (pid: number): Promise<string> =>
     : await run('ps', ['-o', 'command=', '-p', String(pid)]).then((r) => r.stdout, () => '')
   ).trim();
 
-/** Stops whatever Wonos process listens on the app port, by pid (for apps without the stop endpoint). */
+/** Stops whatever Remry process listens on the app port, by pid (for apps without the stop endpoint). */
 const stopByPid = async (): Promise<void> => {
   const pids = await listeningPids(APP_PORT);
   for (const pid of pids) {
     const command = await commandLine(pid);
-    if (!isWonoCommand(command)) {
-      throw new Error(`Something other than Wonos is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
+    if (!isRemryCommand(command)) {
+      throw new Error(`Something other than Remry is using ${APP_HOST}:${APP_PORT} (${command || `pid ${pid}`}). Quit it, then restart the app.`);
     }
     process.kill(pid, 'SIGTERM');
   }
   if (!(await waitForPort(false, 5_000))) {
-    throw new Error(`The Wonos app on ${APP_HOST}:${APP_PORT} didn't stop. Quit it, then restart the app.`);
+    throw new Error(`The Remry app on ${APP_HOST}:${APP_PORT} didn't stop. Quit it, then restart the app.`);
   }
 };
 
@@ -199,8 +200,8 @@ export const openApp = async (owner: AppOwner, timeoutMs = 20_000): Promise<Open
 
 /**
  * When the MCP server starts: stops an app an older release left running, before this
- * process opens the data directory (which may still need moving from its name before
- * the rename to Wonos). True if it stopped one; start this version's app then with startOwnApp.
+ * process opens the data directory (which may still need moving from an earlier name,
+ * Wonos or Working Notes). True if it stopped one; start this version's app then with startOwnApp.
  */
 export const stopStaleApp = async (owner: AppOwner): Promise<boolean> => {
   if (planAppLaunch(await probeApp(), owner) !== 'restart') return false;

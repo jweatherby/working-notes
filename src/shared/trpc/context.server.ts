@@ -22,7 +22,7 @@ export interface Context {
   readonly reg: Registry;
   readonly notebook: NotebookInfo;
   readonly notebooks: NotebookStore;
-  /** The Wonos Pro license on this computer, checked when called (see src/api/_license.ts). */
+  /** The Remry Pro license on this computer, checked when called (see src/api/_license.ts). */
   readonly license: () => Promise<LicenseStatus>;
   readonly pdfConverter?: PdfConverter;
   readonly pageChat?: PageChat;

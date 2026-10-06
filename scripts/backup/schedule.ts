@@ -1,4 +1,4 @@
-// Hourly backups from inside a long-running Wonos process (the MCP server,
+// Hourly backups from inside a long-running Remry process (the MCP server,
 // the release app), so every platform gets them without an OS scheduler. Several
 // processes, and the macOS LaunchAgent, may run at once: a lock file makes one of
 // them take the snapshots, and a last-run file makes the others skip the hour.
@@ -99,8 +99,8 @@ export const runBackupsIfDue = async (now: () => Date = () => new Date()): Promi
  */
 export const startBackupSchedule = (log: (message: string) => void): (() => void) => {
   void replaceLegacyAgent().then((result) => {
-    if (!result.ok) log(`Couldn't replace the hourly backup LaunchAgent from before the rename to Wonos: ${result.error.message}`);
-    else if (result.value.replaced) log('Replaced the hourly backup LaunchAgent from before the rename to Wonos.');
+    if (!result.ok) log(`Couldn't replace the hourly backup LaunchAgent from before the rename to Remry: ${result.error.message}`);
+    else if (result.value.replaced) log('Replaced the hourly backup LaunchAgent from before the rename to Remry.');
   });
   let running = false;
   const tick = async (): Promise<void> => {

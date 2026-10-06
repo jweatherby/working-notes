@@ -3,7 +3,7 @@
 //   1. merges the binaries of every given build into dist/plugin, so the plugin that
 //      the `dist` branch publishes runs on every platform built
 //   2. zips the plugin once per platform, with only that platform's binary, for
-//      Claude desktop Chat uploads: dist/wonos-<version>-<target>.zip
+//      Claude desktop Chat uploads: dist/remry-<version>-<target>.zip
 //   3. leaves off dist/plugin any binary too big for git (GitHub refuses files over
 //      100 MB), so the `dist` branch push succeeds; its zip still has it
 //   bun scripts/release/package.ts [<built plugin dir> ...]     (default: dist/plugin)
@@ -46,9 +46,9 @@ for (const copy of plan.value.copies) {
 const binaries = (await readdir(join(PLUGIN, 'server'))).filter((name) => binaryTarget(name) !== null).sort();
 for (const name of binaries) {
   const target = binaryTarget(name)!;
-  const staging = await mkdtemp(join(tmpdir(), 'wono-package-'));
+  const staging = await mkdtemp(join(tmpdir(), 'remry-package-'));
   await cp(PLUGIN, staging, { recursive: true, filter: (src) => !src.endsWith('.DS_Store') && !(binaryTarget(src.split(/[\\/]/).at(-1) ?? '') && !src.endsWith(name)) });
-  const zip = join(DIST, `wonos-${plan.value.version}-${target}.zip`);
+  const zip = join(DIST, `remry-${plan.value.version}-${target}.zip`);
   await rm(zip, { force: true });
   const zipped = spawnSync('zip', ['-r', '-X', '-q', zip, '.'], { cwd: staging, stdio: 'inherit' });
   await rm(staging, { recursive: true, force: true });

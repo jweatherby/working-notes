@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Wonos",
+  "productName": "Remry",
   "version": "../../package.json",
-  "identifier": "dev.jweatherby.wonos",
+  "identifier": "dev.jweatherby.remry",
   "build": {
     "frontendDist": "../ui"
   },
@@ -25,7 +25,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/wono"
+      "binaries/remry"
     ],
     "resources": {
       "resources/migrations/": "migrations/",

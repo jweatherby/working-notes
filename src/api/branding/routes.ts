@@ -26,7 +26,7 @@ const brandingInput = z.object({
 // Images are resized client-side (icon 256px, logo 800x200) before upload.
 const MAX_IMAGE_BASE64_CHARS = 4_000_000;
 
-// Creating and changing brandings is Wonos Pro (src/api/_license.ts); listing them isn't.
+// Creating and changing brandings is Remry Pro (src/api/_license.ts); listing them isn't.
 export const brandingRouter = router({
   list: procedure.query(({ ctx }) => listBrandings(ctx.reg)),
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Wonos MCP server: `wono mcp`. Serves every procedure, plus snapshots and
+// Remry MCP server: `remry mcp`. Serves every procedure, plus snapshots and
 // opening the app, as MCP tools over stdio for Claude desktop Chat, Cowork and Claude Code.
 // Local only: no network, and it runs with the permissions of whoever starts it.
 // The protocol itself is in mcp-protocol.ts.
@@ -22,7 +22,7 @@ import {
 } from './mcp-protocol';
 
 const REPO = resolve(import.meta.dir, '..');
-const standalone = process.env['WONO_STANDALONE'] === '1';
+const standalone = process.env['REMRY_STANDALONE'] === '1';
 if (!standalone) process.chdir(REPO);
 
 // stdout carries protocol messages only. Anything else the app prints goes to stderr.
@@ -49,23 +49,23 @@ const { startBackupSchedule } = await import('../scripts/backup/schedule');
 startBackupSchedule((message) => console.error(message));
 
 const INSTRUCTIONS = [
-  "Wonos holds the user's local notebooks. Each notebook (for example work, home life, or a personal project) has its own people and teams (in a home notebook: friends, family and groups, with partner, parent, sibling and friend relations and birthdays), projects, goals with check-ins, wiki pages of kinds the notebook defines (pageKind_*; expenses, recipes, places and the like), which page_query filters, groups and totals, relations between entities, notes, docs, recurring todos and tags.",
+  "Remry holds the user's local notebooks. Each notebook (for example work, home life, or a personal project) has its own people and teams (in a home notebook: friends, family and groups, with partner, parent, sibling and friend relations and birthdays), projects, goals with check-ins, wiki pages of kinds the notebook defines (pageKind_*; expenses, recipes, places and the like), which page_query filters, groups and totals, relations between entities, notes, docs, recurring todos and tags.",
   'Before creating a page kind, check pageKind_list and propose its fields to the user.',
   "Every tool except notebook_* works on one notebook: the default, unless you pass `notebook` (an id or name). Call notebook_list first. If there is more than one notebook and the user hasn't made clear which one they mean, ask. Say which notebook you read or wrote.",
   'Each tool is one procedure: person_create is person.create. Find ids with the list and get tools before writing, and never create a second person, team or project with an existing name, or a second goal or page with an existing title, in the same notebook.',
-  'To find anything by what it says (notes, docs, wiki pages, todos, comments, names), call search_query. For "what do I know about X", call search_recall with the entity: it returns its notes, todos, docs, links, tags, relations, owned goals and projects, and text elsewhere that names it without linking it. Both need Wonos Pro; without a license they say so, and then you answer with the list and get tools instead.',
+  'To find anything by what it says (notes, docs, wiki pages, todos, comments, names), call search_query. For "what do I know about X", call search_recall with the entity: it returns its notes, todos, docs, links, tags, relations, owned goals and projects, and text elsewhere that names it without linking it. Both need Remry Pro; without a license they say so, and then you answer with the list and get tools instead.',
   'Confirm with the user before any delete, remove or detach tool, and call backup_snapshot first before deletes or more than about five writes in one go.',
   'To show the user something in the app, call app_open and give them the link.',
   'After any write, end your reply with a markdown link to each item you created or changed: the app address from app_open, plus the item\'s path (the `path` in the result, or /app/people/<id>, /app/teams/<id>, /app/projects/<id>, /app/goals/<id>, /app/wiki/<id>; a doc is its entity\'s path with ?doc=<id>; a todo is /app/todos?popup=todo&todo=<id>; notes, tags and relations link to their entity), with notebook=<notebook id> in the query.',
   'When bringing in items from another tool (Linear, Notion, Jira), call link_find with the item URL first and update the entity it finds; attach a link to the source on anything you create.',
-  "Reach Wonos only through these tools. Never read its data folder (~/Library/Application Support/Wonos on macOS, %LOCALAPPDATA%\\Wonos on Windows) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
-  'Report back by name, not id. The wonos skill has the full rules and recipes.'
+  "Reach Remry only through these tools. Never read its data folder (~/Library/Application Support/Remry on macOS, %LOCALAPPDATA%\\Remry on Windows) or database directly, and don't ask the user to attach that folder: a sandbox such as Cowork's can't see it, and the database must not be opened from two places at once.",
+  'Report back by name, not id. The remry skill has the full rules and recipes.'
 ].join(' ');
 
 const extraTools: readonly McpTool[] = [
   {
     name: 'backup_snapshot',
-    description: 'Takes a snapshot of one Wonos notebook now (the default unless you pass `notebook`), kept on this computer. Do this before deleting anything or making more than about five changes in one go.',
+    description: 'Takes a snapshot of one Remry notebook now (the default unless you pass `notebook`), kept on this computer. Do this before deleting anything or making more than about five changes in one go.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -79,19 +79,19 @@ const extraTools: readonly McpTool[] = [
   },
   {
     name: 'backup_list',
-    description: "Lists a Wonos notebook's snapshots with their reasons and counts. Only the user restores one, with `wono backup restore <id> --notebook <notebook>` while the app is closed.",
+    description: "Lists a Remry notebook's snapshots with their reasons and counts. Only the user restores one, with `remry backup restore <id> --notebook <notebook>` while the app is closed.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   },
   {
     name: 'app_open',
-    description: "Starts the Wonos app on this computer if it isn't running, and returns its address, opening the given notebook (or the default). Give the user the link. The app keeps running afterwards.",
+    description: "Starts the Remry app on this computer if it isn't running, and returns its address, opening the given notebook (or the default). Give the user the link. The app keeps running afterwards.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
   },
   {
     name: 'app_restart',
-    description: "Stops the Wonos app on this computer, whatever version is running, and starts it again, then returns its address for the given notebook (or the default). Use it when the user asks to restart the app, or when it's stuck or showing an old version. Nothing is lost: data lives in the notebook, not the app.",
+    description: "Stops the Remry app on this computer, whatever version is running, and starts it again, then returns its address for the given notebook (or the default). Use it when the user asks to restart the app, or when it's stuck or showing an old version. Nothing is lost: data lives in the notebook, not the app.",
     inputSchema: { type: 'object', properties: { notebook: notebookArgumentSchema }, additionalProperties: false },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
   }
@@ -141,7 +141,7 @@ const callTool = async (name: string, rawArgs: Readonly<Record<string, unknown>>
 };
 
 const ctx: McpContext = {
-  info: { name: 'wonos', version: pluginManifest.version, instructions: INSTRUCTIONS },
+  info: { name: 'remry', version: pluginManifest.version, instructions: INSTRUCTIONS },
   tools: [...procedures.map(toolFromProcedure), ...extraTools],
   callTool
 };

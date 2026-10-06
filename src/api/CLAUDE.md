@@ -69,7 +69,7 @@ Operations that can fail return `Result<T>`: `ok(value)` or `err(new Error(messa
 - `src/shared/trpc/init.ts` exports `router`, `procedure`, `middleware`. There is one kind of procedure: no auth, no org scoping.
 - Context is `{ reg, notebook, notebooks, pdfConverter? }` (`context.server.ts`): the Registry of the notebook the call runs against, that notebook, the notebook store, and (over HTTP only) the PDF converter. Over HTTP the notebook comes from `event.locals.notebook`; the CLI and MCP server build the context with `createNotebookContext(notebook)`. Domain routes pass only `ctx.reg`.
 - Validate inputs with Zod inline in `routes.ts`. Use `z.enum(ENTITY_TYPES)` / `z.enum(TODO_STATUSES)` from `$shared/types/enums`. SQLite has no enums, so these unions are the source of truth.
-- Register new routers in `src/shared/trpc/router.ts`. The CLI (`wono`) and its MCP server (`wono mcp`) call every procedure in-process through `cli/api.ts` and `createCallerFactory`, and build their help and tool lists from `src/shared/trpc/meta.ts`, so new procedures need no CLI or MCP changes.
+- Register new routers in `src/shared/trpc/router.ts`. The CLI (`remry`) and its MCP server (`remry mcp`) call every procedure in-process through `cli/api.ts` and `createCallerFactory`, and build their help and tool lists from `src/shared/trpc/meta.ts`, so new procedures need no CLI or MCP changes.
 
 ## Polymorphic assets
 
@@ -123,7 +123,7 @@ A `Relation` is a link (`fromType`/`fromId` → `toType`/`toId`) with a `kind` a
 A notebook is a folder, `<data dir>/Notebooks/<id>/`, holding `notebook.json` (name, profile, createdAt), `working-notes.db` and `files/`. The default notebook is in `<data dir>/settings.json`. The code lives in `src/shared/notebooks/`:
 
 - `id.ts`: `isNotebookId` (1–40 lowercase letters, digits and dashes) and `notebookIdFromName`. Client-safe.
-- `resolve.ts`: `resolveNotebook`, pure. Named on the call (id, or a name matching exactly one notebook), then `WONO_NOTEBOOK`, then the UI cookie, then the default. An unknown named notebook is an error listing the ones that exist.
+- `resolve.ts`: `resolveNotebook`, pure. Named on the call (id, or a name matching exactly one notebook), then `REMRY_NOTEBOOK`, then the UI cookie, then the default. An unknown named notebook is an error listing the ones that exist.
 - `layout.ts` / `layout.server.ts`: `planLayout` (pure) and `ensureLayout`, which moves a pre-notebooks data directory into `work-work` and makes sure a default exists.
 - `store.server.ts`: `NotebookStore`, the raw filesystem reads and writes. `$api/notebook/operations` does the validation and writes the messages.
 - `current.server.ts`: `getNotebookStore`, `readNotebooks` and `resolveCurrentNotebook`. Every entry point resolves through these, so the layout is always in place first.
@@ -146,7 +146,7 @@ A page's `kind` is a key into the notebook's `page_kind` table (`key`, `name`, `
 
 ## Files
 
-`reg.storage` stores bytes under the notebook's `files/<key>` (`~/Library/Application Support/Wonos/Notebooks/<id>/files`). Keys don't include the notebook, and the files route reads from the request's notebook. Keys look like `docs/<docId>/source-<uuid>.pdf` or `branding/<id>/logo-<uuid>.png`. The storage client rejects keys that resolve outside the files root. Hand clients a URL with `fileUrl(key)` (`$shared/utils/files`), which is served by `src/routes/files/[...key]/+server.ts`.
+`reg.storage` stores bytes under the notebook's `files/<key>` (`~/Library/Application Support/Remry/Notebooks/<id>/files`). Keys don't include the notebook, and the files route reads from the request's notebook. Keys look like `docs/<docId>/source-<uuid>.pdf` or `branding/<id>/logo-<uuid>.png`. The storage client rejects keys that resolve outside the files root. Hand clients a URL with `fileUrl(key)` (`$shared/utils/files`), which is served by `src/routes/files/[...key]/+server.ts`.
 
 - **Docs:** `attachSourcePdf` stores the PDF and sets `sourceUrl`; it never converts. From the CLI or MCP, Claude reads the PDF and calls `doc.update`.
 - **Converting a PDF in the web app** (`attached/doc/convert.ts`):

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Revokes a Wonos Pro license, after a refund or chargeback:
+// Revokes a Remry Pro license, after a refund or chargeback:
 //   bun run license:revoke --key <the customer's latest key> [--reason refund]
 //   bun run license:revoke --id <license id> --expires <its latest expiry> [--reason refund]
 //   bun run license:revoke --prune             only drop entries whose keys have expired

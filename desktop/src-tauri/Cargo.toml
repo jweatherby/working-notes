@@ -1,12 +1,12 @@
 [package]
-name = "wonos-desktop"
+name = "remry-desktop"
 version = "0.0.0"
-description = "Wonos desktop app: a window on the local Wonos server"
+description = "Remry desktop app: a window on the local Remry server"
 edition = "2021"
 publish = false
 
 [[bin]]
-name = "wonos"
+name = "remry"
 path = "src/main.rs"
 
 [build-dependencies]

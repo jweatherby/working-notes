@@ -32,12 +32,14 @@ export const staticFile = (files: StaticFiles, pathname: string): string | null 
 };
 
 /** GET: the running app's version, so a newer release can tell it's stale (cli/app-launch.ts). */
-export const APP_CONTROL_PATH = '/__wono/app';
+export const APP_CONTROL_PATH = '/__remry/app';
 /** POST: stops the app, so a newer release can replace it. */
-export const APP_STOP_PATH = '/__wono/app/stop';
-/** The same, in apps from before the rename to Wonos, which a newer release still replaces. */
-export const LEGACY_APP_CONTROL_PATH = '/__wnotes/app';
-export const LEGACY_APP_STOP_PATH = '/__wnotes/app/stop';
+export const APP_STOP_PATH = '/__remry/app/stop';
+/** The same, in apps from before the renames (Wonos, then Working Notes), which a newer release still replaces. */
+export const LEGACY_APP_CONTROL_PATHS: readonly string[] = ['/__wono/app', '/__wnotes/app'];
+export const LEGACY_APP_STOP_PATHS: readonly string[] = ['/__wono/app/stop', '/__wnotes/app/stop'];
+/** The local header those apps' stop endpoints require (ours is LOCAL_HEADER). */
+export const LEGACY_LOCAL_HEADERS: readonly string[] = ['x-wono', 'x-working-notes'];
 
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -49,7 +51,7 @@ export type AppControl =
 /**
  * The app's own control requests, which bypass SvelteKit and so its guard in
  * hooks.server.ts. Stopping keeps both of that guard's rules: a loopback hostname
- * (blocks DNS rebinding) and the x-wono header (blocks cross-site requests).
+ * (blocks DNS rebinding) and the x-remry header (blocks cross-site requests).
  * Null for any other request.
  */
 export const appControl = (request: Request, version: string): AppControl | null => {
@@ -85,7 +87,7 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
         if (control?.kind === 'version') return Response.json(control.body);
         if (control?.kind === 'forbidden') return new Response('Forbidden', { status: 403 });
         if (control?.kind === 'stop') {
-          console.error('Wonos is stopping for a newer version.');
+          console.error('Remry is stopping for a newer version.');
           // Answer first, then exit.
           setTimeout(() => process.exit(0), 100);
           return new Response(null, { status: 202 });
@@ -102,10 +104,10 @@ export const serveApp = async (options: ServeAppOptions): Promise<void> => {
         return server.respond(request, { getClientAddress: () => bunServer.requestIP(request)?.address ?? APP_HOST });
       }
     });
-    console.error(`Wonos is running at http://${APP_HOST}:${http.port}/app`);
+    console.error(`Remry is running at http://${APP_HOST}:${http.port}/app`);
   } catch (error) {
     const inUse = (error as { code?: string }).code === 'EADDRINUSE';
-    console.error(inUse ? `Something is already running on ${APP_HOST}:${port}. If it's Wonos, open http://${APP_HOST}:${port}/app` : error);
+    console.error(inUse ? `Something is already running on ${APP_HOST}:${port}. If it's Remry, open http://${APP_HOST}:${port}/app` : error);
     process.exit(1);
   }
   // Hourly snapshots while the app is open, on every platform (see scripts/backup/schedule.ts).

@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ params, url, fetch }) => {
     client.license.status.query()
   ]);
   if (!page.ok) error(404, 'Page not found');
-  // PDF export is Wonos Pro: without an active license the page explains instead.
+  // PDF export is Remry Pro: without an active license the page explains instead.
   const status = license.ok ? license.value : NO_LICENSE;
   if (!isProActive(status)) {
     return { page: page.value, locked: lockedMessage('pdf-export', status, 'app'), fields: [], brandings: [], options: resolvePrintOptions(new URLSearchParams(), []), branding: null };

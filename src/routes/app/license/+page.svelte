@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Wonos Pro: the license on this computer, what it unlocks, and where to
+  // Remry Pro: the license on this computer, what it unlocks, and where to
   // add or remove a key. The key is checked here, offline; nothing is sent anywhere.
   import type { PageData } from './$types';
   import { invalidateAll } from '$app/navigation';
@@ -41,7 +41,7 @@
 <svelte:head><title>License</title></svelte:head>
 
 <div class="page">
-  <PageHeader title="License" description="Wonos Pro unlocks branding, PDF export and full-text search. A license lasts a year, and everything else is free." />
+  <PageHeader title="License" description="Remry Pro unlocks branding, PDF export and full-text search. A license lasts a year, and everything else is free." />
 
   <section class="card status">
     {#if active}
@@ -57,7 +57,7 @@
       <p class="text-2">{license.problem}</p>
     {:else}
       <p class="headline">No license on this computer.</p>
-      <p class="text-2">Wonos is free to use. Pro adds the features below.</p>
+      <p class="text-2">Remry is free to use. Pro adds the features below.</p>
     {/if}
 
     <ul class="list features">

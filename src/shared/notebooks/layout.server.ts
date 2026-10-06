@@ -18,7 +18,7 @@ import {
   legacyFilesDir,
   notebookDir
 } from '$shared/settings/server/paths';
-import { MOVED_NOTE } from '$shared/settings/server/legacy-data-dir';
+import { EARLIER_MOVED_NOTES, MOVED_NOTE } from '$shared/settings/server/legacy-data-dir';
 import { LEGACY_NOTEBOOK, planLayout, type LayoutState, type LayoutStep } from './layout';
 import { createNotebookStore, type NotebookStore } from './store.server';
 
@@ -58,7 +58,7 @@ const acquireLock = async (path: string): Promise<() => Promise<void>> => {
         continue;
       }
       if (attempt >= LOCK_ATTEMPTS) {
-        throw new Error(`Another Wonos process is setting up notebooks. If none is running, delete ${path}.`);
+        throw new Error(`Another Remry process is setting up notebooks. If none is running, delete ${path}.`);
       }
       await new Promise((done) => setTimeout(done, LOCK_WAIT_MS));
     }
@@ -114,8 +114,9 @@ const applyStep = async (s: ServerSettings, store: NotebookStore, step: LayoutSt
 export const migrateLayout = async (s: ServerSettings, now: () => Date = () => new Date()): Promise<readonly LayoutStep[]> => {
   // This process kept the old data directory while another moved it (see legacy-data-dir.ts):
   // never start an empty notebook where the data used to be.
-  if (existsSync(join(s.dataDir, MOVED_NOTE)) && !existsSync(join(s.dataDir, 'Notebooks'))) {
-    throw new Error('Working Notes is now Wonos, and your data has just moved to the Wonos folder. Restart Claude (or the Wonos app) to use it.');
+  const moved = [MOVED_NOTE, ...EARLIER_MOVED_NOTES].some((note) => existsSync(join(s.dataDir, note)));
+  if (moved && !existsSync(join(s.dataDir, 'Notebooks'))) {
+    throw new Error('Your data has just moved to the Remry folder (Remry was called Wonos, and Working Notes before that). Restart Claude (or the Remry app) to use it.');
   }
   const store = createNotebookStore(s);
   const quick = planLayout(await readLayoutState(s, store));
@@ -132,8 +133,8 @@ export const migrateLayout = async (s: ServerSettings, now: () => Date = () => n
       const users = otherProcessesUsing(legacyDatabasePath(s));
       if (users.length > 0) {
         throw new Error(
-          `Wonos needs to move your notebook into Notebooks/${LEGACY_NOTEBOOK.id}, but process ${users.join(', ')} still has the database open. ` +
-            'Quit the Wonos app and restart any Claude sessions using Wonos, then try again.'
+          `Remry needs to move your notebook into Notebooks/${LEGACY_NOTEBOOK.id}, but process ${users.join(', ')} still has the database open. ` +
+            'Quit the Remry app and restart any Claude sessions using Remry, then try again.'
         );
       }
     }

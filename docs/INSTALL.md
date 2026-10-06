@@ -1,6 +1,6 @@
 # Install
 
-Wonos runs on your own computer. A release contains the application itself, so Claude is
+Remry runs on your own computer. A release contains the application itself, so Claude is
 the only thing you need beforehand. Releases are built for Macs with Apple silicon, and, as a
 preview, for Windows (x64) and Linux (x64).
 
@@ -19,13 +19,13 @@ claude plugin marketplace add jweatherby/working-notes
 ```
 
 ```bash
-claude plugin install wonos@wonos
+claude plugin install remry@remry
 ```
 
 To update:
 
 ```bash
-claude plugin marketplace update wonos && claude plugin update wonos@wonos
+claude plugin marketplace update remry && claude plugin update remry@remry
 ```
 
 Or turn on auto-update for the marketplace in `/plugin`. The repo is private, so Claude Code needs
@@ -34,7 +34,7 @@ git access to it; for background auto-update, use SSH.
 **Cowork**
 
 Customize → **+** → **Add marketplace from GitHub** → `jweatherby/working-notes`, then install
-Wonos. Uploading the release zip works too, as for Chat.
+Remry. Uploading the release zip works too, as for Chat.
 
 Start Cowork sessions **on your Mac, not in the cloud**, and keep Claude desktop open. A Cowork
 session runs in a sandbox that cannot see `~/Library/Application Support`, so the plugin's tools are
@@ -44,7 +44,7 @@ Do not attach the data folder to a session. Two programs must never open the sam
 
 **Claude desktop Chat**
 
-Download `wonos-<version>-darwin-arm64.zip` (`-windows-x64` or `-linux-x64` on those
+Download `remry-<version>-darwin-arm64.zip` (`-windows-x64` or `-linux-x64` on those
 systems) from the
 [latest release](https://github.com/jweatherby/working-notes/releases/latest) and add it as a
 plugin. Repeat with each new release — Chat takes uploads only.
@@ -58,37 +58,41 @@ or **Connect to Claude Code**. Or add the server yourself after installing the p
 the Windows launcher inside it:
 
 ```powershell
-claude mcp add wonos -- cmd /d /c "<plugin folder>\scripts\wono.cmd" mcp
+claude mcp add remry -- cmd /d /c "<plugin folder>\scripts\remry.cmd" mcp
 ```
 
 In Claude desktop, the same goes in `claude_desktop_config.json` under `mcpServers`, as
-`"command": "cmd"` with `"args": ["/d", "/c", "<plugin folder>\\scripts\\wono.cmd", "mcp"]`.
-The launcher installs the app into `%LOCALAPPDATA%\Wonos\App` and runs it from there.
+`"command": "cmd"` with `"args": ["/d", "/c", "<plugin folder>\\scripts\\remry.cmd", "mcp"]`.
+The launcher installs the app into `%LOCALAPPDATA%\Remry\App` and runs it from there.
 
-## Coming from Working Notes
+## Coming from Wonos or Working Notes
 
-Wonos used to be called Working Notes, and the command was `wnotes`. Your notebooks carry over:
+Remry used to be called Wonos (the command was `wono`), and before that Working Notes (`wnotes`).
+Your notebooks carry over:
 
-- **Data.** The first time Wonos runs, it moves your notebooks, backups and settings (your Pro
-  license included) from the `Working Notes` folder to the `Wonos` one (`working-notes` to `wonos`
-  on Linux). Nothing is copied or deleted. If an older Working Notes app still has a notebook open,
-  Wonos keeps using the old folder until you quit that app and restart Claude. The old folder
+- **Data.** The first time Remry runs, it moves your notebooks, backups and settings (your Pro
+  license included) from the `Wonos` folder, or the `Working Notes` one, to the `Remry` one (`wonos`
+  or `working-notes` to `remry` on Linux). Nothing is copied or deleted. If an older app still has a notebook open,
+  Remry keeps using the old folder until you quit that app and restart Claude. The old folder
   keeps only older versions of the app, and a note saying where the data went; you can delete it.
-- **The plugin.** The plugin and its MCP server are now `wonos`. In Claude Code:
+- **The plugin.** The plugin and its MCP server are now `remry`. In Claude Code:
 
   ```bash
-  claude plugin uninstall working-notes@working-notes
-  claude plugin marketplace remove working-notes
+  claude plugin uninstall wonos@wonos
+  claude plugin marketplace remove wonos
   claude plugin marketplace add jweatherby/working-notes
-  claude plugin install wonos@wonos
+  claude plugin install remry@remry
   ```
 
-  In Cowork and Chat, remove Working Notes and add Wonos the same way you added it. If you
+  (For Working Notes, the old names are `working-notes@working-notes` and `working-notes`.) A clone's
+  `bun run setup` does this for you. In Cowork and Chat, remove Wonos (or Working Notes) and add Remry the same way you added it. If you
   connected Claude with the desktop app's Claude menu, connect again: it replaces the old entry.
-- **The command.** `wnotes` still works from a clone for now, and `WNOTES_NOTEBOOK`,
-  `WNOTES_BUN` and `WORKING_NOTES_HOME` are still read, but use `wono` and `WONO_*` from now on.
+- **The command.** `wono` and `wnotes` still work from a clone for now, and `WONO_NOTEBOOK`,
+  `WONO_BUN` and `WONO_HOME` (and `WNOTES_NOTEBOOK`, `WNOTES_BUN` and `WORKING_NOTES_HOME`) are
+  still read, but use `remry` and `REMRY_*` from now on. A running app from an older release is
+  stopped and replaced when Claude next starts Remry.
 - **Hourly backups.** An old backup LaunchAgent is replaced by the new one the first time Claude
-  or the app runs Wonos.
+  or the app runs Remry.
 
 ## First run
 
@@ -102,10 +106,10 @@ senior engineer, reporting to Alice"*.
 
 ## The app
 
-Ask Claude to "open Wonos" and it will start the app and hand you the link. By hand:
+Ask Claude to "open Remry" and it will start the app and hand you the link. By hand:
 
 ```bash
-"$HOME/Library/Application Support/Wonos/App/current/wono" app
+"$HOME/Library/Application Support/Remry/App/current/remry" app
 ```
 
 Then go to http://127.0.0.1:5173/app. The server binds to 127.0.0.1 and refuses any request that
@@ -113,9 +117,9 @@ didn't come from this machine.
 
 ## The desktop app (preview)
 
-A desktop app for macOS, Windows and Linux opens Wonos in a window of its own. It brings
+A desktop app for macOS, Windows and Linux opens Remry in a window of its own. It brings
 the same app with it, starts it when you open the window, and leaves it running for Claude when you
-close it. Its **Claude** menu connects Wonos to Claude desktop or Claude Code, for when you
+close it. Its **Claude** menu connects Remry to Claude desktop or Claude Code, for when you
 don't use the plugin (on Windows, for now, you need it). Each asks before changing Claude's
 settings.
 
@@ -129,31 +133,31 @@ no browser chrome. It still runs entirely on your machine, against the same loca
 
 Start the app first, then:
 
-- **Chrome or Edge:** open http://127.0.0.1:5173/app, then choose **Install Wonos** — from
+- **Chrome or Edge:** open http://127.0.0.1:5173/app, then choose **Install Remry** — from
   the install icon at the right of the address bar, or from the ⋮ menu under **Cast, save and
   share**.
 - **Safari 17 or later:** open the same address, then **File → Add to Dock**.
 
 The installed app opens at `/app` and shares the browser's cookies, so it remembers which notebook
-you were in. To remove it, open `chrome://apps`, right-click Wonos and choose **Remove**;
+you were in. To remove it, open `chrome://apps`, right-click Remry and choose **Remove**;
 in Safari, delete it from the Applications folder.
 
 The window shows an error page whenever the server is not running. Start it again the usual way —
-ask Claude to open Wonos, or run `wono app` — and reload.
+ask Claude to open Remry, or run `remry app` — and reload.
 
 ## Hourly backups
 
-Wonos snapshots every notebook that changed, once an hour, whenever Claude or the app is
+Remry snapshots every notebook that changed, once an hour, whenever Claude or the app is
 open, on every system. There's nothing to set up.
 
 On a Mac you can also add a LaunchAgent, so backups carry on while neither is running:
 
 ```bash
-"$HOME/Library/Application Support/Wonos/App/current/wono" backup install
+"$HOME/Library/Application Support/Remry/App/current/remry" backup install
 ```
 
 The LaunchAgent snapshots every notebook hourly, when something changed, and keeps working across
-app updates. It shares the hour with Claude and the app, so nothing is snapshotted twice. The log is `~/Library/Logs/Wonos/backup.log`, and `backup
+app updates. It shares the hour with Claude and the app, so nothing is snapshotted twice. The log is `~/Library/Logs/Remry/backup.log`, and `backup
 uninstall` removes it.
 
 Snapshots live on this disk, so they don't protect against losing the disk. Time Machine does on a
@@ -162,8 +166,8 @@ backup.
 
 ## Where your data lives
 
-`~/Library/Application Support/Wonos/` on a Mac, `%LOCALAPPDATA%\Wonos\` on
-Windows, and `$XDG_DATA_HOME/wonos` (usually `~/.local/share/wonos`) on Linux:
+`~/Library/Application Support/Remry/` on a Mac, `%LOCALAPPDATA%\Remry\` on
+Windows, and `$XDG_DATA_HOME/remry` (usually `~/.local/share/remry`) on Linux:
 
 | | |
 |---|---|
@@ -174,23 +178,23 @@ Windows, and `$XDG_DATA_HOME/wonos` (usually `~/.local/share/wonos`) on Linux:
 
 ## Troubleshooting
 
-**`wono: command not found`.** The command is only on your PATH if you ran `bun run setup` from a
+**`remry: command not found`.** The command is only on your PATH if you ran `bun run setup` from a
 clone. From a release, use the full path:
 
 ```bash
-"$HOME/Library/Application Support/Wonos/App/current/wono" help
+"$HOME/Library/Application Support/Remry/App/current/remry" help
 ```
 
-On Windows: `& "$env:LOCALAPPDATA\Wonos\App\current\wono.exe" help`. On Linux:
-`~/.local/share/wonos/App/current/wono help`.
+On Windows: `& "$env:LOCALAPPDATA\Remry\App\current\remry.exe" help`. On Linux:
+`~/.local/share/remry/App/current/remry help`.
 
-**The app is stuck, or shows an old version.** Run `wono app restart`. It stops the running app,
+**The app is stuck, or shows an old version.** Run `remry app restart`. It stops the running app,
 whatever version it is, and starts the current one. Claude can do the same with its `app_restart`
 tool.
 
-**Claude does not have the Wonos tools.** Install the plugin, then start a *new* session. In
+**Claude does not have the Remry tools.** Install the plugin, then start a *new* session. In
 Cowork, the session must also be running on your Mac with Claude desktop open, because a cloud
 session cannot run a local MCP server.
 
 **You see "database is locked".** Another program has the notebook open. Close the app, and any
-other `wono` process, then try again.
+other `remry` process, then try again.

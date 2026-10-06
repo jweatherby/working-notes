@@ -54,7 +54,7 @@ export const verifyLicenseKey = (
   revoked: ReadonlySet<string> = REVOKED_LICENSE_IDS
 ): LicenseStatus => {
   const parts = key.trim().split('.');
-  if (parts.length !== 3 || parts[0] !== PREFIX) return invalid("it isn't a Wonos license key");
+  if (parts.length !== 3 || parts[0] !== PREFIX) return invalid("it isn't a Remry license key");
   const [, body, signature] = parts as [string, string, string];
 
   let signed = false;
@@ -71,7 +71,7 @@ export const verifyLicenseKey = (
   } catch {
     return invalid("its contents can't be read");
   }
-  if (!isPayload(payload)) return invalid("its contents aren't a Wonos Pro license");
+  if (!isPayload(payload)) return invalid("its contents aren't a Remry Pro license");
   if (revoked.has(payload.id)) return invalid('this license was refunded or revoked');
 
   const left = daysLeft(payload.expires, now);

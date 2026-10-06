@@ -1,7 +1,7 @@
 // Pure: the source of src/shared/license/public-key.ts for a public key.
 
 export const publicKeyModule = (publicKeyPem: string): string => [
-  '// The public half of the Wonos Pro signing key, made by `bun run license:keygen`.',
+  '// The public half of the Remry Pro signing key, made by `bun run license:keygen`.',
   '// It only checks license keys; issuing one needs the private half, which is never in this repo.',
   '',
   `export const LICENSE_PUBLIC_KEY = ${JSON.stringify(publicKeyPem.trim() + '\n')};`,
@@ -9,11 +9,12 @@ export const publicKeyModule = (publicKeyPem: string): string => [
 ].join('\n');
 
 /**
- * Pure. Where the private key is by default: ~/.wonos-license/private.pem, or the
- * folder from before the rename to Wonos while the key is still only there.
+ * Pure. Where the private key is by default: ~/.remry-license/private.pem, or a folder
+ * from before the renames (Wonos, then Working Notes) while the key is still only there.
  */
 export const defaultPrivateKeyPath = (home: string, exists: (path: string) => boolean): string => {
-  const current = `${home}/.wonos-license/private.pem`;
-  const legacy = `${home}/.working-notes-license/private.pem`;
-  return !exists(current) && exists(legacy) ? legacy : current;
+  const current = `${home}/.remry-license/private.pem`;
+  if (exists(current)) return current;
+  const legacy = [`${home}/.wonos-license/private.pem`, `${home}/.working-notes-license/private.pem`].find(exists);
+  return legacy ?? current;
 };

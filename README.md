@@ -1,8 +1,8 @@
-# Wonos
+# Remry
 
 A local, structured notebook that your AI assistant writes to over MCP. Works with Claude today.
 
-Wonos remembers what you would otherwise carry in your head: who reports to whom, which team
+Remry remembers what you would otherwise carry in your head: who reports to whom, which team
 owns which project, where a goal stands this month, why you chose that vendor, what you promised to
 follow up on. It keeps them exactly as you said them, for as long as you need them.
 
@@ -42,7 +42,7 @@ never calls a language model — Claude works on it from outside. That matters w
 about people.
 
 **It sits beside your other tools.** Linear, Notion and the rest hold the team's version of things;
-Wonos holds yours.
+Remry holds yours.
 Ask Claude to bring a project or page in and it copies only the parts that matter to you, links back
 to the source, and updates the same entry next time instead of making a second one. Your own notes
 and opinions stay yours.
@@ -92,7 +92,7 @@ pace". The flag is a hint; it never changes the goal's status.
 > alerting.
 
 Pages come in kinds. A software page takes a vendor, a cost and a renewal date; a policy page takes
-a version and an effective date. Wonos turns away anything else, so pages of the same kind
+a version and an effective date. Remry turns away anything else, so pages of the same kind
 stay comparable.
 
 ![The Datadog page: vendor fields, notes, and a sidebar showing what relates to it and what mentions it](docs/images/wiki-page.png)
@@ -135,11 +135,11 @@ Deleting takes its notes and todos with it, so Claude offers to archive first.
 
 ## Backups
 
-Wonos copies each notebook every hour, but only when something changed. Restoring saves your
+Remry copies each notebook every hour, but only when something changed. Restoring saves your
 current data first, so you can undo it.
 
 ```bash
-wono backup install
+remry backup install
 ```
 
 Copies stay on this disk, so they will not save you from losing the disk. Time Machine will, and it
@@ -152,7 +152,7 @@ Notes keeps exactly what you said, where you can see it, and your assistant look
 recalling it.
 
 **…a memory server, like the reference knowledge-graph server or Basic Memory?** Those store free
-text and links: anything can be anything. Wonos knows what a person, a team, a project and
+text and links: anything can be anything. Remry knows what a person, a team, a project and
 a goal are. A goal has a period and dated check-ins, a todo has a status and a due date, and it
 turns away input that doesn't fit. That is what lets it answer "which goals are behind pace?"
 instead of searching for the word "goal". It also comes with an app to read it in.
@@ -162,25 +162,25 @@ yourself. Here you don't organise anything: you say what happened, and it is fil
 place.
 
 **…Linear, Notion or Lattice for the team?** Those hold the team's version of things, and others
-can see them. Wonos holds yours, privately, and can link back to them.
+can see them. Remry holds yours, privately, and can link back to them.
 
 ## Getting started
 
 - **[docs/INSTALL.md](docs/INSTALL.md)** — install it for Claude Code, Cowork or the Claude desktop
   app. A release brings the app with it, so there is nothing else to install.
-- **[docs/CLI.md](docs/CLI.md)** — the `wono` command and the tools Claude uses, for when you want
+- **[docs/CLI.md](docs/CLI.md)** — the `remry` command and the tools Claude uses, for when you want
   to drive it yourself.
 - **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** — running from a clone, and how releases work.
 
 ## Status
 
-Wonos is one person's tool, built in the open. Expect it to change. It was called Working Notes
-until recently; [docs/INSTALL.md](docs/INSTALL.md#coming-from-working-notes) covers moving over.
+Remry is one person's tool, built in the open. Expect it to change. It was called Wonos, and
+Working Notes before that; [docs/INSTALL.md](docs/INSTALL.md#coming-from-wonos-or-working-notes) covers moving over.
 
 Reports — branded write-ups printed to PDF — are built but switched off while they are unfinished.
 Write-ups go in docs instead.
 
-Branding, PDF export and full-text search are part of Wonos Pro, a yearly license that the
+Branding, PDF export and full-text search are part of Remry Pro, a yearly license that the
 app checks on your computer without contacting anything. Everything else is free.
 
 Releases are built for Apple silicon Macs, with Windows and Linux builds in preview, and a desktop

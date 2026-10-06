@@ -1,4 +1,4 @@
-// Wonos Pro: the license file, and the procedures it gates, through the real router.
+// Remry Pro: the license file, and the procedures it gates, through the real router.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -28,9 +28,9 @@ describe('license', () => {
     expect(await api.license.status()).toMatchObject({ ok: true, value: { state: 'none' } });
 
     const search = await api.search.query({ q: 'alice' });
-    expect(!search.ok && search.error.message).toBe('Full-text search is part of Wonos Pro. Add a license key in the app (License) or with license.activate.');
+    expect(!search.ok && search.error.message).toBe('Full-text search is part of Remry Pro. Add a license key in the app (License) or with license.activate.');
     const branding = await api.branding.create({ name: 'Acme' });
-    expect(!branding.ok && branding.error.message).toContain('Branding is part of Wonos Pro');
+    expect(!branding.ok && branding.error.message).toContain('Branding is part of Remry Pro');
 
     // Reading stays free, so stored brandings still list without a license.
     expect((await api.branding.list()).ok).toBe(true);

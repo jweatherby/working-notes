@@ -27,7 +27,7 @@ export const restoreSnapshot = async (
 ): Promise<Result<{ readonly restored: string; readonly safetySnapshot: string | null }>> => {
   const port = options.appPort ?? APP_PORT;
   if (await isPortListening(port)) {
-    return err(new Error(`Wonos is running on 127.0.0.1:${port}. Quit it, then restore.`));
+    return err(new Error(`Remry is running on 127.0.0.1:${port}. Quit it, then restore.`));
   }
 
   const snapshots = await listSnapshots(notebook);

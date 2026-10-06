@@ -30,7 +30,7 @@ export type CallOutcome =
   | { readonly kind: 'invalid'; readonly issues: readonly InputIssue[] };
 
 export interface CallOptions {
-  /** Notebook id or name. Otherwise WONO_NOTEBOOK, then the default notebook. */
+  /** Notebook id or name. Otherwise REMRY_NOTEBOOK, then the default notebook. */
   readonly notebook?: string;
 }
 

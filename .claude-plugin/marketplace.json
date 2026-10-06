@@ -1,17 +1,17 @@
 {
-  "name": "wonos",
+  "name": "remry",
   "owner": {
     "name": "jweatherby"
   },
   "metadata": {
-    "description": "Wonos: a local notebook that Claude keeps for you",
+    "description": "Remry: a local notebook that Claude keeps for you",
     "version": "0.11.3"
   },
   "plugins": [
     {
-      "name": "wonos",
+      "name": "remry",
       "source": { "source": "github", "repo": "jweatherby/working-notes", "ref": "dist" },
-      "description": "Lets Claude read and write your local Wonos notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
+      "description": "Lets Claude read and write your local Remry notebooks (work, personal projects): org chart, projects, goals, a wiki, notes, docs and todos. Releases include the app for Apple silicon Macs, so nothing else needs installing.",
       "version": "0.11.3",
       "category": "productivity",
       "keywords": ["notes", "org-chart", "todos", "reports", "local-first"]
