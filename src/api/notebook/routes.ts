@@ -6,7 +6,7 @@ import type { NotebookProfile } from '$shared/types/notebook';
 import { notebookModel } from '$shared/modules/model';
 import { addStarterKinds } from '$api/page-kind/operations';
 import { seedGroupKinds } from '$api/group-kind/operations';
-import { seedRelationKinds } from '$api/relation-kind/operations';
+import { seedPersonRelationKinds } from '$api/person-relation-kind/operations';
 import { createNotebook, listNotebooks, renameNotebook, setDefaultNotebook, setNotebookProfile } from './operations';
 
 /** The group and relation kinds a profile's modules bring, and the starter page kinds for work. */
@@ -14,7 +14,7 @@ const setUpModules = async (notebookId: string, profile: NotebookProfile): Promi
   const reg = await getReadyRegistry(notebookId);
   const model = notebookModel(profile);
   await seedGroupKinds(reg, model.groupKinds);
-  await seedRelationKinds(reg, model.relationKinds);
+  await seedPersonRelationKinds(reg, model.personRelationKinds);
   if (profile === 'work') await addStarterKinds(reg);
 };
 

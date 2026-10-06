@@ -38,9 +38,9 @@ export const GOAL_STATUSES = ['NOT_STARTED', 'ON_TRACK', 'AT_RISK', 'OFF_TRACK',
 export type GoalStatus = (typeof GOAL_STATUSES)[number];
 
 /**
- * The built-in relation kinds: RELATED has no direction, DEPENDS_ON does, and MENTIONS
- * is derived from app links in content and never written by hand. Every other kind
- * (Parent of / Child of, Partner of…) is data, in the notebook's relation_kind table.
+ * Relation kinds: RELATED has no direction, DEPENDS_ON does, and MENTIONS is derived
+ * from app links in content and never written by hand. Relationships between people
+ * (Parent of / Child of, Lead of…) are person relations, of kinds the notebook defines.
  */
 export const MANUAL_RELATION_KINDS = ['RELATED', 'DEPENDS_ON'] as const;
 
@@ -48,8 +48,7 @@ export type ManualRelationKind = (typeof MANUAL_RELATION_KINDS)[number];
 
 export const RELATION_KINDS = [...MANUAL_RELATION_KINDS, 'MENTIONS'] as const;
 
-/** A built-in kind, or a key from the notebook's relation_kind table. */
-export type RelationKind = string;
+export type RelationKind = (typeof RELATION_KINDS)[number];
 
 /** Entity types that can be archived: hidden from lists and read-only until unarchived. */
 export const ARCHIVABLE_TYPES = ['PERSON', 'GROUP', 'PROJECT', 'GOAL', 'PAGE'] as const;

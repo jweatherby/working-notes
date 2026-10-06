@@ -12,13 +12,13 @@ export const PERSONAL_MODULE: ModuleDefinition = {
     { module: 'personal', key: 'knownAs', label: 'How we know them', input: 'text', placeholder: 'e.g. College friend' },
     { module: 'personal', key: 'birthday', label: 'Birthday', input: 'birthday', placeholder: '1990-05-03, or --05-03 without the year' }
   ],
-  relationKinds: [
-    { key: 'PARTNER_OF', label: 'Partner of', inverseLabel: 'Partner of', symmetric: true, peopleOnly: true, exclusive: false },
-    { key: 'PARENT_OF', label: 'Parent of', inverseLabel: 'Child of', symmetric: false, peopleOnly: true, exclusive: false },
-    { key: 'SIBLING_OF', label: 'Sibling of', inverseLabel: 'Sibling of', symmetric: true, peopleOnly: true, exclusive: false },
-    { key: 'FRIEND_OF', label: 'Friend of', inverseLabel: 'Friend of', symmetric: true, peopleOnly: true, exclusive: false },
-    { key: 'PARENT_IN_LAW_OF', label: 'Parent-in-law of', inverseLabel: 'Child-in-law of', symmetric: false, peopleOnly: true, exclusive: false },
-    { key: 'SIBLING_IN_LAW_OF', label: 'Sibling-in-law of', inverseLabel: 'Sibling-in-law of', symmetric: true, peopleOnly: true, exclusive: false }
+  personRelationKinds: [
+    { key: 'PARTNER_OF', label: 'Partner of', inverseLabel: 'Partner of', symmetric: true, exclusive: false },
+    { key: 'PARENT_OF', label: 'Parent of', inverseLabel: 'Child of', symmetric: false, exclusive: false },
+    { key: 'SIBLING_OF', label: 'Sibling of', inverseLabel: 'Sibling of', symmetric: true, exclusive: false },
+    { key: 'FRIEND_OF', label: 'Friend of', inverseLabel: 'Friend of', symmetric: true, exclusive: false },
+    { key: 'PARENT_IN_LAW_OF', label: 'Parent-in-law of', inverseLabel: 'Child-in-law of', symmetric: false, exclusive: false },
+    { key: 'SIBLING_IN_LAW_OF', label: 'Sibling-in-law of', inverseLabel: 'Sibling-in-law of', symmetric: true, exclusive: false }
   ],
   entityTypes: [],
   nav: [],

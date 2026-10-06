@@ -2,23 +2,31 @@ import type { Registry } from '$shared/registry';
 import { ok, err, type Result } from '$shared/utils';
 import { ensureWritable } from '$api/_archive';
 import type { EntityType, RelatableType, RelationKind } from '$shared/types/enums';
-import { relationLabel, type RelationGroup, type RelationItem, type RelationKindDefinition } from '$shared/types/relations';
+import { RELATION_KINDS } from '$shared/types/enums';
+import { RELATION_LABELS, relationLabel, type RelationGroup, type RelationItem } from '$shared/types/relations';
+import type { PersonRelationKindDefinition } from '$shared/types/person-relations';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { resolveEntityLabel } from '$api/_entity-labels';
-import { getRelationKind, loadRelationKinds } from '$api/relation-kind/operations';
+import { loadPersonRelationKinds } from '$api/person-relation-kind/operations';
+import { listPersonRelationItems } from '$api/person-relation/operations';
 
 // ----- Pure helpers -----
 
 /**
- * Groups by label ("Depends on", "Needed by", …). Groups follow the kinds' order
- * (built-ins first, mentions last), outgoing before incoming.
+ * Groups by label ("Depends on", "Needed by", "Child of", …): relationships between
+ * people first, in their kinds' order, then RELATED, DEPENDS_ON and MENTIONS;
+ * outgoing before incoming.
  */
-export const groupRelations = (items: readonly RelationItem[], kinds: readonly RelationKindDefinition[]): readonly RelationGroup[] => {
-  const order = (kind: string): number => {
-    const i = [...kinds].sort((a, b) => a.sortOrder - b.sortOrder).findIndex((k) => k.key === kind);
-    return i === -1 ? kinds.length : i;
+export const groupRelations = (items: readonly RelationItem[], personKinds: readonly PersonRelationKindDefinition[]): readonly RelationGroup[] => {
+  const sorted = [...personKinds].sort((a, b) => a.sortOrder - b.sortOrder);
+  const order = (item: RelationItem): number => {
+    if (item.personRelation) {
+      const i = sorted.findIndex((k) => k.key === item.kind);
+      return i === -1 ? sorted.length : i;
+    }
+    return sorted.length + 1 + (RELATION_KINDS as readonly string[]).indexOf(item.kind);
   };
-  const rank = (item: RelationItem) => order(item.kind) * 2 + (item.direction === 'incoming' ? 1 : 0);
+  const rank = (item: RelationItem) => order(item) * 2 + (item.direction === 'incoming' ? 1 : 0);
   const groups = new Map<string, { rank: number; items: RelationItem[] }>();
   for (const item of items) {
     const group = groups.get(item.label) ?? { rank: rank(item), items: [] };
@@ -50,24 +58,28 @@ const pathOf = async (reg: Pick<Registry, 'prisma'>, entityType: RelatableType, 
   return entityPath(entityType, entityId);
 };
 
-/** Relations at either end of an entity, grouped by how they read from its side. Relations to deleted entities are left out. */
+/**
+ * Relations at either end of an entity, grouped by how they read from its side,
+ * with a person's relationships to other people. Relations to deleted entities are left out.
+ */
 export const listRelationsForEntity = async (
   reg: Pick<Registry, 'prisma'>,
   entityType: EntityType,
   entityId: string
 ): Promise<Result<readonly RelationGroup[]>> => {
-  const [rows, kinds] = await Promise.all([
+  const [rows, personKinds, personItems] = await Promise.all([
     reg.prisma.relation.findMany({
       where: { OR: [{ fromType: entityType, fromId: entityId }, { toType: entityType, toId: entityId }] },
       orderBy: { createdAt: 'asc' }
     }),
-    loadRelationKinds(reg)
+    entityType === 'PERSON' ? loadPersonRelationKinds(reg) : Promise.resolve([]),
+    entityType === 'PERSON' ? listPersonRelationItems(reg, entityId) : Promise.resolve([])
   ]);
 
   const items = await Promise.all(
     rows.map(async (row): Promise<RelationItem | null> => {
       const outgoing = row.fromType === entityType && row.fromId === entityId;
-      const kind = row.kind;
+      const kind = row.kind as RelationKind;
       const otherType = (outgoing ? row.toType : row.fromType) as RelatableType;
       const otherId = outgoing ? row.toId : row.fromId;
       const label = await resolveEntityLabel(reg, otherType, otherId);
@@ -76,7 +88,7 @@ export const listRelationsForEntity = async (
         id: row.id,
         kind,
         direction: outgoing ? 'outgoing' : 'incoming',
-        label: relationLabel(kinds, kind, outgoing),
+        label: relationLabel(kind, outgoing),
         other: { entityType: otherType, entityId: otherId, label, path: await pathOf(reg, otherType, otherId) },
         note: row.note,
         createdAt: row.createdAt
@@ -102,7 +114,7 @@ export const listRelationsForEntity = async (
         id: link.id,
         kind: 'DEPENDS_ON',
         direction: outgoing ? 'outgoing' : 'incoming',
-        label: relationLabel(kinds, 'DEPENDS_ON', outgoing),
+        label: relationLabel('DEPENDS_ON', outgoing),
         other: { entityType: otherType, entityId: otherId, label, path: entityPath(otherType, otherId) },
         note: null,
         createdAt: link.createdAt,
@@ -111,7 +123,7 @@ export const listRelationsForEntity = async (
     })
   );
 
-  return ok(groupRelations([...items, ...linkItems].filter((item): item is RelationItem => item !== null), kinds));
+  return ok(groupRelations([...personItems, ...items, ...linkItems].filter((item): item is RelationItem => item !== null), personKinds));
 };
 
 // ----- Mutations -----
@@ -127,15 +139,15 @@ interface RelationEnds {
 const findDuplicate = async (
   reg: Pick<Registry, 'prisma'>,
   ends: RelationEnds,
-  kind: RelationKindDefinition
+  kind: RelationKind
 ): Promise<{ readonly id: string } | null> => {
   const find = (fromType: string, fromId: string, toType: string, toId: string) =>
     reg.prisma.relation.findUnique({
-      where: { fromType_fromId_toType_toId_kind: { fromType, fromId, toType, toId, kind: kind.key } },
+      where: { fromType_fromId_toType_toId_kind: { fromType, fromId, toType, toId, kind } },
       select: { id: true }
     });
   return (await find(ends.fromType, ends.fromId, ends.toType, ends.toId))
-    ?? (kind.symmetric ? await find(ends.toType, ends.toId, ends.fromType, ends.fromId) : null);
+    ?? (RELATION_LABELS[kind].symmetric ? await find(ends.toType, ends.toId, ends.fromType, ends.fromId) : null);
 };
 
 export interface AddRelationInput {
@@ -147,33 +159,7 @@ export interface AddRelationInput {
   readonly note?: string | null;
 }
 
-/** The kind, if the notebook has it, can be written by hand, and fits these ends. */
-const checkKind = async (
-  reg: Pick<Registry, 'prisma'>,
-  key: string,
-  ends: { readonly fromType: string; readonly toType: string }
-): Promise<Result<RelationKindDefinition>> => {
-  if (key === 'MENTIONS') {
-    return err(new Error('MENTIONS relations come from links in content: link to the entity with its path in the markdown instead'));
-  }
-  const kind = await getRelationKind(reg, key);
-  if (!kind.ok) return kind;
-  if (kind.value.peopleOnly && (ends.fromType !== 'PERSON' || ends.toType !== 'PERSON')) {
-    return err(new Error(`${key} links two people; use RELATED with a note for anything else`));
-  }
-  return kind;
-};
-
-/** In an exclusive kind the `to` end keeps one relation of it: the others go (a person's old lead). */
-const replacedByExclusive = (
-  reg: Pick<Registry, 'prisma'>,
-  kind: RelationKindDefinition,
-  ends: RelationEnds,
-  exceptId?: string
-) =>
-  reg.prisma.relation.deleteMany({
-    where: { kind: kind.key, toType: ends.toType, toId: ends.toId, ...(exceptId && { id: { not: exceptId } }) }
-  });
+const MENTIONS_ERROR = 'MENTIONS relations come from links in content: link to the entity with its path in the markdown instead';
 
 export const addRelation = async (
   reg: Pick<Registry, 'prisma'>,
@@ -182,8 +168,7 @@ export const addRelation = async (
   if (input.fromType === input.toType && input.fromId === input.toId) {
     return err(new Error('A relation needs two different entities'));
   }
-  const kind = await checkKind(reg, input.kind, input);
-  if (!kind.ok) return err(kind.error);
+  if (input.kind === 'MENTIONS') return err(new Error(MENTIONS_ERROR));
 
   // Relations *to* an archived entity are allowed ("supersedes" an archived project); from one, not.
   const writable = await ensureWritable(reg, input.fromType, input.fromId);
@@ -197,17 +182,14 @@ export const addRelation = async (
   if (toLabel === null) return err(new Error(`${input.toType} ${input.toId} not found`));
 
   const key = { fromType: input.fromType, fromId: input.fromId, toType: input.toType, toId: input.toId, kind: input.kind };
-  const existing = await findDuplicate(reg, input, kind.value);
+  const existing = await findDuplicate(reg, input, input.kind);
   if (existing) {
     return err(new Error(
-      `"${fromLabel}" ${kind.value.label.toLowerCase()} "${toLabel}" already (relation ${existing.id}); use relation.update to change its note`
+      `"${fromLabel}" ${RELATION_LABELS[input.kind].label.toLowerCase()} "${toLabel}" already (relation ${existing.id}); use relation.update to change its note`
     ));
   }
 
-  const create = reg.prisma.relation.create({ data: { ...key, note: input.note ?? null } });
-  const row = kind.value.exclusive
-    ? (await reg.prisma.$transaction([replacedByExclusive(reg, kind.value, input), create]))[1]
-    : await create;
+  const row = await reg.prisma.relation.create({ data: { ...key, note: input.note ?? null } });
   return ok({ id: row.id });
 };
 
@@ -224,25 +206,18 @@ export const updateRelation = async (
     return err(new Error('MENTIONS relations come from links in content and can\'t be edited; change the content instead'));
   }
 
-  let newKind: RelationKindDefinition | null = null;
   if (input.kind !== undefined && input.kind !== existing.kind) {
-    const kind = await checkKind(reg, input.kind, existing);
-    if (!kind.ok) return err(kind.error);
-    const clash = await findDuplicate(reg, existing, kind.value);
+    const clash = await findDuplicate(reg, existing, input.kind);
     if (clash) return err(new Error(`A ${input.kind} relation between these entities already exists (relation ${clash.id})`));
-    newKind = kind.value;
   }
 
-  await reg.prisma.$transaction([
-    ...(newKind?.exclusive ? [replacedByExclusive(reg, newKind, existing, id)] : []),
-    reg.prisma.relation.update({
-      where: { id },
-      data: {
-        ...(input.kind !== undefined && { kind: input.kind }),
-        ...(input.note !== undefined && { note: input.note })
-      }
-    })
-  ]);
+  await reg.prisma.relation.update({
+    where: { id },
+    data: {
+      ...(input.kind !== undefined && { kind: input.kind }),
+      ...(input.note !== undefined && { note: input.note })
+    }
+  });
   return ok({ id });
 };
 

@@ -56,8 +56,7 @@ describe('home smoke', () => {
     const lead = await p.person.create({ data: { name: 'Focus Lead' } });
     const report = await p.person.create({ data: { name: 'Focus Report' } });
     const gone = await p.person.create({ data: { name: 'Focus Gone', archivedAt: new Date() } });
-    await p.relationKind.upsert({ where: { key: 'LEAD_OF' }, create: { key: 'LEAD_OF', label: 'Lead of', inverseLabel: 'Reports to', peopleOnly: true, exclusive: true }, update: {} });
-    await p.relation.createMany({ data: [report.id, gone.id].map((id) => ({ fromType: 'PERSON', fromId: lead.id, toType: 'PERSON', toId: id, kind: 'LEAD_OF' })) });
+    await p.personRelation.createMany({ data: [report.id, gone.id].map((id) => ({ fromPersonId: lead.id, toPersonId: id, kind: 'LEAD_OF' })) });
     const team = await p.group.create({ data: { name: 'Focus Team', kind: 'TEAM' } });
     const family = await p.groupKind.upsert({ where: { key: 'FAMILY' }, create: { key: 'FAMILY', name: 'Family', plural: 'Families' }, update: {} });
     const cousins = await p.group.create({ data: { name: 'Focus Cousins', kind: family.key } });

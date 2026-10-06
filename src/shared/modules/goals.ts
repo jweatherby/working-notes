@@ -6,7 +6,7 @@ export const GOALS_MODULE: ModuleDefinition = {
   name: 'Goals',
   groupKinds: [],
   personFields: [],
-  relationKinds: [],
+  personRelationKinds: [],
   entityTypes: ['GOAL'],
   nav: [{ href: '/app/goals', label: 'Goals', after: '/app/projects' }],
   routes: ['/app/goals'],

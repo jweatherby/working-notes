@@ -9,7 +9,7 @@ import { features } from '$shared/settings/base/features';
 import { GOALS_MODULE } from './goals';
 import { ORG_MODULE } from './org';
 import { PERSONAL_MODULE } from './personal';
-import type { GroupKindSeed, ModuleDefinition, ModuleId, NavItem, PersonFieldDescriptor, RelationKindSeed } from './types';
+import type { GroupKindSeed, ModuleDefinition, ModuleId, NavItem, PersonFieldDescriptor, PersonRelationKindSeed } from './types';
 
 export const MODULES: Readonly<Record<ModuleId, ModuleDefinition>> = {
   org: ORG_MODULE,
@@ -43,7 +43,7 @@ export interface NotebookModel {
   readonly nav: readonly NavItem[];
   readonly personFields: readonly PersonFieldDescriptor[];
   /** Relation kinds the modules bring (seeded into the notebook; the notebook can add its own). */
-  readonly relationKinds: readonly RelationKindSeed[];
+  readonly personRelationKinds: readonly PersonRelationKindSeed[];
   readonly groupKinds: readonly GroupKindSeed[];
   readonly homeWidgets: readonly 'birthdays'[];
   /** The module that owns an app route this notebook doesn't have, or null when it's open. */
@@ -83,7 +83,7 @@ export const notebookModel = (profile: NotebookProfile): NotebookModel => {
     entity: (type) => ENTITY_DESCRIPTORS[type],
     nav: placeNav(CORE_NAV, active.flatMap((m) => m.nav)),
     personFields: active.flatMap((m) => m.personFields),
-    relationKinds: active.flatMap((m) => m.relationKinds),
+    personRelationKinds: active.flatMap((m) => m.personRelationKinds),
     groupKinds: active.flatMap((m) => m.groupKinds),
     homeWidgets: active.flatMap((m) => m.homeWidgets),
     routeOwner: (pathname) => owner((m) => m.routes.some((r) => startsWith(pathname, r))),

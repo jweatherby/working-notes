@@ -8,7 +8,8 @@ import type { OrgPersonData, OrgPersonDetail, PersonalPersonData } from '$shared
 import type { orgPersonPatch, personalPersonPatch } from '$shared/types/person';
 import type { z } from 'zod';
 import type { FocusLink } from '$api/home/focus-node';
-import { seedRelationKinds } from '$api/relation-kind/operations';
+import { seedPersonRelationKinds } from '$api/person-relation-kind/operations';
+import { setExclusiveRelation } from '$api/person-relation/operations';
 import { ORG_MODULE } from '$shared/modules/org';
 
 type Reg = Pick<Registry, 'prisma'>;
@@ -23,12 +24,16 @@ export interface PersonExtension<Data, Detail, Patch> {
   readonly structuralLinks: (reg: Reg, personId: string) => Promise<readonly FocusLink[]>;
 }
 
-// ----- org: title, and the reporting line as LEAD_OF relations (lead → report) -----
+// ----- org: title, and the reporting line as LEAD_OF person relations (lead → report) -----
 
 export const LEAD_KIND = 'LEAD_OF';
 
-const leadRelations = (reg: Reg, where: { toId: { in: string[] } } | { fromId: string } | { toId: string }) =>
-  reg.prisma.relation.findMany({ where: { kind: LEAD_KIND, fromType: 'PERSON', toType: 'PERSON', ...where } });
+const leadRelations = async (
+  reg: Reg,
+  where: { toPersonId: { in: string[] } } | { fromPersonId: string } | { toPersonId: string }
+): Promise<readonly { readonly fromId: string; readonly toId: string }[]> =>
+  (await reg.prisma.personRelation.findMany({ where: { kind: LEAD_KIND, ...where }, select: { fromPersonId: true, toPersonId: true } }))
+    .map((r) => ({ fromId: r.fromPersonId, toId: r.toPersonId }));
 
 const namesOf = async (reg: Reg, ids: readonly string[]): Promise<ReadonlyMap<string, string>> =>
   new Map((await reg.prisma.person.findMany({ where: { id: { in: [...ids] } }, select: { id: true, name: true } })).map((p) => [p.id, p.name]));
@@ -38,7 +43,7 @@ export const ORG_PERSON: PersonExtension<OrgPersonData, OrgPersonDetail, z.infer
   load: async (reg, ids) => {
     const [titles, leads] = await Promise.all([
       reg.prisma.orgPerson.findMany({ where: { personId: { in: [...ids] } } }),
-      leadRelations(reg, { toId: { in: [...ids] } })
+      leadRelations(reg, { toPersonId: { in: [...ids] } })
     ]);
     const names = await namesOf(reg, leads.map((l) => l.fromId));
     const out = new Map<string, OrgPersonData>();
@@ -51,8 +56,8 @@ export const ORG_PERSON: PersonExtension<OrgPersonData, OrgPersonDetail, z.infer
   detail: async (reg, personId) => {
     const [title, lead, reports] = await Promise.all([
       reg.prisma.orgPerson.findUnique({ where: { personId } }),
-      leadRelations(reg, { toId: personId }),
-      leadRelations(reg, { fromId: personId })
+      leadRelations(reg, { toPersonId: personId }),
+      leadRelations(reg, { fromPersonId: personId })
     ]);
     if (!title && lead.length === 0 && reports.length === 0) return null;
     const ids = [...lead.map((l) => l.fromId), ...reports.map((r) => r.toId)];
@@ -80,18 +85,14 @@ export const ORG_PERSON: PersonExtension<OrgPersonData, OrgPersonDetail, z.infer
       if (patch.leadId && !(await reg.prisma.person.findUnique({ where: { id: patch.leadId }, select: { id: true } }))) {
         return err(new Error(`Lead ${patch.leadId} not found. Find ids with person.list.`));
       }
-      // A person has one lead: replace the relation, or clear it with null.
-      await seedRelationKinds(reg, ORG_MODULE.relationKinds);
-      await reg.prisma.$transaction([
-        reg.prisma.relation.deleteMany({ where: { kind: LEAD_KIND, toType: 'PERSON', toId: personId } }),
-        ...(patch.leadId
-          ? [reg.prisma.relation.create({ data: { kind: LEAD_KIND, fromType: 'PERSON', fromId: patch.leadId, toType: 'PERSON', toId: personId } })]
-          : [])
-      ]);
+      // A person has one lead: replace the relationship, or clear it with null.
+      await seedPersonRelationKinds(reg, ORG_MODULE.personRelationKinds);
+      const set = await setExclusiveRelation(reg, LEAD_KIND, personId, patch.leadId);
+      if (!set.ok) return set;
     }
     return ok(undefined);
   },
-  // "Reports to" and "Lead of" are relations, so the graph shows them already.
+  // "Reports to" and "Lead of" are person relations, so the graph shows them already.
   structuralLinks: async () => []
 };
 

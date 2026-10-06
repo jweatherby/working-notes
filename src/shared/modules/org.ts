@@ -12,7 +12,7 @@ export const ORG_MODULE: ModuleDefinition = {
     { module: 'org', key: 'title', label: 'Title', input: 'text', placeholder: 'e.g. Senior Engineer' },
     { module: 'org', key: 'leadId', label: 'Lead', input: 'person' }
   ],
-  relationKinds: [{ key: 'LEAD_OF', label: 'Lead of', inverseLabel: 'Reports to', symmetric: false, peopleOnly: true, exclusive: true }],
+  personRelationKinds: [{ key: 'LEAD_OF', label: 'Lead of', inverseLabel: 'Reports to', symmetric: false, exclusive: true }],
   entityTypes: [],
   nav: [{ href: '/app/orgmap', label: 'Org Map', replaces: ['/app/people', '/app/groups'], after: '/app' }],
   routes: ['/app/orgmap'],

@@ -1,14 +1,14 @@
 <script lang="ts">
-  // Create or edit a relation kind. Its labels change freely; its direction,
-  // what it links and whether it's one each are set when it's created.
+  // Create or edit a person relation kind. Its labels change freely; its direction
+  // and whether it's one each are set when it's created.
   import { trpc } from '$shared/trpc/client';
   import Field from '$lib/ui/Field.svelte';
   import { submit } from '$lib/ui/submit';
   import { kindKeyFromName } from '$lib/page/kind-form';
-  import type { RelationKindDefinition } from '$shared/types/relations';
+  import type { PersonRelationKindDefinition } from '$shared/types/person-relations';
 
   interface Props {
-    readonly initial?: RelationKindDefinition;
+    readonly initial?: PersonRelationKindDefinition;
     readonly onSuccess: () => void;
     readonly onCancel?: () => void;
   }
@@ -21,7 +21,6 @@
   let inverseLabel = $state(initial && !initial.symmetric ? initial.inverseLabel : '');
   let key = $state(initial?.key ?? '');
   let autoKey = $state(!initial);
-  let peopleOnly = $state(initial?.peopleOnly ?? true);
   let exclusive = $state(initial?.exclusive ?? false);
   let submitting = $state(false);
   let error = $state('');
@@ -31,7 +30,6 @@
     inverseLabel = initial && !initial.symmetric ? initial.inverseLabel : '';
     key = initial?.key ?? '';
     autoKey = !initial;
-    peopleOnly = initial?.peopleOnly ?? true;
     exclusive = initial?.exclusive ?? false;
   });
 
@@ -45,8 +43,8 @@
     error = '';
     const inverse = inverseLabel.trim() || undefined;
     const outcome = isEdit
-      ? await submit(() => trpc().relationKind.update.mutate({ key: initial!.key, label: label.trim(), inverseLabel: inverse }))
-      : await submit(() => trpc().relationKind.create.mutate({ key, label: label.trim(), inverseLabel: inverse, peopleOnly, exclusive: !!inverse && exclusive }));
+      ? await submit(() => trpc().personRelationKind.update.mutate({ key: initial!.key, label: label.trim(), inverseLabel: inverse }))
+      : await submit(() => trpc().personRelationKind.create.mutate({ key, label: label.trim(), inverseLabel: inverse, exclusive: !!inverse && exclusive }));
     submitting = false;
     if (!outcome.ok) {
       error = outcome.error;
@@ -75,18 +73,11 @@
     {/snippet}
   </Field>
   {#if !isEdit}
-    <div class="form-row">
-      <Field label="Links people only">
-        {#snippet children({ id })}
-          <input {id} type="checkbox" bind:checked={peopleOnly} />
-        {/snippet}
-      </Field>
-      <Field label="One each" hint="Like a lead: someone has one, and adding another replaces it.">
+    <Field label="One each" hint="Like a lead: someone has one, and adding another replaces it.">
         {#snippet children({ id })}
           <input {id} type="checkbox" bind:checked={exclusive} disabled={!inverseLabel.trim()} />
         {/snippet}
-      </Field>
-    </div>
+    </Field>
   {/if}
 
   {#if error}<p class="form-error">{error}</p>{/if}

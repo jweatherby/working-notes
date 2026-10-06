@@ -132,13 +132,13 @@ describe('applyMigrations', () => {
     expect(await rows('SELECT id, kind, name FROM "group" ORDER BY id')).toEqual([['d1', 'DEPARTMENT', 'Engineering'], ['t1', 'TEAM', 'Platform']]);
     expect(await rows('SELECT group_id, person_id FROM group_member ORDER BY group_id')).toEqual([['d1', 'p2'], ['t1', 'p2']]);
     expect(await rows('SELECT person_id, title FROM org_person ORDER BY person_id')).toEqual([['p1', 'CTO'], ['p2', 'Engineer']]);
-    // The lead became an exclusive LEAD_OF relation, from the lead to the report.
-    expect(await rows('SELECT key, exclusive FROM relation_kind')).toEqual([['LEAD_OF', 1]]);
-    expect(await rows("SELECT from_id, to_id FROM relation WHERE kind = 'LEAD_OF'")).toEqual([['p1', 'p2']]);
+    // The lead became a one-each LEAD_OF person relation, from the lead to the report.
+    expect(await rows('SELECT key, exclusive FROM person_relation_kind')).toEqual([['LEAD_OF', 1]]);
+    expect(await rows("SELECT from_person_id, to_person_id FROM person_relation WHERE kind = 'LEAD_OF'")).toEqual([['p1', 'p2']]);
     expect(await rows('SELECT person_id, birthday FROM personal_person')).toEqual([['p2', '--05-03']]);
     expect(await rows('SELECT entity_type FROM note')).toEqual([['GROUP']]);
     expect(await rows('SELECT owner_type FROM project')).toEqual([['GROUP']]);
-    expect(await rows("SELECT to_type FROM relation WHERE kind = 'RELATED'")).toEqual([['GROUP']]);
+    expect(await rows('SELECT to_type, kind FROM relation')).toEqual([['GROUP', 'RELATED']]);
 
     const hits = async (match: string) =>
       (await client.execute({ sql: 'SELECT entity_type, entity_id, parent_type FROM search_index WHERE search_index MATCH ? ORDER BY entity_id', args: [match] })).rows
@@ -149,6 +149,46 @@ describe('applyMigrations', () => {
     // A module's field reindexes the person when it changes.
     await client.execute("UPDATE org_person SET title = 'Architect' WHERE person_id = 'p2'");
     expect(await hits('architect')).toEqual([['PERSON', 'p2', null]]);
+    expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual([]);
+    client.close();
+  });
+
+  it('moves relationships between people to person_relation, one row per symmetric pair', async () => {
+    const { dir, client } = freshDb();
+    const migrations = join(dir, 'migrations');
+    const personMigration = onDisk.find((name) => name.endsWith('_add_person_relations'))!;
+    const later = onDisk.slice(onDisk.indexOf(personMigration));
+    cpSync('prisma/migrations', migrations, { recursive: true });
+    for (const name of later) rmSync(join(migrations, name), { recursive: true });
+    await applyMigrations(client, migrations, quiet);
+
+    await client.executeMultiple(`
+      INSERT INTO relation_kind (key, label, inverse_label, symmetric, people_only, exclusive, updated_at) VALUES
+        ('PARENT_OF', 'Parent of', 'Child of', 0, 1, 0, CURRENT_TIMESTAMP),
+        ('FRIEND_OF', 'Friend of', 'Friend of', 1, 1, 0, CURRENT_TIMESTAMP),
+        ('USES', 'Uses', 'Used by', 0, 0, 0, CURRENT_TIMESTAMP);
+      INSERT INTO person (id, name, updated_at) VALUES ('a', 'Ada', CURRENT_TIMESTAMP), ('b', 'Bo', CURRENT_TIMESTAMP);
+      INSERT INTO project (id, name, updated_at) VALUES ('pr1', 'Garden', CURRENT_TIMESTAMP);
+      INSERT INTO relation (id, from_type, from_id, to_type, to_id, kind, note, updated_at) VALUES
+        ('r1', 'PERSON', 'a', 'PERSON', 'b', 'PARENT_OF', 'adopted', CURRENT_TIMESTAMP),
+        ('r2', 'PERSON', 'b', 'PERSON', 'a', 'FRIEND_OF', NULL, CURRENT_TIMESTAMP),
+        ('r3', 'PERSON', 'a', 'PERSON', 'b', 'FRIEND_OF', NULL, CURRENT_TIMESTAMP),
+        ('r4', 'PERSON', 'a', 'PROJECT', 'pr1', 'USES', 'weekends', CURRENT_TIMESTAMP),
+        ('r5', 'PERSON', 'a', 'PERSON', 'b', 'RELATED', NULL, CURRENT_TIMESTAMP);
+    `);
+    for (const name of later) cpSync(join('prisma/migrations', name), join(migrations, name), { recursive: true });
+    const result = await applyMigrations(client, migrations, quiet);
+    expect(result.ok && result.value.applied).toEqual(later);
+
+    const rows = async (sql: string) => (await client.execute(sql)).rows.map((r) => Object.values(r));
+    expect(await rows('SELECT key FROM person_relation_kind ORDER BY key')).toEqual([['FRIEND_OF'], ['PARENT_OF'], ['USES']]);
+    expect(await rows('SELECT from_person_id, to_person_id, kind, note FROM person_relation ORDER BY kind')).toEqual([
+      ['a', 'b', 'FRIEND_OF', null],
+      ['a', 'b', 'PARENT_OF', 'adopted']
+    ]);
+    // A notebook kind between other things becomes RELATED, keeping its note.
+    expect(await rows('SELECT id, kind, note FROM relation ORDER BY id')).toEqual([['r4', 'RELATED', 'weekends'], ['r5', 'RELATED', null]]);
+    expect((await client.execute("SELECT name FROM sqlite_master WHERE name = 'relation_kind'")).rows).toEqual([]);
     expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual([]);
     client.close();
   });

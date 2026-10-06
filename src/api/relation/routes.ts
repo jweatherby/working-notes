@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { ENTITY_TYPES, RELATABLE_TYPES } from '$shared/types/enums';
+import { ENTITY_TYPES, MANUAL_RELATION_KINDS, RELATABLE_TYPES } from '$shared/types/enums';
 
-// RELATED, DEPENDS_ON, or a key from relationKind.list; checked in the operation.
-const kind = z.string().max(40);
+// MENTIONS come from content; relationships between people are personRelation.*.
+const kind = z.enum(MANUAL_RELATION_KINDS);
 import { router, procedure } from '$shared/trpc/init';
 import { addRelation, listRelationsForEntity, removeRelation, updateRelation } from './operations';
 

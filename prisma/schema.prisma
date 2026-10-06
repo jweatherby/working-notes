@@ -50,6 +50,8 @@ model Person {
   org              OrgPerson?
   personal         PersonalPerson?
   groupMemberships GroupMember[]
+  relationsFrom    PersonRelation[] @relation("PersonRelationFrom")
+  relationsTo      PersonRelation[] @relation("PersonRelationTo")
 
   @@index([archivedAt])
   @@map("person")
@@ -306,19 +308,42 @@ model PageKind {
 
 // ----- Relation kinds: a notebook's own (RELATED, DEPENDS_ON and MENTIONS are built in) -----
 
-model RelationKind {
+/// A kind of relationship between two people, read one way from each end ("Parent of" / "Child of").
+/// Seeded by modules (org: LEAD_OF; personal: partner, parent, sibling, friend, in-laws); the user can add more.
+model PersonRelationKind {
   key          String   @id
   label        String
   inverseLabel String   @map("inverse_label")
+  /// Reads the same both ways; stored with the smaller person id first.
   symmetric    Boolean  @default(false)
-  peopleOnly   Boolean  @default(false) @map("people_only")
-  /** The `to` end has at most one relation of this kind (a person has one lead): adding replaces it. */
+  /// A person is the `to` end of one at most (one lead): adding another replaces it. A trigger enforces it.
   exclusive    Boolean  @default(false)
   sortOrder    Int      @default(0) @map("sort_order")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@map("relation_kind")
+  relations PersonRelation[]
+
+  @@map("person_relation_kind")
+}
+
+/// A relationship between two people. Deleting either person deletes it.
+model PersonRelation {
+  id           String   @id @default(cuid())
+  fromPersonId String   @map("from_person_id")
+  toPersonId   String   @map("to_person_id")
+  kind         String
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  from    Person             @relation("PersonRelationFrom", fields: [fromPersonId], references: [id], onDelete: Cascade)
+  to      Person             @relation("PersonRelationTo", fields: [toPersonId], references: [id], onDelete: Cascade)
+  kindDef PersonRelationKind @relation(fields: [kind], references: [key], onDelete: Restrict)
+
+  @@unique([fromPersonId, toPersonId, kind])
+  @@index([toPersonId, kind])
+  @@map("person_relation")
 }
 
 // ----- Relations: typed links between any two entities (polymorphic at both ends, no FK) -----

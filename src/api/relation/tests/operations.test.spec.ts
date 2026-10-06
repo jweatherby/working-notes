@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import { BUILTIN_RELATION_KINDS, type RelationItem } from '$shared/types/relations';
+import type { RelationItem } from '$shared/types/relations';
 import { addRelation, groupRelations, listRelationsForEntity, removeRelation } from '../operations';
 
 const item = (overrides: Partial<RelationItem>): RelationItem => ({
@@ -24,13 +24,28 @@ describe('groupRelations', () => {
       item({ id: '4', kind: 'DEPENDS_ON', direction: 'outgoing', label: 'Depends on' }),
       item({ id: '5', kind: 'DEPENDS_ON', direction: 'incoming', label: 'Needed by' }),
       item({ id: '6', kind: 'RELATED', direction: 'incoming', label: 'Related to' })
-    ], BUILTIN_RELATION_KINDS);
+    ], []);
     expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
       ['Related to', ['3', '6']],
       ['Depends on', ['4']],
       ['Needed by', ['2', '5']],
       ['Mentioned in', ['1']]
     ]);
+  });
+});
+
+describe('groupRelations with people', () => {
+  it('puts relationships between people first, in their kinds\' order', () => {
+    const kinds = [
+      { key: 'PARENT_OF', label: 'Parent of', inverseLabel: 'Child of', symmetric: false, exclusive: false, sortOrder: 1 },
+      { key: 'LEAD_OF', label: 'Lead of', inverseLabel: 'Reports to', symmetric: false, exclusive: true, sortOrder: 0 }
+    ];
+    const groups = groupRelations([
+      item({ id: '1', kind: 'RELATED', label: 'Related to' }),
+      item({ id: '2', kind: 'PARENT_OF', direction: 'incoming', label: 'Child of', personRelation: true }),
+      item({ id: '3', kind: 'LEAD_OF', direction: 'incoming', label: 'Reports to', personRelation: true })
+    ], kinds);
+    expect(groups.map((g) => g.label)).toEqual(['Reports to', 'Child of', 'Related to']);
   });
 });
 
@@ -123,7 +138,6 @@ describe('listRelationsForEntity', () => {
   it('links a todo to its popup on the page it belongs to', async () => {
     const reg = createTestRegistry({
       prisma: {
-        relationKind: { findMany: vi.fn().mockResolvedValue([]) },
         relation: {
           findMany: vi.fn().mockResolvedValue([
             { id: 'rel_1', fromType: 'TODO', fromId: 'td1', toType: 'GROUP', toId: 't1', kind: 'RELATED', note: null, createdAt: new Date(0) }

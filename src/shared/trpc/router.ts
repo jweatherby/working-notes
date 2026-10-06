@@ -9,7 +9,8 @@ import { goalRouter } from '$api/goal/routes';
 import { pageRouter } from '$api/page/routes';
 import { pageKindRouter } from '$api/page-kind/routes';
 import { relationRouter } from '$api/relation/routes';
-import { relationKindRouter } from '$api/relation-kind/routes';
+import { personRelationRouter } from '$api/person-relation/routes';
+import { personRelationKindRouter } from '$api/person-relation-kind/routes';
 import { todoRouter } from '$api/attached/todo/routes';
 import { personRouter } from '$api/person/routes';
 import { groupRouter } from '$api/group/routes';
@@ -40,7 +41,8 @@ export const appRouter = router({
   page: pageRouter,
   pageKind: pageKindRouter,
   relation: relationRouter,
-  relationKind: relationKindRouter,
+  personRelation: personRelationRouter,
+  personRelationKind: personRelationKindRouter,
   todo: todoRouter,
   person: personRouter,
   group: groupRouter,

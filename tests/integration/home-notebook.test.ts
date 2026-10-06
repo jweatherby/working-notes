@@ -8,15 +8,16 @@ import { ensureDatabase } from '../../src/shared/db/bootstrap.server';
 import { createPageKind, deletePageKind, listPageKinds, updatePageKind } from '../../src/api/page-kind/operations';
 import { createPage, getPage, queryPages, updatePage } from '../../src/api/page/operations';
 import { createTodo, listTodosForEntity, updateTodo } from '../../src/api/attached/todo/operations';
-import { createPerson, getPerson, listPersons, setMe } from '../../src/api/person/operations';
+import { createPerson, deletePerson, getPerson, listPersons, setMe, updatePerson } from '../../src/api/person/operations';
 import { addGroupMember, createGroup } from '../../src/api/group/operations';
 import { seedGroupKinds } from '../../src/api/group-kind/operations';
-import { createRelationKind, deleteRelationKind, listRelationKinds, seedRelationKinds, updateRelationKind } from '../../src/api/relation-kind/operations';
+import { createPersonRelationKind, deletePersonRelationKind, listPersonRelationKinds, seedPersonRelationKinds, updatePersonRelationKind } from '../../src/api/person-relation-kind/operations';
+import { addPersonRelation } from '../../src/api/person-relation/operations';
 import { createCallerFactory } from '../../src/shared/trpc/init';
 import { appRouter } from '../../src/shared/trpc/router';
 import { createNotebookContext } from '../../src/shared/trpc/context.server';
 import { PERSONAL_MODULE } from '../../src/shared/modules/personal';
-import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
+import { listRelationsForEntity } from '../../src/api/relation/operations';
 import { createProject } from '../../src/api/project/operations';
 import { OTHER_NOTEBOOK, TEST_NOTEBOOK } from './test-notebooks';
 
@@ -25,7 +26,7 @@ const reg = () => getRegistry(OTHER_NOTEBOOK);
 
 beforeAll(async () => {
   await ensureDatabase(OTHER_NOTEBOOK);
-  await seedRelationKinds(reg(), PERSONAL_MODULE.relationKinds);
+  await seedPersonRelationKinds(reg(), PERSONAL_MODULE.personRelationKinds);
 });
 
 const must = <T>(result: { ok: true; value: T } | { ok: false; error: Error }): T => {
@@ -116,32 +117,41 @@ describe('recurring todos', () => {
 });
 
 describe('people at home', () => {
-  it('keeps birthdays and personal relations, which link only people', async () => {
+  it('keeps birthdays and relationships between people, one row per symmetric pair', async () => {
     const r = reg();
     const sam = must(await createPerson(r, { name: 'Sam', extensions: { personal: { birthday: '--05-03', knownAs: 'Sister' } } }));
     const alex = must(await createPerson(r, { name: 'Alex', extensions: { personal: { birthday: '1990-01-31' } } }));
     expect(must(await getPerson(r, sam.id)).extensions.personal).toEqual({ birthday: '--05-03', knownAs: 'Sister' });
 
-    must(await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PERSON', toId: alex.id, kind: 'SIBLING_OF' }));
-    const again = await addRelation(r, { fromType: 'PERSON', fromId: alex.id, toType: 'PERSON', toId: sam.id, kind: 'SIBLING_OF' });
-    expect(again.ok).toBe(false);
-    must(await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PERSON', toId: alex.id, kind: 'PARENT_OF' }));
+    must(await addPersonRelation(r, { fromId: sam.id, toId: alex.id, kind: 'SIBLING_OF' }));
+    const again = await addPersonRelation(r, { fromId: alex.id, toId: sam.id, kind: 'SIBLING_OF' });
+    expect(!again.ok && again.error.message).toContain('already sibling of');
+    must(await addPersonRelation(r, { fromId: sam.id, toId: alex.id, kind: 'PARENT_OF' }));
 
     const fromAlex = must(await listRelationsForEntity(r, 'PERSON', alex.id));
     expect(fromAlex.map((g) => g.label)).toEqual(['Child of', 'Sibling of']);
+    expect(fromAlex.every((g) => g.items.every((i) => i.personRelation))).toBe(true);
 
-    const project = must(await createProject(r, { name: 'Garden' }));
-    const wrong = await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PROJECT', toId: project.id, kind: 'FRIEND_OF' });
-    expect(!wrong.ok && wrong.error.message).toContain('FRIEND_OF links two people');
+    expect((await addPersonRelation(r, { fromId: sam.id, toId: sam.id, kind: 'FRIEND_OF' })).ok).toBe(false);
+    const unknown = await addPersonRelation(r, { fromId: sam.id, toId: alex.id, kind: 'NEMESIS_OF' });
+    expect(!unknown.ok && unknown.error.message).toContain('personRelationKind.create');
   });
 
-  it('reads relations from the other person toward "me", and keeps one me', async () => {
+  it('deletes a person\'s relationships with them, in the database', async () => {
+    const r = reg();
+    const [a, b] = await Promise.all(['Gone A', 'Gone B'].map(async (name) => must(await createPerson(r, { name }))));
+    const rel = must(await addPersonRelation(r, { fromId: a!.id, toId: b!.id, kind: 'FRIEND_OF' }));
+    must(await deletePerson(r, a!.id));
+    expect(await r.prisma.personRelation.findUnique({ where: { id: rel.id } })).toBeNull();
+  });
+
+  it('reads relationships from the other person toward "me", and keeps one me', async () => {
     const r = reg();
     const me = must(await createPerson(r, { name: 'Me Myself' }));
     const mom = must(await createPerson(r, { name: 'Me Mom' }));
     const kid = must(await createPerson(r, { name: 'Me Kid' }));
-    must(await addRelation(r, { fromType: 'PERSON', fromId: mom.id, toType: 'PERSON', toId: me.id, kind: 'PARENT_OF' }));
-    must(await addRelation(r, { fromType: 'PERSON', fromId: me.id, toType: 'PERSON', toId: kid.id, kind: 'PARENT_OF' }));
+    must(await addPersonRelation(r, { fromId: mom.id, toId: me.id, kind: 'PARENT_OF' }));
+    must(await addPersonRelation(r, { fromId: me.id, toId: kid.id, kind: 'PARENT_OF' }));
 
     must(await setMe(r, mom.id));
     must(await setMe(r, me.id));
@@ -158,18 +168,30 @@ describe('people at home', () => {
   });
 });
 
-describe('exclusive relation kinds', () => {
-  it('gives a person one lead: a new LEAD_OF replaces the old one', async () => {
+describe('one-each person relation kinds', () => {
+  it('gives a person one lead: a new LEAD_OF replaces the old one and says so', async () => {
     const r = getRegistry(TEST_NOTEBOOK);
     const [a, b, c] = await Promise.all(['Ex Lead A', 'Ex Lead B', 'Ex Report'].map(async (name) => must(await createPerson(r, { name }))));
-    must(await addRelation(r, { fromType: 'PERSON', fromId: a!.id, toType: 'PERSON', toId: c!.id, kind: 'LEAD_OF' }));
-    must(await addRelation(r, { fromType: 'PERSON', fromId: b!.id, toType: 'PERSON', toId: c!.id, kind: 'LEAD_OF' }));
+    const first = must(await addPersonRelation(r, { fromId: a!.id, toId: c!.id, kind: 'LEAD_OF' }));
+    expect(first.replaced).toBeNull();
+    const second = must(await addPersonRelation(r, { fromId: b!.id, toId: c!.id, kind: 'LEAD_OF' }));
+    expect(second.replaced).toEqual({ id: first.id, personId: a!.id, name: 'Ex Lead A' });
     const leads = must(await listRelationsForEntity(r, 'PERSON', c!.id)).find((g) => g.label === 'Reports to');
     expect(leads?.items.map((i) => i.other.label)).toEqual(['Ex Lead B']);
     expect(must(await getPerson(r, c!.id)).extensions.org).toMatchObject({ leadId: b!.id, leadName: 'Ex Lead B' });
     // A lead can have any number of reports.
-    must(await addRelation(r, { fromType: 'PERSON', fromId: b!.id, toType: 'PERSON', toId: a!.id, kind: 'LEAD_OF' }));
+    must(await addPersonRelation(r, { fromId: b!.id, toId: a!.id, kind: 'LEAD_OF' }));
     expect(must(await getPerson(r, b!.id)).extensions.org?.reports.map((p) => p.name).sort()).toEqual(['Ex Lead A', 'Ex Report']);
+
+    // The reporting line is a tree: B leads A and C, so neither can lead B.
+    const loop = await addPersonRelation(r, { fromId: c!.id, toId: b!.id, kind: 'LEAD_OF' });
+    expect(!loop.ok && loop.error.message).toContain('loop');
+    const viaExtension = await updatePerson(r, b!.id, { extensions: { org: { leadId: a!.id } } });
+    expect(!viaExtension.ok && viaExtension.error.message).toContain('loop');
+
+    // The database refuses a second lead written around the app (a trigger; the
+    // libsql adapter reports every constraint failure as a foreign key one).
+    await expect(r.prisma.personRelation.create({ data: { fromPersonId: a!.id, toPersonId: c!.id, kind: 'LEAD_OF' } })).rejects.toThrow();
   });
 });
 
@@ -205,25 +227,27 @@ describe('groups and modules', () => {
   });
 });
 
-describe('relation kinds as data', () => {
-  it('creates, renames and deletes a kind, moving its relations first', async () => {
+describe('person relation kinds as data', () => {
+  it('creates, renames and deletes a kind, moving its relationships first', async () => {
     const r = reg();
-    const mentor = must(await createRelationKind(r, { key: 'MENTOR_OF', label: 'Mentor of', inverseLabel: 'Mentee of', peopleOnly: true }));
+    const mentor = must(await createPersonRelationKind(r, { key: 'MENTOR_OF', label: 'Mentor of', inverseLabel: 'Mentee of' }));
     expect(mentor).toMatchObject({ symmetric: false, exclusive: false });
-    const neighbour = must(await createRelationKind(r, { key: 'NEIGHBOUR_OF', label: 'Neighbour of' }));
+    const neighbour = must(await createPersonRelationKind(r, { key: 'NEIGHBOUR_OF', label: 'Neighbour of' }));
     expect(neighbour).toMatchObject({ symmetric: true, inverseLabel: 'Neighbour of' });
-    expect((await createRelationKind(r, { key: 'RELATED', label: 'x' })).ok).toBe(false);
-    expect((await createRelationKind(r, { key: 'bad key', label: 'x' })).ok).toBe(false);
+    expect((await createPersonRelationKind(r, { key: 'MENTOR_OF', label: 'x' })).ok).toBe(false);
+    expect((await createPersonRelationKind(r, { key: 'bad key', label: 'x' })).ok).toBe(false);
+    expect((await createPersonRelationKind(r, { key: 'TWIN_OF', label: 'Twin of', exclusive: true })).ok).toBe(false);
 
-    must(await updateRelationKind(r, 'MENTOR_OF', { inverseLabel: 'Mentored by' }));
+    must(await updatePersonRelationKind(r, 'MENTOR_OF', { inverseLabel: 'Mentored by' }));
     const [a, b] = await Promise.all(['Kind A', 'Kind B'].map(async (name) => must(await createPerson(r, { name }))));
-    must(await addRelation(r, { fromType: 'PERSON', fromId: a!.id, toType: 'PERSON', toId: b!.id, kind: 'MENTOR_OF' }));
+    must(await addPersonRelation(r, { fromId: b!.id, toId: a!.id, kind: 'MENTOR_OF' }));
+    must(await addPersonRelation(r, { fromId: a!.id, toId: b!.id, kind: 'MENTOR_OF' }));
     expect(must(await listRelationsForEntity(r, 'PERSON', b!.id)).map((g) => g.label)).toContain('Mentored by');
 
-    expect((await deleteRelationKind(r, 'MENTOR_OF')).ok).toBe(false);
-    expect(must(await deleteRelationKind(r, 'MENTOR_OF', 'RELATED')).relationsMoved).toBe(1);
-    expect(must(await listRelationKinds(r)).some((k) => k.key === 'MENTOR_OF')).toBe(false);
-    expect(must(await listRelationsForEntity(r, 'PERSON', b!.id)).map((g) => g.label)).toContain('Related to');
-    expect((await updateRelationKind(r, 'RELATED', { label: 'x' })).ok).toBe(false);
+    expect((await deletePersonRelationKind(r, 'MENTOR_OF')).ok).toBe(false);
+    // Into a symmetric kind, the two directions are one pair: one moves, one goes.
+    expect(must(await deletePersonRelationKind(r, 'MENTOR_OF', 'NEIGHBOUR_OF'))).toMatchObject({ relationsMoved: 1, relationsDropped: 1 });
+    expect(must(await listPersonRelationKinds(r)).some((k) => k.key === 'MENTOR_OF')).toBe(false);
+    expect(must(await listRelationsForEntity(r, 'PERSON', b!.id)).map((g) => g.label)).toContain('Neighbour of');
   });
 });

@@ -5,7 +5,7 @@
   // goal's Projects section, so neither can be removed here.
   import { invalidateAll } from '$app/navigation';
   import { trpc } from '$shared/trpc/client';
-  import type { RelationGroup } from '$shared/types/relations';
+  import type { RelationGroup, RelationItem } from '$shared/types/relations';
   import { entityTypeLabel } from '$shared/utils/entity';
   import { model } from '$lib/stores/notebook-model';
   import { relationEnd } from '$shared/utils/relations';
@@ -37,8 +37,10 @@
 
   let adding = $state(false);
 
-  const handleRemove = async (id: string) => {
-    await submitOrThrow(() => trpc().relation.remove.mutate({ id }));
+  const handleRemove = async (item: RelationItem) => {
+    await submitOrThrow(() => item.personRelation
+      ? trpc().personRelation.remove.mutate({ id: item.id })
+      : trpc().relation.remove.mutate({ id: item.id }));
     await onChange?.();
     await invalidateAll();
   };
@@ -73,7 +75,7 @@
             <span class="meta truncate" title={item.note ?? undefined}>{item.note ?? entityTypeLabel(item.other.entityType)}</span>
             {#if item.kind !== 'MENTIONS' && !item.goalProject}
               <span class="row-actions">
-                <ConfirmButton label="Remove link to {item.other.label}" variant="icon" onConfirm={() => handleRemove(item.id)} />
+                <ConfirmButton label="Remove link to {item.other.label}" variant="icon" onConfirm={() => handleRemove(item)} />
               </span>
             {/if}
           </li>
