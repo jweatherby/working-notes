@@ -1,7 +1,7 @@
 import type { Registry } from '$shared/registry';
 import { ok, type Result } from '$shared/utils';
 import type { EntityType, TodoRecurrence, TodoStatus } from '$shared/types/enums';
-import type { HomeTodoSort, RecentUpdate, UpdateKind } from '$shared/types/home';
+import type { HomeTodoPage, HomeTodoSort, RecentUpdate, UpdateKind } from '$shared/types/home';
 import { docPath, entityPath } from '$shared/utils/entity';
 import { features } from '$shared/settings/base/features';
 import { resolveEntityLabel } from '$api/_entity-labels';
@@ -66,24 +66,28 @@ const OPEN_STATUSES: readonly TodoStatus[] = ['ACTIVE', 'PENDING'];
 export const listOpenTodos = async (
   reg: Pick<Registry, 'prisma'>,
   limit = 25,
-  sort: HomeTodoSort = 'priority'
-): Promise<Result<readonly TodoSummary[]>> => {
-  const todos = await reg.prisma.todo.findMany({
-    where: { status: { in: [...OPEN_STATUSES] }, ...notAttachedToArchived(await loadArchivedIds(reg)) },
+  sort: HomeTodoSort = 'priority',
+  offset = 0
+): Promise<Result<HomeTodoPage<TodoSummary>>> => {
+  const where = { status: { in: [...OPEN_STATUSES] }, ...notAttachedToArchived(await loadArchivedIds(reg)) };
+  const [todos, total] = await Promise.all([reg.prisma.todo.findMany({
+    where,
     // By status, ACTIVE sorts before PENDING, as in todo.list.
     orderBy:
       sort === 'status'
         ? [{ status: 'asc' }, { priority: 'desc' }, { updatedAt: 'desc' }]
         : [{ priority: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
+    skip: offset,
     take: limit
-  });
+  }), reg.prisma.todo.count({ where })]);
 
   const labels = await Promise.all(
     todos.map((t) => resolveEntityLabel(reg, t.entityType as EntityType, t.entityId))
   );
 
-  return ok(
-    todos.map((t, i) => ({
+  return ok({
+    total,
+    items: todos.map((t, i) => ({
       id: t.id,
       title: t.title,
       description: t.description,
@@ -98,7 +102,7 @@ export const listOpenTodos = async (
       completedAt: t.completedAt,
       createdAt: t.createdAt
     }))
-  );
+  });
 };
 
 export const listRecentUpdates = async (

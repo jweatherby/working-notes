@@ -44,7 +44,7 @@ describe('archiving', () => {
     expect((await addTeamMember(reg, team.value.id, { personId: 'person_bob' })).ok).toBe(false);
 
     const todos = await listOpenTodos(reg);
-    expect(todos.ok && todos.value.some((t) => t.title === 'Bob follow-up')).toBe(false);
+    expect(todos.ok && todos.value.items.some((t) => t.title === 'Bob follow-up')).toBe(false);
     expect((await listTodos(reg)).some((t) => t.title === 'Bob follow-up')).toBe(false);
     expect((await listTodos(reg, { archived: 'include' })).some((t) => t.title === 'Bob follow-up')).toBe(true);
 

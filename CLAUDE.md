@@ -4,7 +4,7 @@ A local-only, single-user structured notebook: an org chart (people, teams, depa
 
 The user keeps several **notebooks** (work, home life, a side project), each with its own database and files. The app, the CLI and the MCP server work on one notebook at a time.
 
-A notebook's **profile** (`work` or `home`, in its `notebook.json`) changes only what the UI shows: a home notebook hides goals, departments, leads and the org map, and calls teams Groups and the wiki the Library (`src/shared/settings/base/profile.ts`). The API is the same for both. Wiki **page kinds** are data, defined per notebook (`page_kind`), and a kind's pages work as a dataset (`page.query`, `/app/wiki?kind=<key>`): that is how a notebook keeps expenses, recipes, places and the like without new tables.
+A notebook's **profile** (`work` or `home`, in its `notebook.json`) changes only what the UI shows: a home notebook hides goals, departments, leads and the org map, and calls teams Groups (`src/shared/settings/base/profile.ts`). The API is the same for both. Wiki **page kinds** are data, defined per notebook (`page_kind`), and a kind's pages work as a dataset (`page.query`, `/app/wiki?kind=<key>`): that is how a notebook keeps expenses, recipes, places and the like without new tables.
 
 **Claude is the primary way data gets in**, through the CLI, which calls the app's tRPC API. The web UI is mainly for looking at the data (usually in the Claude desktop browser pane) and for printing reports to PDF.
 

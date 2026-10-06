@@ -25,6 +25,12 @@ export type HomeTodoSort = (typeof HOME_TODO_SORTS)[number];
 /** `?todoSort=` on the home page; anything unknown is the default, priority. */
 export const parseHomeTodoSort = (value: string | null): HomeTodoSort => (value === 'status' ? 'status' : 'priority');
 
+/** One page of open todos, and how many are open in all. */
+export interface HomeTodoPage<T> {
+  readonly items: readonly T[];
+  readonly total: number;
+}
+
 export interface RecentUpdate {
   readonly kind: UpdateKind;
   readonly id: string;

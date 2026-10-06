@@ -12,7 +12,7 @@
   import DatasetTable from '$lib/page/components/DatasetTable.svelte';
   import { buildTree, flattenTree } from '$shared/utils/hierarchy';
   import { formatPropertyValue, kindName } from '$lib/page/utils';
-  import { labels, profile } from '$lib/stores/profile';
+  import { profile } from '$lib/stores/profile';
 
   const { data } = $props<{ data: PageData }>();
   const pages = $derived(data.pages as readonly PageSummary[]);
@@ -55,11 +55,11 @@
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
-<svelte:head><title>{currentKind ? `${currentKind.name} · ${$labels.wiki}` : $labels.wiki}</title></svelte:head>
+<svelte:head><title>{currentKind ? `${currentKind.name} · Wiki` : 'Wiki'}</title></svelte:head>
 
 <div class="page">
   <PageHeader
-    title={currentKind ? currentKind.name : $labels.wiki}
+    title={currentKind ? currentKind.name : 'Wiki'}
     description={currentKind?.description ?? ($profile === 'home'
       ? 'Recipes, places, bills, home things and anything else worth keeping. Each kind of page has its own fields.'
       : 'Policies, products, software, decisions and anything else worth writing down.')}

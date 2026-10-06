@@ -8,6 +8,7 @@
   import { submit } from '$lib/ui/submit';
   import { toRelationInput, type PickedLink } from '$shared/utils/relations';
   import TodoLinks from './TodoLinks.svelte';
+  import { profileFlags } from '$lib/stores/profile';
   import PencilIcon from '$lib/ui/PencilIcon.svelte';
   import { entityTypeLabel } from '$shared/utils/entity';
   import { profile } from '$lib/stores/profile';
@@ -241,8 +242,8 @@
               <option value="PROJECT">Project</option>
               <option value="PERSON">Person</option>
               <option value="TEAM">Team</option>
-              <option value="DEPARTMENT">Department</option>
-              <option value="GOAL">Goal</option>
+              {#if $profileFlags.departments}<option value="DEPARTMENT">Department</option>{/if}
+              {#if $profileFlags.goals}<option value="GOAL">Goal</option>{/if}
               <option value="PAGE">Page</option>
             </select>
           {/snippet}

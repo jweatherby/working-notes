@@ -12,7 +12,7 @@
   import { focusKey, type FocusBranch, type FocusGraph, type FocusNode } from '$shared/types/home';
   import type { RelatableType } from '$shared/types/enums';
   import { ENTITY_SEARCH_SCOPES, entityTypeLabel, typedIdValue } from '$shared/utils/entity';
-  import { profile } from '$lib/stores/profile';
+  import { profile, hiddenTypes } from '$lib/stores/profile';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { errorMessage } from '$lib/ui/submit';
@@ -49,7 +49,7 @@
     person: 'People',
     goal: 'Goals',
     org: $profile === 'home' ? 'Groups' : 'Teams and departments',
-    other: $profile === 'home' ? 'Library and other' : 'Wiki and other'
+    other: 'Wiki and other'
   };
 
   const branchOf = (n: FocusNode): FocusBranch | undefined => graph.branches[focusKey(n)];
@@ -128,8 +128,8 @@
       {#if picking}
         <SearchPicker
           label="Focus on"
-          {options}
-          scopes={ENTITY_SEARCH_SCOPES}
+          options={options.filter((o) => !$hiddenTypes.has(o.scope))}
+          scopes={ENTITY_SEARCH_SCOPES.filter((s) => !$hiddenTypes.has(s.id))}
           loading={loadingOptions}
           onPick={pick}
           onCancel={() => (picking = false)}

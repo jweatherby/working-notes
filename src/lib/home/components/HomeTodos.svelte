@@ -9,6 +9,7 @@
   import { submit } from '$lib/ui/submit';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import ParamToggle from '$lib/ui/ParamToggle.svelte';
+  import Pager from '$lib/ui/Pager.svelte';
 
   const SORT_OPTIONS = [
     { id: 'priority', name: 'Priority' },
@@ -16,10 +17,15 @@
   ];
 
   interface Props {
+    /** The page shown. */
     readonly todos: readonly TodoSummary[];
+    /** Open todos on every page. */
+    readonly total: number;
+    readonly page: number;
+    readonly pageSize: number;
   }
 
-  const { todos }: Props = $props();
+  const { todos, total, page, pageSize }: Props = $props();
 
   let statusError = $state('');
 
@@ -34,7 +40,7 @@
 
 <section class="card panel">
   <header class="section-header">
-    <h2>Todos <span class="count">{todos.length}</span></h2>
+    <h2>Todos <span class="count">{total}</span></h2>
     <div class="header-actions">
       <ParamToggle param="todoSort" options={SORT_OPTIONS} defaultValue="priority" ariaLabel="Sort todos" />
       <a href="/app/todos" class="text-sm">All todos →</a>
@@ -62,6 +68,7 @@
         </li>
       {/each}
     </ul>
+    <Pager param="todoPage" current={page} {total} {pageSize} ariaLabel="Todo pages" />
   {/if}
 </section>
 

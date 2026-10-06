@@ -12,7 +12,7 @@
   import { ARCHIVE_CHANGED_EVENT } from '$shared/utils/archive';
   import { ENTITY_SEARCH_SCOPES, entityPath, parseTypedIdValue } from '$shared/utils/entity';
   import { features } from '$shared/settings/base/features';
-  import { labels, profileFlags } from '$lib/stores/profile';
+  import { labels, profileFlags, hiddenTypes } from '$lib/stores/profile';
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import { switchNotebook } from '$lib/notebook/switch';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -31,7 +31,7 @@
     ...($profileFlags.departments ? [{ name: 'Departments', href: '/app/departments' }] : []),
     { name: 'Projects', href: '/app/projects' },
     ...($profileFlags.goals ? [{ name: 'Goals', href: '/app/goals' }] : []),
-    { name: $labels.wiki, href: '/app/wiki' },
+    { name: 'Wiki', href: '/app/wiki' },
     { name: 'Page kinds', href: '/app/wiki/kinds' },
     ...($profileFlags.orgMap ? [{ name: 'Org Map', href: '/app/orgmap' }] : []),
     { name: 'Todos', href: '/app/todos' },
@@ -64,11 +64,14 @@
   let loading = $state(false);
   let inputEl = $state<HTMLInputElement | null>(null);
 
+  // A home notebook leaves goals and departments out of the finder.
+  const scopes = $derived(ENTITY_SEARCH_SCOPES.filter((s) => !$hiddenTypes.has(s.id)));
+
   const rows = $derived(
     finderRows(query, {
-      scopes: ENTITY_SEARCH_SCOPES,
+      scopes,
       commands: COMMANDS,
-      entries: [...entities.map((e) => ({ ...e, meta: scopeLabel(e.scope) })), ...routeEntries, ...notebookEntries],
+      entries: [...entities.filter((e) => !$hiddenTypes.has(e.scope)).map((e) => ({ ...e, meta: scopeLabel(e.scope) })), ...routeEntries, ...notebookEntries],
       home: routeEntries
     })
   );
@@ -77,7 +80,7 @@
 
   const handleInput = (value: string) => {
     const scopeIndex = rows[active]?.kind === 'scope' ? active : 0;
-    query = completeScopeWord(value, ENTITY_SEARCH_SCOPES, scopeIndex);
+    query = completeScopeWord(value, scopes, scopeIndex);
     active = 0;
   };
 

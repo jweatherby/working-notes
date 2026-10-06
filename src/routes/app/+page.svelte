@@ -12,7 +12,7 @@
 
 <div class="page">
   <div class="home-grid">
-    <HomeTodos todos={data.todos} />
+    <HomeTodos todos={data.todos.items} total={data.todos.total} page={data.todoPage} pageSize={data.todoPageSize} />
     <RecentUpdates updates={data.updates} />
     {#if data.birthdays}<UpcomingBirthdays birthdays={data.birthdays} />{/if}
   </div>

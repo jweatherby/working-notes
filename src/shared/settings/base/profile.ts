@@ -1,8 +1,9 @@
 // What a notebook's profile changes. Client-safe and pure. A home notebook hides
-// goals and the org-only parts and renames four terms in the nav and page headings; field
+// goals and the org-only parts and renames three terms in the nav and page headings; field
 // labels, forms and the API stay the same in every notebook.
 
 import type { NotebookProfile } from '$shared/types/notebook';
+import type { RelatableType } from '$shared/types/enums';
 
 export interface ProfileFeatures {
   /** The Departments pages, finder entry and person field. Data and router stay. */
@@ -28,14 +29,19 @@ export const profileFeatures = (profile: NotebookProfile): ProfileFeatures => ({
   birthdays: profile === 'home'
 });
 
+/** Entity types the profile hides from pickers, the finder and Related lists. */
+export const hiddenEntityTypes = (profile: NotebookProfile): ReadonlySet<RelatableType> => {
+  const flags = profileFeatures(profile);
+  return new Set<RelatableType>([...(flags.goals ? [] : ['GOAL' as const]), ...(flags.departments ? [] : ['DEPARTMENT' as const])]);
+};
+
 export interface NavLabels {
   readonly team: string;
   readonly teams: string;
   readonly people: string;
-  readonly wiki: string;
 }
 
 export const navLabels = (profile: NotebookProfile): NavLabels =>
   profile === 'home'
-    ? { team: 'Group', teams: 'Groups', people: 'People', wiki: 'Library' }
-    : { team: 'Team', teams: 'Teams', people: 'Org Map', wiki: 'Wiki' };
+    ? { team: 'Group', teams: 'Groups', people: 'People' }
+    : { team: 'Team', teams: 'Teams', people: 'Org Map' };

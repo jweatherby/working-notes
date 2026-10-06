@@ -13,6 +13,7 @@
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import type { GoalSummary } from '$shared/types/goals';
+  import { profileFlags } from '$lib/stores/profile';
 
   interface ProjectOption {
     readonly id: string;
@@ -193,6 +194,8 @@
 
   {#snippet renderOverview()}
 
+    <!-- A home notebook has no goals. -->
+    {#if $profileFlags.goals}
     <section class="section">
       <div class="section-header">
         <h4>Goals <span class="count">{data.linkedGoals.length}</span></h4>
@@ -206,6 +209,7 @@
         <InlinePicker label="Link goal" options={goalOptions} placeholder="Select a goal…" onPick={handleLinkGoal} />
       </div>
     </section>
+    {/if}
 
     <section class="section">
       <div class="section-header">

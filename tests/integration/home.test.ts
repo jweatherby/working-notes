@@ -22,15 +22,19 @@ describe('home smoke', () => {
     await createTodo(reg, { title: 'Urgent', priority: 3, entityType: 'PERSON', entityId: 'person_alice' });
 
     const todos = await listOpenTodos(reg);
-    expect(todos.ok && todos.value[0]?.title).toBe('Urgent');
+    expect(todos.ok && todos.value.items[0]?.title).toBe('Urgent');
 
     const started = await createTodo(reg, { title: 'Started', priority: 0, entityType: 'PERSON', entityId: 'person_alice' });
     if (!started.ok) return;
     await reg.prisma.todo.update({ where: { id: started.value.id }, data: { status: 'ACTIVE' } });
     const byStatus = await listOpenTodos(reg, 200, 'status');
-    expect(byStatus.ok && byStatus.value[0]?.status).toBe('ACTIVE');
+    expect(byStatus.ok && byStatus.value.items[0]?.status).toBe('ACTIVE');
     const byPriority = await listOpenTodos(reg, 200);
-    expect(byPriority.ok && byPriority.value[0]?.title).not.toBe('Started');
+    expect(byPriority.ok && byPriority.value.items[0]?.title).not.toBe('Started');
+    const secondPage = await listOpenTodos(reg, 1, 'priority', 1);
+    expect(secondPage.ok && secondPage.value.items.length).toBe(1);
+    expect(secondPage.ok && secondPage.value.items[0]?.id).toBe(byPriority.ok ? byPriority.value.items[1]?.id : undefined);
+    expect(secondPage.ok && secondPage.value.total).toBe(byPriority.ok ? byPriority.value.total : -1);
 
     const updates = await listRecentUpdates(reg);
     expect(updates.ok).toBe(true);

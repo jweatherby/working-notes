@@ -14,6 +14,7 @@
   import { errorMessage, submitOrThrow } from '$lib/ui/submit';
   import { profileFlags } from '$lib/stores/profile';
   import { isPersonalKind } from '$shared/types/relations';
+  import { hiddenTypes } from '$lib/stores/profile';
 
   interface Props {
     /** The entity the link is on; null while it's still being created (pass `onPickLink`). */
@@ -32,6 +33,8 @@
 
   let choice = $state('RELATED:out');
   let options = $state<readonly EntityOption[]>([]);
+  // A home notebook leaves goals and departments out.
+  const shown = $derived(options.filter((o) => !$hiddenTypes.has(o.scope)));
   let loading = $state(true);
   let loadError = $state('');
 
@@ -67,7 +70,7 @@
   <select class="sm" bind:value={choice} aria-label="How it's linked">
     {#each choices as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
   </select>
-  <SearchPicker label="Link to" options={isPersonalKind(choice.split(':')[0] ?? '') ? options.filter((o) => o.id.startsWith('PERSON:')) : options} scopes={ENTITY_SEARCH_SCOPES} {loading} onPick={handlePick} onCancel={onDone} />
+  <SearchPicker label="Link to" options={isPersonalKind(choice.split(':')[0] ?? '') ? options.filter((o) => o.id.startsWith('PERSON:')) : shown} scopes={ENTITY_SEARCH_SCOPES.filter((s) => !$hiddenTypes.has(s.id))} {loading} onPick={handlePick} onCancel={onDone} />
   {#if loadError}<span class="inline-error" role="alert">{loadError}</span>{/if}
 </div>
 

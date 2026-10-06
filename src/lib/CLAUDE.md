@@ -25,7 +25,7 @@ The one app-wide context is the open notebook. The `/app` layout provides `data.
 
 ## Stores
 
-`stores/profile.ts` gives the open notebook's `profile`, `profileFlags` (`profileFeatures`) and `labels` (`navLabels`: Team/Group, Wiki/Library…). Use them for the few things a home notebook changes; pass `$profile` to `entityTypeLabel` where a team's type is shown. Load functions read `locals.notebook.profile` instead.
+`stores/profile.ts` gives the open notebook's `profile`, `profileFlags` (`profileFeatures`), `labels` (`navLabels`: Team/Group, Org Map/People…) and `hiddenTypes` (`hiddenEntityTypes`: GOAL and DEPARTMENT in a home notebook), which the finder, `AddRelation`, the focus graph's picker and `RelationsWidget` filter out. Use them for the few things a home notebook changes; pass `$profile` to `entityTypeLabel` where a team's type is shown. Load functions read `locals.notebook.profile` instead.
 
 Use classic Svelte stores (`writable`, `readable`, `derived`), not rune modules. Entity caches use a normalized `{ [entityType]: { [id]: entity } }` shape, and lists hold ids.
 
@@ -60,6 +60,7 @@ Global styles live in `src/routes/styles/` (see `src/routes/CLAUDE.md`). Compone
 | `PageHeader` | `title`, `description?`, children (actions) | top of every list page |
 | `ParamSelect` | `param`, `options: {id,name,group?}[]`, `defaultValue`, `ariaLabel` | a list page's toolbar select whose value lives in one query parameter (picking `defaultValue` removes it). The projects page's team filter (`?team=`) and grouping (`?group=`) use it |
 | `ParamToggle` | `param`, `options: {id,name}[]`, `defaultValue`, `ariaLabel` | switching a page between views held in one query parameter: joined `.btn sm` links in `.segmented`, the current one filled (the projects page's Table / Map, `?view=map`; the Org Map's Org chart / Owned work, `?view=work`; the home Todos panel's Priority / Status sort, `?todoSort=status`). Use `ParamSelect` for filters |
+| `Pager` | `param`, `current` (1-based), `total`, `pageSize`, `ariaLabel` | Previous / "Page n of m" / Next links for a list paged by one query parameter (page 1 removes it); renders nothing on a single page. The load reads the page with `parsePageParam` and `clampPage` (`ui/pager.ts`) and passes `offset`. The home Todos panel uses it (`?todoPage=`) |
 | `ArchiveFilter` | – | the Active / Archived / All select in a list page's `.toolbar.filters`, built on `ParamSelect`. It sets `?archived=`; the page's load passes `parseArchiveFilter(url.searchParams.get('archived'))` to `*.list` |
 | `DisclosureButton` | `expanded`, `label`, `onToggle`, children? | the chevron that shows or hides a tree row's children (collapsible sub-projects). Use `flattenTree(forest, isCollapsed)` from `$shared/utils/hierarchy` for the rows. Pass children to put the label inside the button, so the whole thing toggles; wrap the component in the heading (`<h4><DisclosureButton>Docs</DisclosureButton></h4>`), as the Docs header does |
 | `ChevronIcon` | `size?` (14) | every expand/collapse chevron (`DisclosureButton`, the Todos widget, the org map's reports badge). It points right; the parent rotates it. Don't use `▸`/`▾` glyphs, which render too small |

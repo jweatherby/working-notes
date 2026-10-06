@@ -46,7 +46,7 @@ Every call works on one notebook: the default, unless you name another.
 - **Name it on the call** to use a notebook other than the default: `--notebook <id or name>` on any CLI call, or `notebook` in any tool's arguments. Keep passing it for every call in that notebook, lookups included.
 - **Ids don't carry across notebooks.** Look people, teams and projects up in the notebook you're writing to.
 - **Say which notebook** you read or wrote when there's more than one: "Added Dana Park to Platform, in Work".
-- **A notebook's profile** is `work` or `home` (`notebook.list` shows it). A home notebook hides goals, departments, leads and the org map, and its UI calls teams **groups** (family, college friends) and the wiki the **Library**. The data and tools are the same; use the user's words when you report back.
+- **A notebook's profile** is `work` or `home` (`notebook.list` shows it). A home notebook hides goals, departments, leads and the org map, and its UI calls teams **groups** (family, college friends). The data and tools are the same; use the user's words when you report back.
 - `notebook.create --name "Garden"` makes a notebook; its id comes from the name, or pass `--id`. Add `--profile home` for home life. A work notebook starts with the page kinds POLICY, PRODUCT, SOFTWARE and DECISION; a home one starts with none. `notebook.setProfile --id <id> --profile home` changes it, only when the user asks. `notebook.setDefault --id <id>` changes the default for every later call, so do it only when the user asks. There is no delete: the user removes a notebook themselves.
 
 ## Rules
@@ -58,6 +58,22 @@ Every call works on one notebook: the default, unless you name another.
    `backup_snapshot` with a reason like "before <what>", or `wono backup --force --reason "before <what>"`
 5. **Report back by name.** Say "Added Dana Park to Platform, reporting to Alice Johnson", not ids.
 6. **Keep the user's words.** A note records what they said. Don't embellish or summarise it unless asked.
+7. **Link everything you created or changed.** End every reply that wrote something with a markdown link to each item, by name, so the user can open it: `[Dana Park](http://127.0.0.1:5173/app/people/<id>?notebook=<notebook id>)`. See **Links to what you changed** below.
+
+## Links to what you changed
+
+After any write (create, update, add, attach, check-in, archive), list what changed at the end of your reply, one link per item. Don't link deleted items; name them.
+
+- **Address:** `http://127.0.0.1:5173` + the item's path + `?notebook=<notebook id>` (or `&notebook=` when the path already has a `?`). Always add the notebook, so the link opens in the right one. The links work only while the app is running: call `app_open` once (with the notebook) if you haven't this session, and use the address it returns.
+- **Paths:** use the `path` in the result when there is one. Otherwise: `/app/people/<id>`, `/app/teams/<id>`, `/app/departments/<id>`, `/app/projects/<id>`, `/app/goals/<id>`, `/app/wiki/<id>` (a page kind's table: `/app/wiki?kind=<key>`).
+- **Things attached to an entity** link to that entity's page: a note, tag, link, relation, team membership or goal check-in. A doc opens with `?doc=<doc id>` on its entity's path. A todo opens with `/app/todos?popup=todo&todo=<todo id>`.
+- **Several changes to one item** are one link. For more than about ten items, link the ten that matter most and say how many more there are.
+
+```markdown
+Added to Work:
+- [Dana Park](http://127.0.0.1:5173/app/people/abc123?notebook=work), on [Platform](http://127.0.0.1:5173/app/teams/def456?notebook=work)
+- Todo: [Book 1:1 with Dana](http://127.0.0.1:5173/app/todos?popup=todo&todo=ghi789&notebook=work)
+```
 
 ## Recipes
 
@@ -103,7 +119,7 @@ These use CLI syntax. With MCP tools, `person.create --name "Dana Park"` is `per
 
 ## Page kinds
 
-Wiki (Library) pages have a kind, and each notebook defines its own kinds: a key (`EXPENSE`), a name and typed fields. A kind's pages open as a table at `/app/wiki?kind=<key>` that the user can filter, sort, group and total.
+Wiki pages have a kind, and each notebook defines its own kinds: a key (`EXPENSE`), a name and typed fields. A kind's pages open as a table at `/app/wiki?kind=<key>` that the user can filter, sort, group and total.
 
 - **List first:** `pageKind.list` gives each kind's fields and page count. `GENERAL` (a plain page, no fields) always exists. Reuse a kind that fits ("bills" go in an existing Expense kind).
 - **Propose before creating.** Suggest the name and a few fields and wait for a yes, then `pageKind.create --input '{"key":"EXPENSE","name":"Expense","fields":[...]}'`. Keep kinds general (one Expense kind with a category field, not a kind per bill) and fields few.
@@ -138,7 +154,7 @@ Reports are switched off for now. When the user asks for a report or write-up, w
 1. Gather the facts first (`person.get`, `note.list`, `todo.forEntity`, and so on). Don't invent numbers; ask for them if they're missing.
 2. Write the markdown. Add charts as fenced `chart` blocks; the syntax is in [references/charts.md](references/charts.md). A line of just `<!-- pagebreak -->` starts a new page when the doc is exported to PDF; use it only where the user wants one (say, before an appendix).
 3. `wono doc.add --entityType TEAM --entityId <id> --title "Q3 review"`, then `wono doc.update --id <doc> --content-file /tmp/q3.md`.
-4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then give them the entity's page with `?notebook=<notebook id>`; the doc is in the Docs list at the top of the page's middle column. Its "Export PDF" button makes a PDF with the notebook's branding (Wonos Pro).
+4. Tell the user where to view it. Call `app_open` (with the doc's `notebook`) so the app is running, then link the doc: the entity's page with `?doc=<doc id>&notebook=<notebook id>`. Its "Export PDF" button makes a PDF with the notebook's branding (Wonos Pro).
 
 ## Importing from other tools
 

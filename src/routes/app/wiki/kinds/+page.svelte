@@ -13,7 +13,6 @@
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
   import { trpc } from '$shared/trpc/client';
-  import { labels } from '$lib/stores/profile';
   import type { PageKindSummary } from '$shared/types/pages';
 
   const { data } = $props<{ data: PageData }>();
@@ -30,11 +29,11 @@
   };
 </script>
 
-<svelte:head><title>Page kinds · {$labels.wiki}</title></svelte:head>
+<svelte:head><title>Page kinds · Wiki</title></svelte:head>
 
 <div class="page">
   <PageHeader title="Page kinds" description="Each kind of page has its own fields, and its pages open as a table you can filter, group and total.">
-    <a class="btn" href="/app/wiki">Back to {$labels.wiki.toLowerCase()}</a>
+    <a class="btn" href="/app/wiki">Back to wiki</a>
     <button type="button" class="btn primary" onclick={() => openPopup('new-kind')}>Add kind</button>
   </PageHeader>
 

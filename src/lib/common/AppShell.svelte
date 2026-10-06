@@ -36,7 +36,7 @@
       : [{ href: '/app/people', label: names.people }, { href: '/app/teams', label: names.teams }]),
     { href: '/app/projects', label: 'Projects' },
     ...(profileFeatures(profile).goals ? [{ href: '/app/goals', label: 'Goals' }] : []),
-    { href: '/app/wiki', label: names.wiki },
+    { href: '/app/wiki', label: 'Wiki' },
     ...(features.reports ? [{ href: '/app/reports', label: 'Reports' }] : []),
     { href: '/app/todos', label: 'Todos' },
   ]);

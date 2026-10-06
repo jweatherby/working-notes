@@ -14,7 +14,6 @@
   import { submit, submitOrThrow } from '$lib/ui/submit';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import { formatPropertyValue, kindName } from '$lib/page/utils';
-  import { labels } from '$lib/stores/profile';
   import { wikiPrintUrl } from '$lib/doc/print-options';
   import type { PageDetail, PageKindSummary, PageSummary } from '$shared/types/pages';
 
@@ -133,7 +132,7 @@
   entityId={wikiPage.id}
   archivedAt={wikiPage.archivedAt}
   entityName={wikiPage.title}
-  breadcrumbLabel={$labels.wiki}
+  breadcrumbLabel="Wiki"
   breadcrumbHref="/app/wiki"
   {breadcrumbTrail}
   editPopupTitle="Edit page"

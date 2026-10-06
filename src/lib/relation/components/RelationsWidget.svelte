@@ -7,7 +7,7 @@
   import { trpc } from '$shared/trpc/client';
   import type { RelationGroup } from '$shared/types/relations';
   import { entityTypeLabel } from '$shared/utils/entity';
-  import { profile } from '$lib/stores/profile';
+  import { hiddenTypes, profile } from '$lib/stores/profile';
   import { relationEnd } from '$shared/utils/relations';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -23,7 +23,14 @@
     readonly onChange?: () => Promise<void> | void;
   }
 
-  const { entityType, entityId, groups, readOnly = false, onChange }: Props = $props();
+  const { entityType, entityId, groups: allGroups, readOnly = false, onChange }: Props = $props();
+
+  // A home notebook leaves out links to goals and departments.
+  const groups = $derived(
+    allGroups
+      .map((group) => ({ ...group, items: group.items.filter((item) => !$hiddenTypes.has(item.other.entityType)) }))
+      .filter((group) => group.items.length > 0)
+  );
 
   const self = $derived(readOnly ? null : relationEnd(entityType, entityId));
   const count = $derived(groups.reduce((n, group) => n + group.items.length, 0));
