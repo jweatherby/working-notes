@@ -2,14 +2,14 @@
 // client-safe; the app layout, the tRPC context and route guards all read it,
 // so nothing else asks which profile a notebook has.
 
-import { ENTITY_TYPES, type EntityType, type ManualRelationKind } from '$shared/types/enums';
+import { ENTITY_TYPES, type EntityType } from '$shared/types/enums';
 import type { NotebookProfile } from '$shared/types/notebook';
 import { ENTITY_DESCRIPTORS, type EntityDescriptor } from '$shared/entities/descriptors';
 import { features } from '$shared/settings/base/features';
 import { GOALS_MODULE } from './goals';
 import { ORG_MODULE } from './org';
 import { PERSONAL_MODULE } from './personal';
-import type { GroupKindSeed, ModuleDefinition, ModuleId, NavItem, PersonFieldDescriptor } from './types';
+import type { GroupKindSeed, ModuleDefinition, ModuleId, NavItem, PersonFieldDescriptor, RelationKindSeed } from './types';
 
 export const MODULES: Readonly<Record<ModuleId, ModuleDefinition>> = {
   org: ORG_MODULE,
@@ -42,8 +42,8 @@ export interface NotebookModel {
   readonly entity: (type: EntityType) => EntityDescriptor;
   readonly nav: readonly NavItem[];
   readonly personFields: readonly PersonFieldDescriptor[];
-  /** Relation kinds `relation.add` offers beyond RELATED and DEPENDS_ON. */
-  readonly relationKinds: readonly ManualRelationKind[];
+  /** Relation kinds the modules bring (seeded into the notebook; the notebook can add its own). */
+  readonly relationKinds: readonly RelationKindSeed[];
   readonly groupKinds: readonly GroupKindSeed[];
   readonly homeWidgets: readonly 'birthdays'[];
   /** The module that owns an app route this notebook doesn't have, or null when it's open. */

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTestRegistry } from '$shared/registry.test';
 import type { Registry } from '$shared/registry';
-import type { RelationItem } from '$shared/types/relations';
+import { BUILTIN_RELATION_KINDS, type RelationItem } from '$shared/types/relations';
 import { addRelation, groupRelations, listRelationsForEntity, removeRelation } from '../operations';
 
 const item = (overrides: Partial<RelationItem>): RelationItem => ({
@@ -24,7 +24,7 @@ describe('groupRelations', () => {
       item({ id: '4', kind: 'DEPENDS_ON', direction: 'outgoing', label: 'Depends on' }),
       item({ id: '5', kind: 'DEPENDS_ON', direction: 'incoming', label: 'Needed by' }),
       item({ id: '6', kind: 'RELATED', direction: 'incoming', label: 'Related to' })
-    ]);
+    ], BUILTIN_RELATION_KINDS);
     expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
       ['Related to', ['3', '6']],
       ['Depends on', ['4']],
@@ -123,6 +123,7 @@ describe('listRelationsForEntity', () => {
   it('links a todo to its popup on the page it belongs to', async () => {
     const reg = createTestRegistry({
       prisma: {
+        relationKind: { findMany: vi.fn().mockResolvedValue([]) },
         relation: {
           findMany: vi.fn().mockResolvedValue([
             { id: 'rel_1', fromType: 'TODO', fromId: 'td1', toType: 'GROUP', toId: 't1', kind: 'RELATED', note: null, createdAt: new Date(0) }

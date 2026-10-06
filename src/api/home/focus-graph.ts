@@ -31,6 +31,7 @@ const GROUP_ORDER: readonly string[] = [
   'Part of',
   'Contains',
   'Reports to',
+  'Lead of',
   'Direct reports',
   'Member of',
   'Members',

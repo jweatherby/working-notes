@@ -41,13 +41,14 @@ model Person {
   id         String    @id @default(cuid())
   name       String
   email      String?
+  /** The notebook's owner: relations to them read as "your …". At most one person. */
+  isMe       Boolean   @default(false) @map("is_me")
   archivedAt DateTime? @map("archived_at")
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  org              OrgPerson?      @relation("OrgPersonPerson")
+  org              OrgPerson?
   personal         PersonalPerson?
-  orgReports       OrgPerson[]     @relation("OrgLead")
   groupMemberships GroupMember[]
 
   @@index([archivedAt])
@@ -100,19 +101,16 @@ model GroupMember {
   @@map("group_member")
 }
 
-// ----- Module: org (titles and reporting lines) -----
+// ----- Module: org (titles; reporting lines are LEAD_OF relations) -----
 
 model OrgPerson {
   personId  String   @id @map("person_id")
   title     String?
-  leadId    String?  @map("lead_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  person Person  @relation("OrgPersonPerson", fields: [personId], references: [id], onDelete: Cascade)
-  lead   Person? @relation("OrgLead", fields: [leadId], references: [id], onDelete: SetNull)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
-  @@index([leadId])
   @@map("org_person")
 }
 
@@ -304,6 +302,23 @@ model PageKind {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("page_kind")
+}
+
+// ----- Relation kinds: a notebook's own (RELATED, DEPENDS_ON and MENTIONS are built in) -----
+
+model RelationKind {
+  key          String   @id
+  label        String
+  inverseLabel String   @map("inverse_label")
+  symmetric    Boolean  @default(false)
+  peopleOnly   Boolean  @default(false) @map("people_only")
+  /** The `to` end has at most one relation of this kind (a person has one lead): adding replaces it. */
+  exclusive    Boolean  @default(false)
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("relation_kind")
 }
 
 // ----- Relations: typed links between any two entities (polymorphic at both ends, no FK) -----

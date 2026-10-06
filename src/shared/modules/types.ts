@@ -3,7 +3,7 @@
 // family and friends) and goals. A notebook's profile is a list of modules.
 // Client-safe; the server parts (person extensions) are in $api/modules.
 
-import type { EntityType, ManualRelationKind } from '$shared/types/enums';
+import type { EntityType } from '$shared/types/enums';
 
 export const MODULE_IDS = ['org', 'personal', 'goals'] as const;
 
@@ -14,6 +14,17 @@ export interface GroupKindSeed {
   readonly key: string;
   readonly name: string;
   readonly plural: string;
+  readonly exclusive: boolean;
+}
+
+/** A relation kind a module brings ("Lead of" / "Reports to"), added to a notebook that uses the module. */
+export interface RelationKindSeed {
+  readonly key: string;
+  readonly label: string;
+  readonly inverseLabel: string;
+  readonly symmetric: boolean;
+  readonly peopleOnly: boolean;
+  /** The `to` end has at most one relation of this kind: adding replaces it. */
   readonly exclusive: boolean;
 }
 
@@ -40,7 +51,7 @@ export interface ModuleDefinition {
   readonly name: string;
   readonly groupKinds: readonly GroupKindSeed[];
   readonly personFields: readonly PersonFieldDescriptor[];
-  readonly relationKinds: readonly ManualRelationKind[];
+  readonly relationKinds: readonly RelationKindSeed[];
   /** Entity types only this module has (goals). */
   readonly entityTypes: readonly EntityType[];
   readonly nav: readonly NavItem[];

@@ -57,7 +57,8 @@ The CLI runs the tRPC router in-process against the local database, with the sam
 remry help                                   # every procedure
 remry help todo.create                       # one procedure's inputs, types and limits
 remry person.create --name "Alice Johnson" --extensions '{"org":{"title":"Staff Engineer"}}'
-remry person.update --id <personId> --extensions '{"org":{"leadId":"<leadPersonId>"}}'
+remry relation.add --fromType PERSON --fromId <leadPersonId> --toType PERSON --toId <personId> --kind LEAD_OF
+remry person.setMe --id <personId>
 remry group.create --kind TEAM --name Platform
 remry group.addMember --groupId <groupId> --personId <personId>
 remry note.add --entityType PERSON --entityId <personId> --content "Wants to lead the migration"
@@ -80,7 +81,7 @@ remry search.recall --entityType PERSON --entityId <personId>  # everything abou
 - **Input:** `--<field>-file <path>` reads a value from a file (use it for markdown), and `--input '<json>'` passes the whole input.
 - **Entity types:** `PERSON GROUP PROJECT GOAL PAGE DOC NOTE REPORT TODO LINK TAG COMMENT EMOJI`. Docs, notes, todos, reports, links, tags, comments and emoji attach to any entity through `entityType` + `entityId`, except docs on wiki pages (`acceptsDocs` in `src/shared/utils/entity.ts`).
 - **Search and recall:** `search.query` is full-text search (SQLite FTS5, kept current by triggers) over names, notes, docs, pages, todos, comments, links and check-ins; `search.recall` returns an entity with everything attached to it and the text elsewhere that names it without linking it. See `src/api/CLAUDE.md` § Search.
-- **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities as `RELATED` (no direction) or `DEPENDS_ON`, with an optional note; in the UI, "+" in an entity's Related section adds one. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
+- **Links between entities:** projects and goals have an owner (`ownerType` + `ownerId`). `relation.add` links any two entities as `RELATED` (no direction), `DEPENDS_ON`, or a kind the notebook defines (`relationKind.*`: `LEAD_OF` for leads and reports, `PARENT_OF`, `PARTNER_OF`…), with an optional note; in the UI, "+" in an entity's Related section adds one, and People → Relation kinds manages them. One person can be marked as the user (`person.setMe`), and People shows how everyone relates to them. A markdown link to an app path (`/app/wiki/<id>`) in page, doc, note or report content becomes a `MENTIONS` backlink when the content is saved.
 - **The Claude skill** in `plugin/skills/remry/` teaches all of this, plus recipes and the chart syntax. `bun run setup` installs it as a Claude Code plugin (see § Claude plugin).
 
 ### Importing a PDF

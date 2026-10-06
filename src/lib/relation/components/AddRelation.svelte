@@ -9,11 +9,11 @@
   import { loadEntityOptions, type EntityOption } from '$shared/trpc/load-entity-options';
   import { RELATABLE_TYPES } from '$shared/types/enums';
   import { ENTITY_SEARCH_SCOPES, parseTypedIdValue } from '$shared/utils/entity';
-  import { relationChoices, toRelationInput, type PickedLink, type RelationEnd } from '$shared/utils/relations';
+  import { choiceIsPeopleOnly, relationChoices, toRelationInput, type PickedLink, type RelationEnd } from '$shared/utils/relations';
+  import { BUILTIN_RELATION_KINDS, type RelationKindDefinition } from '$shared/types/relations';
   import SearchPicker from '$lib/ui/SearchPicker.svelte';
   import { errorMessage, submitOrThrow } from '$lib/ui/submit';
   import { model } from '$lib/stores/notebook-model';
-  import { isPersonalKind } from '$shared/types/relations';
 
   interface Props {
     /** The entity the link is on; null while it's still being created (pass `onPickLink`). */
@@ -27,8 +27,9 @@
 
   const { self, onPickLink, onChange, onDone }: Props = $props();
 
-  // Partner, parent, sibling and friend: on a person's page in a home notebook, and only to other people.
-  const choices = $derived(relationChoices(self?.entityType === 'PERSON' ? $model.relationKinds : []));
+  // The notebook's relation kinds (relationKind.list); people-only ones (Parent of, Lead of) on a person's page.
+  let kinds = $state<readonly RelationKindDefinition[]>(BUILTIN_RELATION_KINDS);
+  const choices = $derived(relationChoices(kinds, self?.entityType ?? null));
 
   let choice = $state('RELATED:out');
   let options = $state<readonly EntityOption[]>([]);
@@ -39,7 +40,9 @@
 
   onMount(async () => {
     try {
-      options = await loadEntityOptions(trpc(), self);
+      const [loaded, listed] = await Promise.all([loadEntityOptions(trpc(), self), trpc().relationKind.list.query()]);
+      options = loaded;
+      if (listed.ok) kinds = listed.value;
     } catch (e: unknown) {
       loadError = errorMessage(e);
     } finally {
@@ -56,7 +59,7 @@
       onDone();
       return;
     }
-    const input = target && self ? toRelationInput(choice, self, target) : null;
+    const input = target && self ? toRelationInput(choice, self, target, kinds) : null;
     if (!input) throw new Error('Choose what to link to.');
     await submitOrThrow(() => trpc().relation.add.mutate(input));
     onDone();
@@ -69,7 +72,7 @@
   <select class="sm" bind:value={choice} aria-label="How it's linked">
     {#each choices as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
   </select>
-  <SearchPicker label="Link to" options={isPersonalKind(choice.split(':')[0] ?? '') ? options.filter((o) => o.id.startsWith('PERSON:')) : shown} scopes={ENTITY_SEARCH_SCOPES.filter((s) => $model.shows(s.id))} {loading} onPick={handlePick} onCancel={onDone} />
+  <SearchPicker label="Link to" options={choiceIsPeopleOnly(kinds, choice) ? options.filter((o) => o.id.startsWith('PERSON:')) : shown} scopes={ENTITY_SEARCH_SCOPES.filter((s) => $model.shows(s.id))} {loading} onPick={handlePick} onCancel={onDone} />
   {#if loadError}<span class="inline-error" role="alert">{loadError}</span>{/if}
 </div>
 

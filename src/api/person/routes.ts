@@ -7,7 +7,7 @@ import { notInModelMessage } from '$shared/modules/model';
 import type { ModuleId } from '$shared/modules/types';
 import { err, type Err } from '$shared/utils/result';
 import { setArchived } from '$api/_archive';
-import { createPerson, deletePerson, getPerson, listPersons, updatePerson } from './operations';
+import { createPerson, deletePerson, getPerson, listPersons, setMe, updatePerson } from './operations';
 
 // Each module's fields under its id: {"org":{"title":"…","leadId":"…"}} or
 // {"personal":{"birthday":"--05-03","knownAs":"College friend"}}.
@@ -44,6 +44,11 @@ export const personRouter = router({
       extensions
     }))
     .mutation(async ({ ctx, input: { id, ...data } }) => checkModules(ctx.model, data.extensions) ?? updatePerson(ctx.reg, id, data)),
+
+  // The notebook's owner: relations to them read as "your …". null: nobody.
+  setMe: procedure
+    .input(z.object({ id: z.string().nullable() }))
+    .mutation(({ ctx, input }) => setMe(ctx.reg, input.id)),
 
   archive: procedure
     .input(z.object({ id: z.string() }))

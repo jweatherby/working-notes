@@ -14,10 +14,11 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 | Module (profile) | Fields |
 |---|---|
-| `org` (work) | `title`, `leadId` (their manager; `person.get` returns `leadName` and `reports`) |
+| `org` (work) | `title`, `leadId` (their manager: writing it adds or replaces the `LEAD_OF` relation to them; `person.get` returns `leadName` and `reports`) |
 | `personal` (home) | `birthday` (`1990-05-03`, or `--05-03` without the year), `knownAs` (how you know them) |
 
 - `person.get` returns `groups` (each with `kind` and `kindName`) and `extensions` (each module's data).
+- **Me:** `person.setMe --id <id>` (or `null`) marks the notebook's owner, one at most. `person.list` and `person.get` return `isMe` and `toMe`, each relation between that person and me labelled from their side (`["Child of"]`).
 - A work notebook starts with the group kinds TEAM and DEPARTMENT (exclusive); a home notebook with FAMILY and FRIENDS. Add others with `groupKind.create` when the user agrees.
 - Deleting a person removes their memberships and their module data, and clears them as anyone's lead. Deleting a group kind is refused while groups use it, unless `--moveTo` names another kind.
 - A home notebook has no goals (the `goal.*` tools are refused there) and no org fields; the home page lists birthdays in the next 30 days.
@@ -75,11 +76,21 @@ A relation links two entities, with a `kind` and an optional `note` (up to 1000 
 |---|---|---|
 | `RELATED` (default, no direction) | Related to | Related to |
 | `DEPENDS_ON` | Depends on | Needed by |
-| `PARTNER_OF` (people only, no direction) | Partner of | Partner of |
-| `PARENT_OF` (people only) | Parent of | Child of |
-| `SIBLING_OF` (people only, no direction) | Sibling of | Sibling of |
-| `FRIEND_OF` (people only, no direction) | Friend of | Friend of |
 | `MENTIONS` (derived) | Mentions | Mentioned in |
+
+Those are built in. Every other kind is the notebook's own, seeded by its modules or added with `relationKind.create` (`key`, `label`, `inverseLabel?`, `peopleOnly?`, `exclusive?`); `relationKind.list` shows them with their use. `update` changes labels only, and `delete --moveTo <kind>` moves a used kind's relations first.
+
+| Seeded kind | From the `from` side | From the `to` side |
+|---|---|---|
+| `LEAD_OF` (work; people only, one each) | Lead of | Reports to |
+| `PARTNER_OF` (home; people only, no direction) | Partner of | Partner of |
+| `PARENT_OF` (home; people only) | Parent of | Child of |
+| `SIBLING_OF` (home; people only, no direction) | Sibling of | Sibling of |
+| `FRIEND_OF` (home; people only, no direction) | Friend of | Friend of |
+| `PARENT_IN_LAW_OF` (home; people only) | Parent-in-law of | Child-in-law of |
+| `SIBLING_IN_LAW_OF` (home; people only, no direction) | Sibling-in-law of | Sibling-in-law of |
+
+- A kind that's **one each** (`exclusive`) allows one relation at its `to` end: a new `LEAD_OF` to someone replaces their old lead.
 
 - Only one relation of each kind can exist between the same two entities (for a kind with no direction, in either direction), and an entity can't relate to itself.
 - For a link that's neither ("uses", "replaces"), use `RELATED` with a `note`.

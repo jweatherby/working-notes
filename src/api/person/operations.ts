@@ -11,21 +11,57 @@ import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
 import { archiveWhere, ensureWritable } from '$api/_archive';
 import { listPersonGroups } from '$api/group/operations';
 import { ORG_PERSON, PERSONAL_PERSON } from '$api/modules/person-extensions';
+import { loadRelationKinds } from '$api/relation-kind/operations';
+import { relationLabel } from '$shared/types/relations';
 
 type Reg = Pick<Registry, 'prisma'>;
 
 const notFound = (id: string): Error => new Error(`Person ${id} not found. Find ids with person.list.`);
+
+// ----- "Me" -----
+
+/** Each person's relations with "me", as labels from their side; an empty map without a "me". */
+const relationsToMe = async (reg: Reg, meId: string | null): Promise<ReadonlyMap<string, readonly string[]>> => {
+  if (!meId) return new Map();
+  const [rows, kinds] = await Promise.all([
+    reg.prisma.relation.findMany({
+      where: { kind: { not: 'MENTIONS' }, OR: [{ fromType: 'PERSON', fromId: meId, toType: 'PERSON' }, { toType: 'PERSON', toId: meId, fromType: 'PERSON' }] },
+      orderBy: { createdAt: 'asc' }
+    }),
+    loadRelationKinds(reg)
+  ]);
+  const out = new Map<string, string[]>();
+  for (const r of rows) {
+    // The other person's side: they're the `from` end when the relation points at me.
+    const [other, fromTheirSide] = r.toId === meId ? [r.fromId, true] : [r.toId, false];
+    out.set(other, [...(out.get(other) ?? []), relationLabel(kinds, r.kind, fromTheirSide)]);
+  }
+  return out;
+};
+
+/** Makes one person "me" (the notebook's owner), or nobody with null. */
+export const setMe = async (reg: Reg, id: string | null): Promise<Result<{ readonly id: string | null }>> => {
+  if (id !== null && !(await reg.prisma.person.findUnique({ where: { id }, select: { id: true } }))) return err(notFound(id));
+  await reg.prisma.$transaction([
+    reg.prisma.person.updateMany({ where: { isMe: true }, data: { isMe: false } }),
+    ...(id !== null ? [reg.prisma.person.update({ where: { id }, data: { isMe: true } })] : [])
+  ]);
+  return ok({ id });
+};
 
 // ----- Queries -----
 
 export const listPersons = async (reg: Reg, archived: ArchiveFilter = 'exclude'): Promise<Result<readonly PersonSummary[]>> => {
   const rows = await reg.prisma.person.findMany({ where: archiveWhere(archived), orderBy: { name: 'asc' } });
   const ids = rows.map((r) => r.id);
-  const [org, personal] = await Promise.all([ORG_PERSON.load(reg, ids), PERSONAL_PERSON.load(reg, ids)]);
+  const me = await reg.prisma.person.findFirst({ where: { isMe: true }, select: { id: true } });
+  const [org, personal, toMe] = await Promise.all([ORG_PERSON.load(reg, ids), PERSONAL_PERSON.load(reg, ids), relationsToMe(reg, me?.id ?? null)]);
   return ok(rows.map((r) => ({
     id: r.id,
     name: r.name,
     email: r.email,
+    isMe: r.isMe,
+    toMe: toMe.get(r.id) ?? [],
     path: entityPath('PERSON', r.id),
     archivedAt: r.archivedAt,
     createdAt: r.createdAt,
@@ -39,15 +75,19 @@ export const listPersons = async (reg: Reg, archived: ArchiveFilter = 'exclude')
 export const getPerson = async (reg: Reg, id: string): Promise<Result<PersonDetail>> => {
   const row = await reg.prisma.person.findUnique({ where: { id } });
   if (!row) return err(notFound(id));
-  const [groups, org, personal] = await Promise.all([
+  const me = await reg.prisma.person.findFirst({ where: { isMe: true }, select: { id: true } });
+  const [groups, org, personal, toMe] = await Promise.all([
     listPersonGroups(reg, id),
     ORG_PERSON.detail(reg, id),
-    PERSONAL_PERSON.detail(reg, id)
+    PERSONAL_PERSON.detail(reg, id),
+    relationsToMe(reg, me && me.id !== id ? me.id : null)
   ]);
   return ok({
     id: row.id,
     name: row.name,
     email: row.email,
+    isMe: row.isMe,
+    toMe: toMe.get(row.id) ?? [],
     path: entityPath('PERSON', row.id),
     archivedAt: row.archivedAt,
     createdAt: row.createdAt,

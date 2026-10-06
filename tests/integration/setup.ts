@@ -12,6 +12,7 @@ import { getNotebookStore } from '../../src/shared/notebooks/current.server';
 import { closeRegistries, getRegistry } from '../../src/shared/registry.server';
 import { addStarterKinds } from '../../src/api/page-kind/operations';
 import { seedGroupKinds } from '../../src/api/group-kind/operations';
+import { seedRelationKinds } from '../../src/api/relation-kind/operations';
 import { ORG_MODULE } from '../../src/shared/modules/org';
 import { OTHER_NOTEBOOK, TEST_NOTEBOOK } from './test-notebooks';
 
@@ -33,6 +34,7 @@ beforeAll(async () => {
   });
   await addStarterKinds(getRegistry(TEST_NOTEBOOK));
   await seedGroupKinds(getRegistry(TEST_NOTEBOOK), ORG_MODULE.groupKinds);
+  await seedRelationKinds(getRegistry(TEST_NOTEBOOK), ORG_MODULE.relationKinds);
 });
 
 afterAll(async () => {

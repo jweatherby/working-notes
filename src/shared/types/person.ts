@@ -31,6 +31,10 @@ export interface PersonSummary {
   readonly id: string;
   readonly name: string;
   readonly email: string | null;
+  /** The notebook's owner ("me"); at most one person. */
+  readonly isMe: boolean;
+  /** How this person relates to me, read from their side ("Child of", "Lead of"); empty without a "me". */
+  readonly toMe: readonly string[];
   readonly path: string;
   readonly archivedAt: Date | null;
   readonly createdAt: Date;

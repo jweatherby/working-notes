@@ -7,7 +7,7 @@
   import InlinePicker from '$lib/ui/InlinePicker.svelte';
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
-  import { submitOrThrow } from '$lib/ui/submit';
+  import { submit, submitOrThrow } from '$lib/ui/submit';
   import OwnedWork from '$lib/goal/components/OwnedWork.svelte';
   import { model } from '$lib/stores/notebook-model';
   import { fieldPatch, fieldText } from '$lib/person/fields';
@@ -35,6 +35,15 @@
   const setField = async (field: PersonFieldDescriptor, value: string | null) => {
     await submitOrThrow(() => trpc().person.update.mutate({ id: person.id, extensions: fieldPatch(field, value) }));
     await invalidateAll();
+  };
+
+  // "Me" is the notebook's owner; relations to them read as "To you" on People.
+  let meError = $state('');
+  const handleSetMe = async (id: string | null) => {
+    meError = '';
+    const outcome = await submit(() => trpc().person.setMe.mutate({ id }));
+    if (!outcome.ok) meError = outcome.error;
+    else await invalidateAll();
   };
 
   const handleJoin = async (groupId: string) => {
@@ -68,6 +77,19 @@
       <div>
         <dt>Email</dt>
         <dd>{#if person.email}<a href="mailto:{person.email}">{person.email}</a>{:else}<span class="muted">—</span>{/if}</dd>
+      </div>
+      <div>
+        <dt>To you</dt>
+        <dd>
+          {#if person.isMe}
+            <span class="badge accent">You</span>
+            <button type="button" class="btn link sm" onclick={() => handleSetMe(null)}>Not me</button>
+          {:else}
+            {#if person.toMe.length > 0}{person.toMe.join(', ')}{:else}<span class="muted">—</span>{/if}
+            <button type="button" class="btn link sm" onclick={() => handleSetMe(person.id)}>This is me</button>
+          {/if}
+          {#if meError}<span class="inline-error">{meError}</span>{/if}
+        </dd>
       </div>
       {#each $model.personFields as field (`${field.module}.${field.key}`)}
         {@const text = fieldText(person.extensions, field)}

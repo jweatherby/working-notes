@@ -1,23 +1,48 @@
-// Relations: links between any two entities, with an optional note. RELATED
-// has no direction; DEPENDS_ON does. The personal kinds link two people
-// (PARENT_OF has a direction, the rest don't). MENTIONS relations are derived
-// from app links in content.
+// Relations: links between any two entities, with a kind and an optional note.
+// RELATED (no direction) and DEPENDS_ON are built in, and MENTIONS is derived from
+// app links in content. Every other kind is the notebook's own (relation_kind): a
+// label each way ("Parent of" / "Child of"), whether it has a direction, and
+// whether it links only people.
 
-import { PERSONAL_RELATION_KINDS, SYMMETRIC_RELATION_KINDS, type RelatableType, type RelationKind } from './enums';
+import { MANUAL_RELATION_KINDS, type RelatableType, type RelationKind } from './enums';
 
-export const isSymmetricKind = (kind: string): boolean => (SYMMETRIC_RELATION_KINDS as readonly string[]).includes(kind);
+export interface RelationKindDefinition {
+  readonly key: string;
+  /** How it reads from the `from` end: "Parent of". */
+  readonly label: string;
+  /** How it reads from the `to` end: "Child of"; the same as `label` when symmetric. */
+  readonly inverseLabel: string;
+  /** No direction: A→B is the same relation as B→A. */
+  readonly symmetric: boolean;
+  /** Links two people only. */
+  readonly peopleOnly: boolean;
+  /** The `to` end has at most one relation of this kind (a person has one lead): adding replaces it. */
+  readonly exclusive: boolean;
+  readonly sortOrder: number;
+  /** RELATED, DEPENDS_ON and MENTIONS; they can't be changed. */
+  readonly builtIn: boolean;
+}
 
-export const isPersonalKind = (kind: string): boolean => (PERSONAL_RELATION_KINDS as readonly string[]).includes(kind);
+export interface RelationKindSummary extends RelationKindDefinition {
+  readonly relationCount: number;
+}
 
-/** How a relation reads from each end: "Checkout depends on Payments" / "Payments is needed by Checkout". */
-export const RELATION_LABELS: Readonly<Record<RelationKind, { readonly forward: string; readonly inverse: string }>> = {
-  RELATED: { forward: 'Related to', inverse: 'Related to' },
-  DEPENDS_ON: { forward: 'Depends on', inverse: 'Needed by' },
-  PARTNER_OF: { forward: 'Partner of', inverse: 'Partner of' },
-  PARENT_OF: { forward: 'Parent of', inverse: 'Child of' },
-  SIBLING_OF: { forward: 'Sibling of', inverse: 'Sibling of' },
-  FRIEND_OF: { forward: 'Friend of', inverse: 'Friend of' },
-  MENTIONS: { forward: 'Mentions', inverse: 'Mentioned in' }
+export const BUILTIN_RELATION_KINDS: readonly RelationKindDefinition[] = [
+  { key: 'RELATED', label: 'Related to', inverseLabel: 'Related to', symmetric: true, peopleOnly: false, exclusive: false, sortOrder: -3, builtIn: true },
+  { key: 'DEPENDS_ON', label: 'Depends on', inverseLabel: 'Needed by', symmetric: false, peopleOnly: false, exclusive: false, sortOrder: -2, builtIn: true },
+  { key: 'MENTIONS', label: 'Mentions', inverseLabel: 'Mentioned in', symmetric: false, peopleOnly: false, exclusive: false, sortOrder: 1_000_000, builtIn: true }
+];
+
+/** Relation kind keys look like PARENT_OF or MENTOR_OF. */
+export const RELATION_KIND_KEY = /^[A-Z][A-Z0-9_]{0,39}$/;
+
+export const isManualBuiltIn = (kind: string): boolean => (MANUAL_RELATION_KINDS as readonly string[]).includes(kind);
+
+/** The kind's label from one end; an unknown kind reads as its key. */
+export const relationLabel = (kinds: readonly RelationKindDefinition[], kind: RelationKind, outgoing: boolean): string => {
+  const def = kinds.find((k) => k.key === kind);
+  if (!def) return kind;
+  return outgoing ? def.label : def.inverseLabel;
 };
 
 export interface RelationItem {

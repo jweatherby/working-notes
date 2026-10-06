@@ -8,22 +8,24 @@ import { ensureDatabase } from '../../src/shared/db/bootstrap.server';
 import { createPageKind, deletePageKind, listPageKinds, updatePageKind } from '../../src/api/page-kind/operations';
 import { createPage, getPage, queryPages, updatePage } from '../../src/api/page/operations';
 import { createTodo, listTodosForEntity, updateTodo } from '../../src/api/attached/todo/operations';
-import { createPerson, getPerson } from '../../src/api/person/operations';
+import { createPerson, getPerson, listPersons, setMe } from '../../src/api/person/operations';
 import { addGroupMember, createGroup } from '../../src/api/group/operations';
 import { seedGroupKinds } from '../../src/api/group-kind/operations';
+import { createRelationKind, deleteRelationKind, listRelationKinds, seedRelationKinds, updateRelationKind } from '../../src/api/relation-kind/operations';
 import { createCallerFactory } from '../../src/shared/trpc/init';
 import { appRouter } from '../../src/shared/trpc/router';
 import { createNotebookContext } from '../../src/shared/trpc/context.server';
 import { PERSONAL_MODULE } from '../../src/shared/modules/personal';
 import { addRelation, listRelationsForEntity } from '../../src/api/relation/operations';
 import { createProject } from '../../src/api/project/operations';
-import { OTHER_NOTEBOOK } from './test-notebooks';
+import { OTHER_NOTEBOOK, TEST_NOTEBOOK } from './test-notebooks';
 
 // The empty second notebook, so the kinds and people here start from nothing.
 const reg = () => getRegistry(OTHER_NOTEBOOK);
 
 beforeAll(async () => {
   await ensureDatabase(OTHER_NOTEBOOK);
+  await seedRelationKinds(reg(), PERSONAL_MODULE.relationKinds);
 });
 
 const must = <T>(result: { ok: true; value: T } | { ok: false; error: Error }): T => {
@@ -132,6 +134,43 @@ describe('people at home', () => {
     const wrong = await addRelation(r, { fromType: 'PERSON', fromId: sam.id, toType: 'PROJECT', toId: project.id, kind: 'FRIEND_OF' });
     expect(!wrong.ok && wrong.error.message).toContain('FRIEND_OF links two people');
   });
+
+  it('reads relations from the other person toward "me", and keeps one me', async () => {
+    const r = reg();
+    const me = must(await createPerson(r, { name: 'Me Myself' }));
+    const mom = must(await createPerson(r, { name: 'Me Mom' }));
+    const kid = must(await createPerson(r, { name: 'Me Kid' }));
+    must(await addRelation(r, { fromType: 'PERSON', fromId: mom.id, toType: 'PERSON', toId: me.id, kind: 'PARENT_OF' }));
+    must(await addRelation(r, { fromType: 'PERSON', fromId: me.id, toType: 'PERSON', toId: kid.id, kind: 'PARENT_OF' }));
+
+    must(await setMe(r, mom.id));
+    must(await setMe(r, me.id));
+    const people = must(await listPersons(r));
+    expect(people.filter((p) => p.isMe).map((p) => p.name)).toEqual(['Me Myself']);
+    expect(people.find((p) => p.id === mom.id)?.toMe).toEqual(['Parent of']);
+    expect(people.find((p) => p.id === kid.id)?.toMe).toEqual(['Child of']);
+    expect(must(await getPerson(r, kid.id)).toMe).toEqual(['Child of']);
+    expect(must(await getPerson(r, me.id)).toMe).toEqual([]);
+
+    must(await setMe(r, null));
+    expect(must(await listPersons(r)).some((p) => p.isMe)).toBe(false);
+    expect((await setMe(r, 'no-such-person')).ok).toBe(false);
+  });
+});
+
+describe('exclusive relation kinds', () => {
+  it('gives a person one lead: a new LEAD_OF replaces the old one', async () => {
+    const r = getRegistry(TEST_NOTEBOOK);
+    const [a, b, c] = await Promise.all(['Ex Lead A', 'Ex Lead B', 'Ex Report'].map(async (name) => must(await createPerson(r, { name }))));
+    must(await addRelation(r, { fromType: 'PERSON', fromId: a!.id, toType: 'PERSON', toId: c!.id, kind: 'LEAD_OF' }));
+    must(await addRelation(r, { fromType: 'PERSON', fromId: b!.id, toType: 'PERSON', toId: c!.id, kind: 'LEAD_OF' }));
+    const leads = must(await listRelationsForEntity(r, 'PERSON', c!.id)).find((g) => g.label === 'Reports to');
+    expect(leads?.items.map((i) => i.other.label)).toEqual(['Ex Lead B']);
+    expect(must(await getPerson(r, c!.id)).extensions.org).toMatchObject({ leadId: b!.id, leadName: 'Ex Lead B' });
+    // A lead can have any number of reports.
+    must(await addRelation(r, { fromType: 'PERSON', fromId: b!.id, toType: 'PERSON', toId: a!.id, kind: 'LEAD_OF' }));
+    expect(must(await getPerson(r, b!.id)).extensions.org?.reports.map((p) => p.name).sort()).toEqual(['Ex Lead A', 'Ex Report']);
+  });
 });
 
 describe('groups and modules', () => {
@@ -163,5 +202,28 @@ describe('groups and modules', () => {
     expect(!orgPatch.ok && orgPatch.error.message).toContain('Org chart module');
     const work = await caller('work');
     expect((await work.goal.list({})).ok).toBe(true);
+  });
+});
+
+describe('relation kinds as data', () => {
+  it('creates, renames and deletes a kind, moving its relations first', async () => {
+    const r = reg();
+    const mentor = must(await createRelationKind(r, { key: 'MENTOR_OF', label: 'Mentor of', inverseLabel: 'Mentee of', peopleOnly: true }));
+    expect(mentor).toMatchObject({ symmetric: false, exclusive: false });
+    const neighbour = must(await createRelationKind(r, { key: 'NEIGHBOUR_OF', label: 'Neighbour of' }));
+    expect(neighbour).toMatchObject({ symmetric: true, inverseLabel: 'Neighbour of' });
+    expect((await createRelationKind(r, { key: 'RELATED', label: 'x' })).ok).toBe(false);
+    expect((await createRelationKind(r, { key: 'bad key', label: 'x' })).ok).toBe(false);
+
+    must(await updateRelationKind(r, 'MENTOR_OF', { inverseLabel: 'Mentored by' }));
+    const [a, b] = await Promise.all(['Kind A', 'Kind B'].map(async (name) => must(await createPerson(r, { name }))));
+    must(await addRelation(r, { fromType: 'PERSON', fromId: a!.id, toType: 'PERSON', toId: b!.id, kind: 'MENTOR_OF' }));
+    expect(must(await listRelationsForEntity(r, 'PERSON', b!.id)).map((g) => g.label)).toContain('Mentored by');
+
+    expect((await deleteRelationKind(r, 'MENTOR_OF')).ok).toBe(false);
+    expect(must(await deleteRelationKind(r, 'MENTOR_OF', 'RELATED')).relationsMoved).toBe(1);
+    expect(must(await listRelationKinds(r)).some((k) => k.key === 'MENTOR_OF')).toBe(false);
+    expect(must(await listRelationsForEntity(r, 'PERSON', b!.id)).map((g) => g.label)).toContain('Related to');
+    expect((await updateRelationKind(r, 'RELATED', { label: 'x' })).ok).toBe(false);
   });
 });

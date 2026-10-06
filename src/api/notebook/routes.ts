@@ -6,12 +6,15 @@ import type { NotebookProfile } from '$shared/types/notebook';
 import { notebookModel } from '$shared/modules/model';
 import { addStarterKinds } from '$api/page-kind/operations';
 import { seedGroupKinds } from '$api/group-kind/operations';
+import { seedRelationKinds } from '$api/relation-kind/operations';
 import { createNotebook, listNotebooks, renameNotebook, setDefaultNotebook, setNotebookProfile } from './operations';
 
-/** The group kinds a profile's modules bring, and the starter page kinds for work. */
+/** The group and relation kinds a profile's modules bring, and the starter page kinds for work. */
 const setUpModules = async (notebookId: string, profile: NotebookProfile): Promise<void> => {
   const reg = await getReadyRegistry(notebookId);
-  await seedGroupKinds(reg, notebookModel(profile).groupKinds);
+  const model = notebookModel(profile);
+  await seedGroupKinds(reg, model.groupKinds);
+  await seedRelationKinds(reg, model.relationKinds);
   if (profile === 'work') await addStarterKinds(reg);
 };
 

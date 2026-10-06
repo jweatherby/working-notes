@@ -56,7 +56,8 @@ describe('home smoke', () => {
     const lead = await p.person.create({ data: { name: 'Focus Lead' } });
     const report = await p.person.create({ data: { name: 'Focus Report' } });
     const gone = await p.person.create({ data: { name: 'Focus Gone', archivedAt: new Date() } });
-    await p.orgPerson.createMany({ data: [{ personId: report.id, leadId: lead.id }, { personId: gone.id, leadId: lead.id }] });
+    await p.relationKind.upsert({ where: { key: 'LEAD_OF' }, create: { key: 'LEAD_OF', label: 'Lead of', inverseLabel: 'Reports to', peopleOnly: true, exclusive: true }, update: {} });
+    await p.relation.createMany({ data: [report.id, gone.id].map((id) => ({ fromType: 'PERSON', fromId: lead.id, toType: 'PERSON', toId: id, kind: 'LEAD_OF' })) });
     const team = await p.group.create({ data: { name: 'Focus Team', kind: 'TEAM' } });
     const family = await p.groupKind.upsert({ where: { key: 'FAMILY' }, create: { key: 'FAMILY', name: 'Family', plural: 'Families' }, update: {} });
     const cousins = await p.group.create({ data: { name: 'Focus Cousins', kind: family.key } });
@@ -71,19 +72,17 @@ describe('home smoke', () => {
     const labelsOf = (graph: Awaited<ReturnType<typeof getFocusGraph>>) =>
       graph.ok ? Object.fromEntries(graph.value.groups.map((g) => [g.label, g.nodes.map((n) => n.label)])) : null;
 
-    // Every group, under its kind's name; the org module adds the reporting line.
+    // Every group, under its kind's name; the reporting line is a LEAD_OF relation.
     const person = await getFocusGraph(reg, work, { type: 'PERSON', id: lead.id });
     expect(person.ok && person.value.focus?.label).toBe('Focus Lead');
     expect(labelsOf(person)).toEqual({
-      'Direct reports': ['Focus Report'],
+      'Lead of': ['Focus Report'],
       Family: ['Focus Cousins'],
       Team: ['Focus Team'],
       Owns: ['Focus Project']
     });
-    expect(person.ok && person.value.groups.map((g) => g.label).slice(0, 3)).toEqual(['Direct reports', 'Family', 'Team']);
-    // Without the org module (a home notebook) there are no reporting lines.
-    expect(Object.keys(labelsOf(await getFocusGraph(reg, home, { type: 'PERSON', id: lead.id })) ?? {})).toEqual(['Family', 'Team', 'Owns']);
-    expect(labelsOf(person)?.['Direct reports']).not.toContain(gone.name);
+    expect(person.ok && person.value.groups.map((g) => g.label).slice(0, 3)).toEqual(['Lead of', 'Family', 'Team']);
+    expect(labelsOf(person)?.['Lead of']).not.toContain(gone.name);
 
     // Attached todos are not neighbours; goal–project links read as dependencies.
     expect(labelsOf(await getFocusGraph(reg, work, { type: 'PROJECT', id: project.id }))).toEqual({

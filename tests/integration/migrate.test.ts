@@ -131,11 +131,14 @@ describe('applyMigrations', () => {
     expect(await rows('SELECT key, exclusive FROM group_kind ORDER BY sort_order')).toEqual([['TEAM', 0], ['DEPARTMENT', 1]]);
     expect(await rows('SELECT id, kind, name FROM "group" ORDER BY id')).toEqual([['d1', 'DEPARTMENT', 'Engineering'], ['t1', 'TEAM', 'Platform']]);
     expect(await rows('SELECT group_id, person_id FROM group_member ORDER BY group_id')).toEqual([['d1', 'p2'], ['t1', 'p2']]);
-    expect(await rows('SELECT person_id, title, lead_id FROM org_person ORDER BY person_id')).toEqual([['p1', 'CTO', null], ['p2', 'Engineer', 'p1']]);
+    expect(await rows('SELECT person_id, title FROM org_person ORDER BY person_id')).toEqual([['p1', 'CTO'], ['p2', 'Engineer']]);
+    // The lead became an exclusive LEAD_OF relation, from the lead to the report.
+    expect(await rows('SELECT key, exclusive FROM relation_kind')).toEqual([['LEAD_OF', 1]]);
+    expect(await rows("SELECT from_id, to_id FROM relation WHERE kind = 'LEAD_OF'")).toEqual([['p1', 'p2']]);
     expect(await rows('SELECT person_id, birthday FROM personal_person')).toEqual([['p2', '--05-03']]);
     expect(await rows('SELECT entity_type FROM note')).toEqual([['GROUP']]);
     expect(await rows('SELECT owner_type FROM project')).toEqual([['GROUP']]);
-    expect(await rows('SELECT to_type FROM relation')).toEqual([['GROUP']]);
+    expect(await rows("SELECT to_type FROM relation WHERE kind = 'RELATED'")).toEqual([['GROUP']]);
 
     const hits = async (match: string) =>
       (await client.execute({ sql: 'SELECT entity_type, entity_id, parent_type FROM search_index WHERE search_index MATCH ? ORDER BY entity_id', args: [match] })).rows
