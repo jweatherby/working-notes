@@ -4,6 +4,8 @@
   import PageHeader from '$lib/ui/PageHeader.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import ArchiveFilter from '$lib/ui/ArchiveFilter.svelte';
+  import ParamToggle from '$lib/ui/ParamToggle.svelte';
+  import FocusGraph from '$lib/home/components/FocusGraph.svelte';
   import PersonForm from '$lib/person/components/PersonForm.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { model } from '$lib/stores/notebook-model';
@@ -18,6 +20,13 @@
   const hasMe = $derived(persons.some((p) => p.isMe));
 
   const handleCreated = () => closePopup({ invalidate: true });
+
+  // A home notebook opens on the graph (centred on you), a work notebook on the table.
+  const VIEW_OPTIONS = [
+    { id: 'graph', name: 'Graph' },
+    { id: 'table', name: 'Table' }
+  ];
+  const graph = $derived(data.view === 'graph' ? data.graph : null);
 </script>
 
 <svelte:head><title>People</title></svelte:head>
@@ -29,10 +38,18 @@
   </PageHeader>
 
   <div class="toolbar filters">
-    <ArchiveFilter />
+    {#if data.view === 'table'}<ArchiveFilter />{/if}
+    <span class="spacer"></span>
+    <ParamToggle param="view" options={VIEW_OPTIONS} defaultValue={data.defaultView} ariaLabel="View" />
   </div>
 
-  {#if persons.length > 0}
+  {#if data.view === 'graph' && persons.length > 0}
+    {#if graph?.focus}
+      <FocusGraph graph={{ ...graph, focus: graph.focus }} />
+    {:else}
+      <EmptyState message="Nothing to show here." boxed />
+    {/if}
+  {:else if persons.length > 0}
     <div class="table-wrap">
       <table>
         <thead>
