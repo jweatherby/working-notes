@@ -5,6 +5,8 @@
   import { quickFinderOpen } from '$lib/stores/quick-finder';
   import type { NotebookInfo, NotebookSummary } from '$shared/types/notebook';
   import { notebookModel } from '$shared/modules/model';
+  import { panelWidth } from '$lib/stores/right-panel';
+  import { clampPanelWidth } from '$lib/common/panel-width';
 
   interface Props {
     readonly children: any;
@@ -34,9 +36,15 @@
     link.exact ? pathname === link.href : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
   const closeMenu = () => { menuOpen = false; };
+
+  // The width the user dragged the right panel to, kept within the window as it resizes.
+  let innerWidth = $state(0);
+  const panelW = $derived($panelWidth !== null && innerWidth > 0 ? `${clampPanelWidth($panelWidth, innerWidth)}px` : undefined);
 </script>
 
-<div class="app-layout" class:has-panel={showInfoPanel} class:collapse-medium={collapseInfoPanelOnMedium}>
+<svelte:window bind:innerWidth />
+
+<div class="app-layout" class:has-panel={showInfoPanel} class:collapse-medium={collapseInfoPanelOnMedium} style:--panel-w={panelW}>
   {#if showInfoPanel}
     <RightPanel />
   {/if}
@@ -258,6 +266,7 @@
       grid-template-columns: minmax(0, 1fr);
       :global(.notes-backdrop) { display: block; }
       :global(.right-panel .drawer-handle) { display: flex; }
+      :global(.right-panel .resize-handle) { display: none; }
       :global(.right-panel) {
         top: var(--nav-h);
         height: calc(100dvh - var(--nav-h));
