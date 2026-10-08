@@ -128,7 +128,6 @@
             <th class="status-col">Status</th>
             {#if axis}<th class="timing-col"><TimelineHead {axis} /></th>{/if}
             {#if maxDays > 0}<th class="size-col">Size</th>{/if}
-            <th class="children-col">Sub-projects</th>
           </tr>
         </thead>
         <tbody>
@@ -171,7 +170,6 @@
                   {#if size}<ProgressBar value={relativeSize(expectedDays(project) ?? 0, maxDays)} tone="muted" label={size.label} />{/if}
                 </td>
               {/if}
-              <td class="text-2">{project.childCount || ''}</td>
             </tr>
           {/each}
         </tbody>
@@ -257,7 +255,6 @@
   .name-col { width: 26%; }
   .status-col { width: 110px; }
   .size-col { width: 140px; }
-  .children-col { width: 120px; }
   .disclosure-spacer {
     flex-shrink: 0;
     width: var(--control-h-sm);
