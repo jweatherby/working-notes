@@ -35,6 +35,20 @@ describe('parseChartSpec', () => {
     if (!result.ok) expect(result.error.message).toContain('series.0.values has 2 values but there are 3 labels');
   });
 
+  it('accepts a hex colour per series and rejects anything else', () => {
+    const spec = (color: string): string =>
+      `{"type":"line","labels":["a"],"series":[{"values":[1],"color":${JSON.stringify(color)}},{"values":[2]}]}`;
+    const result = parseChartSpec(spec('#2563EB'));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.series.map((s) => s.color)).toEqual(['#2563EB', undefined]);
+
+    for (const bad of ['red', '#fff', '2563eb', 'rgb(0,0,0)']) {
+      const rejected = parseChartSpec(spec(bad));
+      expect(rejected.ok).toBe(false);
+      if (!rejected.ok) expect(rejected.error.message).toContain('series.0.color must be a hex colour');
+    }
+  });
+
   it('reports invalid JSON', () => {
     const result = parseChartSpec('{type: bar}');
     expect(result.ok).toBe(false);

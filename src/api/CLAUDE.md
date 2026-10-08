@@ -205,9 +205,9 @@ A `Report` is markdown attached to an entity, with an optional `brandingId`. `ge
 
 - `type`: `bar` | `line` | `radar`
 - `labels`: 1–100 strings
-- `series`: 1–6 series, each with exactly one number per label, and an optional `label`
+- `series`: 1–6 series, each with exactly one number per label, an optional `label` and an optional `color` (`#rrggbb`)
 - Optional: `title`, `min`, `max`. No other keys are allowed.
-- Charts render in brand colours in the editor, in doc/note views and in the print view.
+- Charts render in brand colours in the editor, in doc/note views and in the print view. A series with a `color` draws its line, bars or area in that colour instead; the others fade from the brand colour.
 - Legacy `[chart:key]` tags (`avg_by_section`, `scores:<section>`, `radar:<section>`) render survey sections and are reserved for results imported from form-engine.
 
 ## Adding a domain

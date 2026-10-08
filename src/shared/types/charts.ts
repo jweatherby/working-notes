@@ -12,6 +12,8 @@ export type ChartType = (typeof CHART_TYPES)[number];
 export interface ChartSeries {
   readonly label?: string;
   readonly values: readonly number[];
+  /** `#rrggbb`; without it the series takes the branding's colour. */
+  readonly color?: string;
 }
 
 export interface ChartSpec {
@@ -29,7 +31,11 @@ export const chartSpecSchema: z.ZodType<ChartSpec, z.ZodTypeDef, unknown> = z
     title: z.string().max(200).optional(),
     labels: z.array(z.string()).min(1).max(100),
     series: z
-      .array(z.object({ label: z.string().max(100).optional(), values: z.array(z.number()) }).strict())
+      .array(z.object({
+        label: z.string().max(100).optional(),
+        values: z.array(z.number()),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'must be a hex colour like "#2563eb"').optional()
+      }).strict())
       .min(1)
       .max(6),
     min: z.number().optional(),

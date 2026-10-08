@@ -18,7 +18,7 @@ import {
   Tooltip,
   type ChartConfiguration
 } from 'chart.js';
-import { chartColors, type ChartBranding } from '$shared/types/branding';
+import { chartColors, solidRgba, type ChartBranding } from '$shared/types/branding';
 import { parseChartSpec, sectionsToSpec, type AggregatedSection, type ChartSpec } from '$shared/types/charts';
 
 Chart.register(
@@ -37,11 +37,13 @@ export const renderChart = (el: HTMLElement, spec: ChartSpec, branding: ChartBra
 
   const multi = spec.series.length > 1;
   const datasets = spec.series.map((series, i) => {
-    // Series fade from the brand colour so several stay distinguishable.
-    const strength = 1 - i * (0.6 / spec.series.length);
-    const fill = spec.type === 'bar' ? withAlpha(colors.solid, 0.7 * strength) : withAlpha(colors.solid, 0.15);
-    // Lines use the brand colour itself; `colors.border` is the accent *font* colour (often white).
-    const line = withAlpha(colors.solid, strength);
+    // A series with its own colour draws in it at full strength. The others fade from the
+    // brand colour so several stay distinguishable.
+    const base = series.color ? solidRgba(series.color) : colors.solid;
+    const strength = series.color ? 1 : 1 - i * (0.6 / spec.series.length);
+    const fill = spec.type === 'bar' ? withAlpha(base, 0.7 * strength) : withAlpha(base, 0.15);
+    // Lines use the colour itself; `colors.border` is the accent *font* colour (often white).
+    const line = withAlpha(base, strength);
     return {
       label: series.label ?? (multi ? `Series ${i + 1}` : spec.title ?? ''),
       data: [...series.values],
