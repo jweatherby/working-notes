@@ -11,6 +11,12 @@ export interface ProjectListItem {
   readonly owner: EntityOwner | null;
   readonly childCount: number;
   readonly archivedAt: Date | string | null;
+  /** When it runs (`endDate` is the target) and its three-point estimate in days. */
+  readonly startDate?: Date | string | null;
+  readonly endDate?: Date | string | null;
+  readonly daysOptimistic?: number | null;
+  readonly daysLikely?: number | null;
+  readonly daysPessimistic?: number | null;
 }
 
 /** The `?team=` value for projects that no team owns. */

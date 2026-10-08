@@ -18,6 +18,11 @@ export interface ProjectSummary {
   readonly parentId: string | null;
   readonly owner: EntityOwner | null;
   readonly childCount: number;
+  readonly startDate: Date | null;
+  readonly endDate: Date | null;
+  readonly daysOptimistic: number | null;
+  readonly daysLikely: number | null;
+  readonly daysPessimistic: number | null;
   readonly path: string;
   readonly archivedAt: Date | null;
   readonly createdAt: Date;
@@ -88,6 +93,11 @@ export const listProjects = async (
     parentId: p.parentId,
     owner: await loadOwner(reg, p.ownerType, p.ownerId),
     childCount: p._count.children,
+    startDate: p.startDate,
+    endDate: p.endDate,
+    daysOptimistic: p.daysOptimistic,
+    daysLikely: p.daysLikely,
+    daysPessimistic: p.daysPessimistic,
     path: entityPath('PROJECT', p.id),
     archivedAt: p.archivedAt,
     createdAt: p.createdAt

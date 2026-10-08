@@ -12,6 +12,11 @@
   import DependencyMap from '$lib/project/components/DependencyMap.svelte';
   import ProjectPeek from '$lib/project/components/ProjectPeek.svelte';
   import PeekIcon from '$lib/ui/PeekIcon.svelte';
+  import ProgressBar from '$lib/ui/ProgressBar.svelte';
+  import TimelineBar from '$lib/project/components/TimelineBar.svelte';
+  import TimelineHead from '$lib/project/components/TimelineHead.svelte';
+  import { expectedDays, relativeSize, sizeText, timelineAxis, timelineBar } from '$lib/project/project-timeline';
+  import { localDay } from '$shared/utils/period';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { openPeek, PEEK_PARAM } from '$lib/ui/peek-url';
   import { statusBadgeClass } from '$lib/project/utils';
@@ -82,6 +87,12 @@
 
   const peekId = $derived(page.url.searchParams.get(PEEK_PARAM));
 
+  // Timing and Size share one scale across every group, collapsed rows included, so collapsing never rescales them.
+  const today = localDay();
+  const shown = $derived(groups.flatMap((group) => flattenTree(group.nodes, () => false).map((row) => row.item)));
+  const axis = $derived(timelineAxis(shown, today));
+  const maxDays = $derived(Math.max(0, ...shown.map((p) => expectedDays(p) ?? 0)));
+
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
@@ -110,13 +121,14 @@
 
   {#snippet projectTable(rows: (typeof tables)[number]['rows'])}
     <div class="table-wrap">
-      <table>
+      <table class="project-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Owner</th>
-            <th>Status</th>
-            <th>Sub-projects</th>
+            <th class="name-col">Name</th>
+            <th class="status-col">Status</th>
+            {#if axis}<th class="timing-col"><TimelineHead {axis} /></th>{/if}
+            {#if maxDays > 0}<th class="size-col">Size</th>{/if}
+            <th class="children-col">Sub-projects</th>
           </tr>
         </thead>
         <tbody>
@@ -133,18 +145,32 @@
                   {:else}
                     <span class="disclosure-spacer"></span>
                   {/if}
-                  <a href="/app/projects/{project.id}">{project.name}</a>{#if project.archivedAt} <span class="badge muted">Archived</span>{/if}
-                  <span class="row-actions">
-                    <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
+                  <span class="name-stack">
+                    <span class="name-line">
+                      <a href="/app/projects/{project.id}">{project.name}</a>{#if project.archivedAt} <span class="badge muted">Archived</span>{/if}
+                      <span class="row-actions">
+                        <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
+                      </span>
+                    </span>
+                    <!-- Grouped by team, the group's heading already names the owner. -->
+                    {#if project.owner && !grouped}
+                      <a class="owner text-xs" href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
+                    {/if}
                   </span>
                 </span>
-              </td>
-              <td class="text-2">
-                {#if project.owner}<a href={project.owner.path}>{project.owner.label ?? '—'}</a>{/if}
               </td>
               <td>
                 {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
               </td>
+              {#if axis}
+                <td class="timing-col"><TimelineBar bar={timelineBar(project, axis, today)} today={axis.today} /></td>
+              {/if}
+              {#if maxDays > 0}
+                {@const size = sizeText(project)}
+                <td class="size-col" title={size?.title}>
+                  {#if size}<ProgressBar value={relativeSize(expectedDays(project) ?? 0, maxDays)} tone="muted" label={size.label} />{/if}
+                </td>
+              {/if}
               <td class="text-2">{project.childCount || ''}</td>
             </tr>
           {/each}
@@ -208,6 +234,30 @@
   .context a {
     color: var(--text-3);
   }
+  .name-stack {
+    display: inline-flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .name-line {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+  .owner {
+    color: var(--text-3);
+    font-weight: 400;
+    &:hover { color: var(--accent); }
+  }
+  // Fixed column widths, so every group's table (and its timing axis) lines up.
+  .project-table {
+    table-layout: fixed;
+    min-width: 760px;
+  }
+  .name-col { width: 26%; }
+  .status-col { width: 110px; }
+  .size-col { width: 140px; }
+  .children-col { width: 120px; }
   .disclosure-spacer {
     flex-shrink: 0;
     width: var(--control-h-sm);
