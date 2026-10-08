@@ -176,6 +176,9 @@ export const relativeSize = (days: number, max: number): number => (max > 0 ? Ma
 export const SIZE_BAR_MAX = 20;
 export const SIZE_BAR_MIN = 2;
 
-/** A size bar's height in px: linear in the fraction, never too short to see. */
+/**
+ * A size bar's height in px, on a square-root scale: small projects spread out
+ * instead of bunching at the bottom beside one big one. Never too short to see.
+ */
 export const sizeBarHeight = (fraction: number, max: number = SIZE_BAR_MAX, min: number = SIZE_BAR_MIN): number =>
-  Math.max(min, Math.round(Math.min(1, Math.max(0, fraction)) * max));
+  Math.max(min, Math.round(Math.sqrt(Math.min(1, Math.max(0, fraction))) * max));

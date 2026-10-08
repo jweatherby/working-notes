@@ -134,13 +134,17 @@ describe('relativeSize', () => {
 });
 
 describe('sizeBarHeight', () => {
-  it('scales linearly up to the full height', () => {
+  it('scales by the square root up to the full height', () => {
     expect(sizeBarHeight(1)).toBe(20);
-    expect(sizeBarHeight(0.5)).toBe(10);
+    expect(sizeBarHeight(0.25)).toBe(10);
   });
 
-  it('keeps a small project visible', () => {
-    expect(sizeBarHeight(0.01)).toBe(2);
+  it('spreads small projects apart', () => {
+    expect(sizeBarHeight(8 / 63)).toBe(7);
+    expect(sizeBarHeight(10 / 63)).toBe(8);
+  });
+
+  it('keeps a tiny project visible', () => {
     expect(sizeBarHeight(0)).toBe(2);
   });
 });
