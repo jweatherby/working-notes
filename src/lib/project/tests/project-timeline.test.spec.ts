@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectedDays, relativeSize, shortDuration, sizeText, timelineAxis, timelineBar, toDay } from '../project-timeline';
+import { expectedDays, relativeSize, sizeDotDiameter, shortDuration, sizeText, timelineAxis, timelineBar, toDay } from '../project-timeline';
 
 const TODAY = '2026-08-15';
 
@@ -130,5 +130,17 @@ describe('relativeSize', () => {
   it('scales against the biggest', () => {
     expect(relativeSize(10, 40)).toBe(0.25);
     expect(relativeSize(10, 0)).toBe(0);
+  });
+});
+
+describe('sizeDotDiameter', () => {
+  it('scales the area, not the width', () => {
+    expect(sizeDotDiameter(1)).toBe(16);
+    expect(sizeDotDiameter(0.25)).toBe(8);
+  });
+
+  it('keeps a small project visible', () => {
+    expect(sizeDotDiameter(0.01)).toBe(4);
+    expect(sizeDotDiameter(0)).toBe(4);
   });
 });
