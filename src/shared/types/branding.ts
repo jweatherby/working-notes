@@ -12,6 +12,9 @@ const hexToRgb = (hex: string): string => {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)].join(', ');
 };
 
+/** `rgba(r, g, b, 1)` for a #rrggbb colour. */
+export const solidRgba = (hex: string): string => `rgba(${hexToRgb(hex)}, 1)`;
+
 /** WCAG contrast of a #rrggbb colour against white. */
 export const contrastOnWhite = (hex: string): number => {
   const channel = (c: number): number => {
@@ -45,6 +48,6 @@ export const chartColors = (branding?: ChartBranding | null): {
   return {
     fill: `rgba(${rgb}, 0.7)`,
     border: branding?.accentColor === base && branding.accentFontColor ? branding.accentFontColor : `rgba(${rgb}, 1)`,
-    solid: `rgba(${rgb}, 1)`,
+    solid: solidRgba(base),
   };
 };
