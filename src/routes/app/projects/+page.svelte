@@ -12,7 +12,7 @@
   import DependencyMap from '$lib/project/components/DependencyMap.svelte';
   import ProjectPeek from '$lib/project/components/ProjectPeek.svelte';
   import PeekIcon from '$lib/ui/PeekIcon.svelte';
-  import SizeDot from '$lib/project/components/SizeDot.svelte';
+  import SizeBar from '$lib/project/components/SizeBar.svelte';
   import TimelineBar from '$lib/project/components/TimelineBar.svelte';
   import TimelineHead from '$lib/project/components/TimelineHead.svelte';
   import { expectedDays, relativeSize, sizeText, timelineAxis, timelineBar } from '$lib/project/project-timeline';
@@ -167,7 +167,7 @@
               {#if maxDays > 0}
                 {@const size = sizeText(project)}
                 <td class="size-col" title={size?.title}>
-                  {#if size}<SizeDot fraction={relativeSize(expectedDays(project) ?? 0, maxDays)} label={size.label} />{/if}
+                  {#if size}<SizeBar fraction={relativeSize(expectedDays(project) ?? 0, maxDays)} label={size.label} />{/if}
                 </td>
               {/if}
             </tr>
@@ -254,7 +254,7 @@
   }
   .status-col { width: 110px; }
   .timing-col { width: 35%; }
-  .size-col { width: 84px; }
+  .size-col { width: 76px; }
   .disclosure-spacer {
     flex-shrink: 0;
     width: var(--control-h-sm);

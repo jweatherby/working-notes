@@ -173,9 +173,9 @@ export const sizeText = (item: EstimateInput): SizeText | null => {
 /** A size as a fraction of the biggest one shown. */
 export const relativeSize = (days: number, max: number): number => (max > 0 ? Math.min(1, days / max) : 0);
 
-export const SIZE_DOT_MAX = 16;
-export const SIZE_DOT_MIN = 4;
+export const SIZE_BAR_MAX = 20;
+export const SIZE_BAR_MIN = 2;
 
-/** A size dot's diameter in px: its area, not its width, grows with the fraction, so sizes compare fairly. */
-export const sizeDotDiameter = (fraction: number, max: number = SIZE_DOT_MAX, min: number = SIZE_DOT_MIN): number =>
-  Math.max(min, Math.round(Math.sqrt(Math.min(1, Math.max(0, fraction))) * max));
+/** A size bar's height in px: linear in the fraction, never too short to see. */
+export const sizeBarHeight = (fraction: number, max: number = SIZE_BAR_MAX, min: number = SIZE_BAR_MIN): number =>
+  Math.max(min, Math.round(Math.min(1, Math.max(0, fraction)) * max));
