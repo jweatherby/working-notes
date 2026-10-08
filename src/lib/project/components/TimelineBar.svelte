@@ -29,19 +29,20 @@
 <style lang="scss">
   .lane {
     position: relative;
-    height: 14px;
+    height: 10px;
   }
+  // Overlaps the rows above and below, so the line runs unbroken down the table.
   .today {
     position: absolute;
-    top: -6px;
-    bottom: -6px;
+    top: -24px;
+    bottom: -24px;
     left: calc(var(--at) * 100%);
     border-left: 1px dashed var(--border-strong);
   }
   .bar, .marker {
     position: absolute;
-    top: 3px;
-    height: 8px;
+    top: 2px;
+    height: 6px;
     border-radius: var(--r-full);
     background: var(--tone);
   }
@@ -54,8 +55,8 @@
   }
   .marker {
     left: calc(var(--at) * 100%);
-    width: 8px;
-    margin-left: -4px;
+    width: 6px;
+    margin-left: -3px;
     border-radius: 2px;
     transform: rotate(45deg);
   }

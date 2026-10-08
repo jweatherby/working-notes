@@ -243,6 +243,7 @@
     gap: var(--sp-1);
   }
   .owner {
+    line-height: 1.2;
     color: var(--text-3);
     font-weight: 400;
     &:hover { color: var(--accent); }
@@ -250,11 +251,13 @@
   // Fixed column widths, so every group's table (and its timing axis) lines up.
   .project-table {
     table-layout: fixed;
-    min-width: 760px;
+    min-width: 680px;
+    // Dense rows, so the swimlane reads as one chart.
+    td { padding-top: calc(var(--sp-1) / 2); padding-bottom: calc(var(--sp-1) / 2); }
   }
-  .name-col { width: 26%; }
-  .status-col { width: 110px; }
-  .size-col { width: 140px; }
+  .name-col { width: 28%; }
+  .status-col { width: 100px; }
+  .size-col { width: 104px; }
   .disclosure-spacer {
     flex-shrink: 0;
     width: var(--control-h-sm);
