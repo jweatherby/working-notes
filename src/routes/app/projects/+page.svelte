@@ -153,7 +153,7 @@
                       <a class="owner text-xs" href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
                     {/if}
                   </span>
-                  <!-- Beside the stack, so it centres on the name and owner lines together. -->
+                  <!-- Beside the stack, level with the name line, whether or not an owner line follows. -->
                   <span class="row-actions">
                     <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
                   </span>
@@ -237,6 +237,11 @@
     display: inline-flex;
     flex-direction: column;
     min-width: 0;
+  }
+  // Top-aligned, centred on the name line: the button is taller than the line, so it moves up by half the difference.
+  .project-name > .row-actions {
+    align-self: flex-start;
+    margin-top: calc((1lh - var(--control-h-sm)) / 2);
   }
   .name-line {
     display: inline-flex;
