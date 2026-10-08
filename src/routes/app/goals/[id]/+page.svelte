@@ -14,7 +14,7 @@
   import { GOAL_STATUSES, type GoalStatus } from '$shared/types/enums';
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
-  import { statusBadgeClass } from '$lib/project/utils';
+  import StatusBadge from '$lib/project/components/StatusBadge.svelte';
   import { GOAL_STATUS_LABELS, GOAL_TIME_FLAGS, formatGoalValue, goalStatusBadgeClass, goalTimeFlag, progressTone } from '$lib/goal/utils';
   import { localDay, periodElapsed, periodPhase, periodSpan } from '$shared/utils/period';
   import type { GoalDetail, GoalSummary } from '$shared/types/goals';
@@ -310,7 +310,7 @@
           {#each goal.projects as project (project.id)}
             <li class="list-row">
               <a class="grow truncate" href={project.path}>{project.name}</a>
-              {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+              <StatusBadge status={project.status} />
               <span class="row-actions">
                 <ConfirmButton label="Unlink project" variant="icon" onConfirm={() => handleUnlinkProject(project.id)} />
               </span>

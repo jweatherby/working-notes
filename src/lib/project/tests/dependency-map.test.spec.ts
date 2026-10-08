@@ -3,7 +3,7 @@ import type { ProjectDependencies } from '$shared/types/project-dependencies';
 import { buildDependencyMap, chainOf, layoutDependencyMap } from '../dependency-map';
 import type { ProjectListItem } from '../project-list';
 
-const project = (id: string, team: string | null = null, status: string | null = 'active'): ProjectListItem => ({
+const project = (id: string, team: string | null = null, status: string | null = 'in-progress'): ProjectListItem => ({
   id,
   name: id.toUpperCase(),
   status,

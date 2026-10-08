@@ -7,9 +7,9 @@ const person = (id: string): EntityOwner => ({ type: 'PERSON', id, label: id, pa
 
 const input = (overrides: Partial<WorkMapInput> = {}): WorkMapInput => ({
   projects: [
-    { id: 'pay', name: 'Payments', status: 'planning', owner: team('core', 'Core') },
-    { id: 'auth', name: 'Auth', status: 'active', owner: team('core', 'Core') },
-    { id: 'check', name: 'Checkout', status: 'active', owner: team('web', 'Web') },
+    { id: 'pay', name: 'Payments', status: 'committed', owner: team('core', 'Core') },
+    { id: 'auth', name: 'Auth', status: 'in-progress', owner: team('core', 'Core') },
+    { id: 'check', name: 'Checkout', status: 'in-progress', owner: team('web', 'Web') },
     { id: 'misc', name: 'Misc', status: null, owner: null }
   ],
   goals: [{ id: 'conv', title: 'Conversion', status: 'AT_RISK', progress: 0.5, owner: person('ana') }],
@@ -68,7 +68,7 @@ describe('buildWorkMap', () => {
 
 describe('layoutWorkMap', () => {
   it('stacks lanes without overlap and wraps cards into rows', () => {
-    const many = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, status: 'active', owner: team('core') }));
+    const many = Array.from({ length: 11 }, (_, i) => ({ id: `p${i}`, name: `P${i}`, status: 'in-progress', owner: team('core') }));
     const layout = layoutWorkMap(buildWorkMap(input({ projects: [...many, ...input().projects] })));
     for (let i = 1; i < layout.lanes.length; i++) {
       const prev = layout.lanes[i - 1]!;

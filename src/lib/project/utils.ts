@@ -1,13 +1,5 @@
-// Badge class for a project status; unknown statuses fall back to the neutral badge.
-export const statusBadgeClass = (status: string | null | undefined): string => {
-  switch (status) {
-    case 'planning':
-      return 'badge accent';
-    case 'active':
-      return 'badge success';
-    case 'archived':
-      return 'badge muted';
-    default:
-      return 'badge';
-  }
-};
+import { projectStatusTone } from '$shared/utils/project-status';
+
+// Badge class for a project status, in the same colour as its swimlane bar.
+export const statusBadgeClass = (status: string | null | undefined): string =>
+  status ? `badge ${projectStatusTone(status)}` : 'badge';

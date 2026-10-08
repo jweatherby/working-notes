@@ -26,7 +26,7 @@ export const projectRouter = router({
     .input(z.object({
       name: z.string().min(1).max(200),
       description: z.string().max(5000).optional(),
-      status: z.string().max(50).optional(),
+      status: z.string().max(50).optional().describe('proposed, committed, in-progress, blocked, done or abandoned; words like active or planning map onto these'),
       startDate: z.coerce.date().optional(),
       endDate: z.coerce.date().optional(),
       daysOptimistic: z.number().int().min(0).optional(),
@@ -43,7 +43,7 @@ export const projectRouter = router({
       id: z.string(),
       name: z.string().min(1).max(200).optional(),
       description: z.string().max(5000).nullable().optional(),
-      status: z.string().max(50).nullable().optional(),
+      status: z.string().max(50).nullable().optional().describe('proposed, committed, in-progress, blocked, done or abandoned; words like active or planning map onto these'),
       startDate: z.coerce.date().nullable().optional(),
       endDate: z.coerce.date().nullable().optional(),
       daysOptimistic: z.number().int().min(0).nullable().optional(),

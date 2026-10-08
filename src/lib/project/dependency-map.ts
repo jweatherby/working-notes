@@ -45,8 +45,9 @@ export interface DependencyMap {
 const projectKey = (id: string): string => `P:${id}`;
 const goalKey = (id: string): string => `G:${id}`;
 
+/** A project card's tone on the maps: the badge colours where the maps have them, done and abandoned muted. */
 export const projectTone = (status: string | null): MapTone =>
-  status === 'planning' ? 'accent' : status === 'active' ? 'success' : 'muted';
+  status === 'committed' ? 'accent' : status === 'in-progress' ? 'success' : status === 'blocked' ? 'danger' : 'muted';
 
 /** A goal card's second line: its status, and progress when it's measured. */
 export const goalDetail = (goal: { readonly status: GoalStatus; readonly progress: number | null }): string =>

@@ -19,7 +19,7 @@
   import { localDay } from '$shared/utils/period';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
   import { openPeek, PEEK_PARAM } from '$lib/ui/peek-url';
-  import { statusBadgeClass } from '$lib/project/utils';
+  import StatusBadge from '$lib/project/components/StatusBadge.svelte';
   import {
     defaultCollapseBase,
     isRowCollapsed,
@@ -147,19 +147,20 @@
                   <span class="name-stack">
                     <span class="name-line">
                       <a href="/app/projects/{project.id}">{project.name}</a>{#if project.archivedAt} <span class="badge muted">Archived</span>{/if}
-                      <span class="row-actions">
-                        <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
-                      </span>
                     </span>
                     <!-- Grouped by team, the group's heading already names the owner. -->
                     {#if project.owner && !grouped}
                       <a class="owner text-xs" href={project.owner.path}>{project.owner.label ?? 'Missing owner'}</a>
                     {/if}
                   </span>
+                  <!-- Beside the stack, so it centres on the name and owner lines together. -->
+                  <span class="row-actions">
+                    <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
+                  </span>
                 </span>
               </td>
               <td>
-                {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+                <StatusBadge status={project.status} />
               </td>
               {#if axis}
                 <td class="timing-col"><TimelineBar bar={timelineBar(project, axis, today)} today={axis.today} /></td>

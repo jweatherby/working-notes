@@ -4,6 +4,7 @@ import {
   TEAM_NONE,
   defaultCollapseBase,
   isRowCollapsed,
+  parentsFirst,
   parseProjectListParams,
   projectListGroups,
   projectTeamOptions,
@@ -135,5 +136,20 @@ describe('collapsing rows', () => {
     const toggled = new Set(['orchestration']);
     const visible = flattenTree(onlyGroup('').nodes, (n) => isRowCollapsed(n.item.id, 'collapsed', toggled));
     expect(visible.map((n) => n.item.id)).toEqual(['exchange', 'orchestration', 'orchestration-m1', 'solo']);
+  });
+});
+
+describe('parentsFirst', () => {
+  const node = (id: string, children: ReturnType<typeof parentsFirst<string>> = []) => ({ item: id, depth: 0, context: false, children });
+
+  it('puts projects with sub-projects first at each level, keeping order within each set', () => {
+    const sorted = parentsFirst([
+      node('a'),
+      node('b', [node('b1'), node('b2', [node('b2x')])]),
+      node('c'),
+      node('d', [node('d1')])
+    ]);
+    expect(sorted.map((n) => n.item)).toEqual(['b', 'd', 'a', 'c']);
+    expect(sorted[0]?.children.map((n) => n.item)).toEqual(['b2', 'b1']);
   });
 });

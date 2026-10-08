@@ -99,7 +99,7 @@ Person, group, project, goal and page (`ARCHIVABLE_TYPES`) have a nullable `arch
 - `loadArchivedIds` + `notAttachedToArchived(ids)` leave rows attached to archived entities out of cross-entity queries (home feed, open todos, `todo.list`).
 - Relations check only the `from` end, so a relation can point at an archived entity.
 
-Archiving is not a status. `Project.status` is free text and separate; don't derive one from the other.
+Archiving is not a status. `Project.status` is one of six (`proposed committed in-progress blocked done abandoned`, `$shared/utils/project-status`) and separate; don't derive one from the other. `createProject` and `updateProject` map common words onto them (`active` → `in-progress`) and refuse anything else with an error naming the six; the `project_statuses` migration mapped what was stored before, and a unit test keeps its word list in step with the code's.
 
 ## Relations and mentions
 

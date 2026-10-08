@@ -3,7 +3,7 @@
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import GoalRows from './GoalRows.svelte';
   import type { GoalSummary } from '$shared/types/goals';
-  import { statusBadgeClass } from '$lib/project/utils';
+  import StatusBadge from '$lib/project/components/StatusBadge.svelte';
   import { model } from '$lib/stores/notebook-model';
 
   interface OwnedProject {
@@ -44,7 +44,7 @@
       {#each projects as project (project.id)}
         <li class="list-row">
           <a class="grow truncate" href={project.path}>{project.name}</a>
-          {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+          <StatusBadge status={project.status} />
         </li>
       {/each}
     </ul>

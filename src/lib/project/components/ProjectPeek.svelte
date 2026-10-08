@@ -12,7 +12,7 @@
   import StatusDot from '$lib/todo/components/StatusDot.svelte';
   import PriorityBadge from '$lib/todo/components/PriorityBadge.svelte';
   import type { TodoStatus } from '$lib/todo/utils';
-  import { statusBadgeClass } from '$lib/project/utils';
+  import StatusBadge from '$lib/project/components/StatusBadge.svelte';
   import { docPath } from '$shared/utils/entity';
   import type { GoalSummary } from '$shared/types/goals';
   import { model } from '$lib/stores/notebook-model';
@@ -94,7 +94,7 @@
   {:else if peeked && project}
     <dl class="meta-list">
       {#if project.status}
-        <div><dt>Status</dt><dd><span class={statusBadgeClass(project.status)}>{project.status}</span></dd></div>
+        <div><dt>Status</dt><dd><StatusBadge status={project.status} /></dd></div>
       {/if}
       {#if project.archivedAt}
         <div><dt>Archived</dt><dd>{formatDate(project.archivedAt)}</dd></div>

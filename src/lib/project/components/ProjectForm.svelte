@@ -7,11 +7,13 @@
   import { submit } from '$lib/ui/submit';
   import type { EntityOwner } from '$shared/types/owner';
   import { ownerOptionValue, parseOwnerOptionValue, type OwnerOption } from '$shared/trpc/load-owner-options';
+  import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from '$shared/utils/project-status';
 
   interface ProjectData {
     readonly id?: string;
     readonly name?: string;
     readonly description?: string | null;
+    readonly status?: string | null;
     readonly startDate?: Date | string | null;
     readonly endDate?: Date | string | null;
     readonly daysOptimistic?: number | null;
@@ -46,6 +48,8 @@
   let name = $state(initial.name ?? '');
   let description = $state(initial.description ?? '');
   let owner = $state(ownerValue(initial.owner));
+  // A new project starts committed; "No status" is only for one that has none.
+  let status = $state(initial.id ? (initial.status ?? '') : 'committed');
   let startDate = $state(toDateStr(initial.startDate));
   let endDate = $state(toDateStr(initial.endDate));
   let daysOptimistic = $state<number | undefined>(initial.daysOptimistic ?? undefined);
@@ -59,6 +63,7 @@
     name = initial.name ?? '';
     description = initial.description ?? '';
     owner = ownerValue(initial.owner);
+    status = initial.id ? (initial.status ?? '') : 'committed';
     startDate = toDateStr(initial.startDate);
     endDate = toDateStr(initial.endDate);
     daysOptimistic = initial.daysOptimistic ?? undefined;
@@ -75,6 +80,7 @@
           id: initial.id!,
           name: name.trim(),
           description: description.trim() || null,
+          status: status || null,
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
           daysOptimistic: daysOptimistic ?? null,
@@ -85,7 +91,7 @@
       : await submit(() => trpc().project.create.mutate({
           name: name.trim(),
           description: description.trim() || undefined,
-          status: 'planning',
+          status: status || undefined,
           startDate: startDate ? new Date(startDate) : undefined,
           endDate: endDate ? new Date(endDate) : undefined,
           daysOptimistic,
@@ -103,6 +109,7 @@
       name = '';
       description = '';
       owner = '';
+      status = 'committed';
       startDate = '';
       endDate = '';
       daysOptimistic = undefined;
@@ -122,6 +129,16 @@
   <Field label="Description">
     {#snippet children({ id })}
       <MarkdownEditor value={description} onChange={(md: string) => { description = md; }} />
+    {/snippet}
+  </Field>
+  <Field label="Status">
+    {#snippet children({ id })}
+      <select {id} bind:value={status}>
+        {#if isEdit}<option value="">No status</option>{/if}
+        {#each PROJECT_STATUSES as option (option)}
+          <option value={option}>{PROJECT_STATUS_LABELS[option]}</option>
+        {/each}
+      </select>
     {/snippet}
   </Field>
   {#if ownerOptions}

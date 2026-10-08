@@ -14,11 +14,11 @@ describe('toDay', () => {
 
 describe('timelineAxis', () => {
   it('is null when nothing is dated', () => {
-    expect(timelineAxis([{ status: 'active' }], TODAY)).toBeNull();
+    expect(timelineAxis([{ status: 'in-progress' }], TODAY)).toBeNull();
   });
 
   it('spans whole months from the earliest date to the latest', () => {
-    const axis = timelineAxis([{ status: 'active', startDate: '2026-07-10', endDate: '2026-09-20' }], TODAY);
+    const axis = timelineAxis([{ status: 'in-progress', startDate: '2026-07-10', endDate: '2026-09-20' }], TODAY);
     expect(axis?.start).toBe('2026-07-01');
     expect(axis?.end).toBe('2026-10-01');
     expect(axis?.months.map((m) => m.label)).toEqual(['Jul', 'Aug', 'Sep']);
@@ -26,7 +26,7 @@ describe('timelineAxis', () => {
   });
 
   it('always includes today', () => {
-    const axis = timelineAxis([{ status: 'active', endDate: '2026-03-05' }], TODAY);
+    const axis = timelineAxis([{ status: 'in-progress', endDate: '2026-03-05' }], TODAY);
     expect(axis?.start).toBe('2026-03-01');
     expect(axis?.end).toBe('2026-09-01');
     expect(axis!.today).toBeGreaterThan(0.8);
@@ -34,20 +34,20 @@ describe('timelineAxis', () => {
   });
 
   it('puts the year on January', () => {
-    const axis = timelineAxis([{ status: 'active', startDate: '2026-11-01', endDate: '2027-02-01' }], '2026-11-02');
+    const axis = timelineAxis([{ status: 'in-progress', startDate: '2026-11-01', endDate: '2027-02-01' }], '2026-11-02');
     expect(axis?.months.map((m) => m.label)).toEqual(['Nov', 'Dec', "Jan '27", 'Feb']);
   });
 
   it('labels fewer months on a long axis', () => {
-    const axis = timelineAxis([{ status: 'active', startDate: '2026-01-01', endDate: '2027-12-01' }], TODAY);
+    const axis = timelineAxis([{ status: 'in-progress', startDate: '2026-01-01', endDate: '2027-12-01' }], TODAY);
     expect(axis?.months).toHaveLength(24);
     expect(axis?.months.filter((m) => m.label !== null)).toHaveLength(12);
   });
 });
 
 describe('timelineBar', () => {
-  const julToSep = { status: 'active', startDate: '2026-07-01', endDate: '2026-09-30' };
-  const octToDec = { status: 'planning', startDate: '2026-10-01', endDate: '2026-12-31' };
+  const julToSep = { status: 'in-progress', startDate: '2026-07-01', endDate: '2026-09-30' };
+  const octToDec = { status: 'committed', startDate: '2026-10-01', endDate: '2026-12-31' };
   const axis = timelineAxis([julToSep, octToDec], TODAY)!;
 
   it('runs from start to target', () => {
@@ -60,7 +60,7 @@ describe('timelineBar', () => {
   });
 
   it('marks the stretch past a missed target as late', () => {
-    const bar = timelineBar({ status: 'active', startDate: '2026-07-01', endDate: '2026-08-01' }, axis, TODAY)!;
+    const bar = timelineBar({ status: 'in-progress', startDate: '2026-07-01', endDate: '2026-08-01' }, axis, TODAY)!;
     expect(bar.late).not.toBeNull();
     expect(bar.late!.left + bar.late!.width).toBeCloseTo(axis.today);
     expect(bar.title).toBe('Jul 1, 2026 → Aug 1, 2026 · 2w late');
@@ -68,30 +68,30 @@ describe('timelineBar', () => {
 
   it('is not late once finished', () => {
     expect(timelineBar({ status: 'done', endDate: '2026-08-01' }, axis, TODAY)!.late).toBeNull();
-    expect(timelineBar({ status: 'active', archivedAt: '2026-08-02', endDate: '2026-08-01' }, axis, TODAY)!.late).toBeNull();
+    expect(timelineBar({ status: 'in-progress', archivedAt: '2026-08-02', endDate: '2026-08-01' }, axis, TODAY)!.late).toBeNull();
   });
 
   it('runs an open-ended bar from the start to today', () => {
-    const bar = timelineBar({ status: 'active', startDate: '2026-07-01' }, axis, TODAY)!;
+    const bar = timelineBar({ status: 'in-progress', startDate: '2026-07-01' }, axis, TODAY)!;
     expect(bar.open).toBe(true);
     expect(bar.marker).toBe(false);
     expect(bar.left + bar.width).toBeCloseTo(axis.today);
   });
 
   it('marks a future start with no target', () => {
-    const bar = timelineBar({ status: 'planning', startDate: '2026-11-01' }, axis, TODAY)!;
+    const bar = timelineBar({ status: 'committed', startDate: '2026-11-01' }, axis, TODAY)!;
     expect(bar.marker).toBe(true);
     expect(bar.width).toBe(0);
   });
 
   it('marks a target with no start', () => {
-    const bar = timelineBar({ status: 'planning', endDate: '2026-11-01' }, axis, TODAY)!;
+    const bar = timelineBar({ status: 'committed', endDate: '2026-11-01' }, axis, TODAY)!;
     expect(bar.marker).toBe(true);
     expect(bar.title).toBe('Target Nov 1, 2026 · no start date');
   });
 
   it('is null without dates', () => {
-    expect(timelineBar({ status: 'active' }, axis, TODAY)).toBeNull();
+    expect(timelineBar({ status: 'in-progress' }, axis, TODAY)).toBeNull();
   });
 });
 

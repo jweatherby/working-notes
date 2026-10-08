@@ -25,7 +25,7 @@ Everything belongs to one user; there are no accounts, orgs or permissions. Ids 
 
 ## Projects
 
-**Project**: `name`, `description?`, `status?` (free text, e.g. `planning`, `active`, `done`), `startDate?`, `endDate?`, `parentId?` (sub-projects), an owner (`ownerType` `PERSON` or `GROUP` + `ownerId`), and three-point estimates `daysOptimistic?`, `daysLikely?`, `daysPessimistic?`.
+**Project**: `name`, `description?`, `status?` (one of `proposed` for prospective projects, `committed`, `in-progress`, `blocked`, `done`, `abandoned`; common words map onto these, such as `active` → `in-progress`, `planning` → `committed`, `cancelled` → `abandoned`, and anything else is refused), `startDate?`, `endDate?`, `parentId?` (sub-projects), an owner (`ownerType` `PERSON` or `GROUP` + `ownerId`), and three-point estimates `daysOptimistic?`, `daysLikely?`, `daysPessimistic?`.
 
 - Set `ownerType` and `ownerId` together. Set both to `null` to clear the owner. The owner must exist.
 - `project.list` filters by `ownerType` + `ownerId`. `project.get` returns the `owner` with its name and path. `project.create` returns `{ id, path }`.

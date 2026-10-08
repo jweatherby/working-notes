@@ -9,7 +9,9 @@
   import ConfirmButton from '$lib/ui/ConfirmButton.svelte';
   import EmptyState from '$lib/ui/EmptyState.svelte';
   import { submit, submitOrThrow } from '$lib/ui/submit';
-  import { statusBadgeClass } from '$lib/project/utils';
+  import StatusBadge from '$lib/project/components/StatusBadge.svelte';
+  import Menu from '$lib/ui/Menu.svelte';
+  import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from '$shared/utils/project-status';
   import { parseOwnerOptionValue } from '$shared/trpc/load-owner-options';
   import { ancestorsOf, wouldCreateCycle } from '$shared/utils/hierarchy';
   import type { GoalSummary } from '$shared/types/goals';
@@ -53,17 +55,14 @@
   let creatingChild = $state(false);
   let childError = $state('');
 
-  // ----- Status flow -----
-  const STATUS_FLOW = ['planning', 'active', 'archived'] as const;
-  const statusIndex = $derived(
-    STATUS_FLOW.indexOf(project.status as (typeof STATUS_FLOW)[number]),
+  // ----- Status: a menu of the six -----
+  const statusItems = $derived(
+    PROJECT_STATUSES.map((status) => ({
+      label: PROJECT_STATUS_LABELS[status],
+      current: project.status === status,
+      onSelect: () => handleStatusChange(status)
+    }))
   );
-  const canAdvance = $derived(
-    statusIndex >= 0 && statusIndex < STATUS_FLOW.length - 1,
-  );
-  const canRevert = $derived(statusIndex > 0);
-  const nextStatus = $derived(canAdvance ? STATUS_FLOW[statusIndex + 1] : null);
-  const prevStatus = $derived(canRevert ? STATUS_FLOW[statusIndex - 1] : null);
 
   let statusError = $state('');
 
@@ -109,7 +108,7 @@
     childError = '';
     const outcome = await submit(() => trpc().project.create.mutate({
       name: newChildName.trim(),
-      status: 'planning',
+      status: 'committed',
       parentId: project.id,
     }));
     creatingChild = false;
@@ -146,21 +145,17 @@
 >
   {#snippet renderMeta()}
     <dl class="meta-list">
-      {#if project.status}
-        <div>
-          <dt>Status</dt>
-          <dd>
-            <span class={statusBadgeClass(project.status)}>{project.status}</span>
-            {#if canRevert}
-              <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(prevStatus!)}>← {prevStatus}</button>
-            {/if}
-            {#if canAdvance}
-              <button type="button" class="btn ghost sm" onclick={() => handleStatusChange(nextStatus!)}>{nextStatus} →</button>
-            {/if}
-            {#if statusError}<span class="inline-error" role="alert">{statusError}</span>{/if}
-          </dd>
-        </div>
-      {/if}
+      <div>
+        <dt>Status</dt>
+        <dd>
+          <Menu label="Change status" items={statusItems}>
+            {#snippet trigger()}
+              {#if project.status}<StatusBadge status={project.status} />{:else}<span class="muted">Set status</span>{/if}
+            {/snippet}
+          </Menu>
+          {#if statusError}<span class="inline-error" role="alert">{statusError}</span>{/if}
+        </dd>
+      </div>
       <div>
         <dt>Owner</dt>
         <dd>
@@ -220,7 +215,7 @@
           {#each project.children as child (child.id)}
             <li class="list-row">
               <a class="grow truncate" href="/app/projects/{child.id}">{child.name}</a>
-              {#if child.status}<span class={statusBadgeClass(child.status)}>{child.status}</span>{/if}
+              <StatusBadge status={child.status} />
               <span class="row-actions">
                 <ConfirmButton label="Unlink sub-project" variant="icon" onConfirm={() => handleUnlinkChild(child.id)} />
               </span>
@@ -241,7 +236,7 @@
 
   {#snippet renderAssetHeader()}
     <span class="asset-h-name">{project.name}</span>
-    {#if project.status}<span class={statusBadgeClass(project.status)}>{project.status}</span>{/if}
+    <StatusBadge status={project.status} />
   {/snippet}
 
   {#snippet renderEditForm({ onSuccess, onCancel })}

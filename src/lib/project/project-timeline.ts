@@ -1,7 +1,7 @@
 // The projects list's Timing and Size columns. Pure: dates are `YYYY-MM-DD`
 // day strings (as in $shared/utils/period), offsets are 0–1 fractions of the
 // shared axis, and today comes in as an argument.
-import { projectTone, type MapTone } from './dependency-map';
+import { isFinishedStatus, projectStatusTone, type ProjectStatusTone } from '$shared/utils/project-status';
 
 const DAY_MS = 86_400_000;
 
@@ -38,7 +38,9 @@ export interface TimelineSpan {
 }
 
 export interface TimelineBar extends TimelineSpan {
-  readonly tone: MapTone;
+  readonly tone: ProjectStatusTone;
+  /** Proposed, not committed: drawn faded. */
+  readonly tentative: boolean;
   /** Started with no target: the bar runs to today and reads as open-ended. */
   readonly open: boolean;
   /** Only a target: a marker at it, no bar. */
@@ -97,10 +99,7 @@ export const timelineAxis = (items: readonly TimelineInput[], today: string): Ti
   return { start, end, months: labelled, today: offset(today) };
 };
 
-const FINISHED = new Set(['done', 'complete', 'completed', 'archived', 'cancelled', 'canceled']);
-
-const isFinished = (item: TimelineInput): boolean =>
-  !!item.archivedAt || FINISHED.has((item.status ?? '').trim().toLowerCase());
+const isFinished = (item: TimelineInput): boolean => !!item.archivedAt || isFinishedStatus(item.status);
 
 /** 5d, 3w, 4mo. */
 export const shortDuration = (days: number): string =>
@@ -115,7 +114,8 @@ export const timelineBar = (item: TimelineInput, axis: TimelineAxis, today: stri
   const offset = (day: string): number => (dayNumber(day) - dayNumber(axis.start)) / span;
   // The end of a day: a bar covers its target day too.
   const endOf = (day: string): number => offset(day) + 1 / span;
-  const tone = projectTone(item.status);
+  const tone = projectStatusTone(item.status);
+  const tentative = item.status === 'proposed';
 
   const lateDays = end && end < today && !isFinished(item) ? dayNumber(today) - dayNumber(end) : 0;
   const late = end && lateDays > 0 ? { left: endOf(end), width: offset(today) - endOf(end) } : null;
@@ -124,19 +124,19 @@ export const timelineBar = (item: TimelineInput, axis: TimelineAxis, today: stri
   if (start && end) {
     const [from, to] = start <= end ? [start, end] : [end, start];
     return {
-      left: offset(from), width: endOf(to) - offset(from), tone, open: false, marker: false, late,
+      left: offset(from), width: endOf(to) - offset(from), tone, tentative, open: false, marker: false, late,
       title: `${formatDay(start)} → ${formatDay(end)}${lateText}`
     };
   }
   if (start) {
     const to = start < today ? today : start;
     return {
-      left: offset(start), width: offset(to) - offset(start), tone, open: true, marker: start >= today, late: null,
+      left: offset(start), width: offset(to) - offset(start), tone, tentative, open: true, marker: start >= today, late: null,
       title: `Starts ${formatDay(start)} · no target date`
     };
   }
   return {
-    left: offset(end as string), width: 0, tone, open: false, marker: true, late,
+    left: offset(end as string), width: 0, tone, tentative, open: false, marker: true, late,
     title: `Target ${formatDay(end as string)} · no start date${lateText}`
   };
 };

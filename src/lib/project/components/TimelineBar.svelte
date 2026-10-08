@@ -16,9 +16,9 @@
   <span class="today" style="--at: {today}"></span>
   {#if bar}
     {#if bar.marker}
-      <span class="marker" data-tone={bar.tone} style="--at: {bar.left}"></span>
+      <span class="marker" class:open={bar.tentative} data-tone={bar.tone} style="--at: {bar.left}"></span>
     {:else}
-      <span class="bar" class:open={bar.open} data-tone={bar.tone} style="--left: {bar.left}; --width: {bar.width}"></span>
+      <span class="bar" class:open={bar.open || bar.tentative} data-tone={bar.tone} style="--left: {bar.left}; --width: {bar.width}"></span>
     {/if}
     {#if bar.late}
       <span class="bar late" style="--left: {bar.late.left}; --width: {bar.late.width}"></span>
@@ -64,4 +64,7 @@
   [data-tone='warning'] { --tone: var(--warning); }
   [data-tone='danger'] { --tone: var(--danger); }
   [data-tone='muted'] { --tone: var(--text-3); }
+  [data-tone='viz-1'] { --tone: var(--viz-1); }
+  [data-tone='viz-4'] { --tone: var(--viz-4); }
+  .marker.open { opacity: 0.45; }
 </style>

@@ -4,6 +4,7 @@ import type { ArchiveFilter, OwnerType } from '$shared/types/enums';
 import type { EntityOwner } from '$shared/types/owner';
 import { entityPath } from '$shared/utils/entity';
 import { wouldCreateCycle } from '$shared/utils/hierarchy';
+import { toProjectStatus, unknownStatusMessage, type ProjectStatus } from '$shared/utils/project-status';
 import { loadOwner, resolveOwnerInput, type OwnerInput } from '$api/_owners';
 import { planEntityCleanup, removeFiles } from '$api/_entity-cleanup';
 import { archiveWhere, ensureWritable } from '$api/_archive';
@@ -150,10 +151,19 @@ interface CreateProjectInput extends OwnerInput {
   readonly parentId?: string;
 }
 
+/** A status as given (a synonym such as `active` maps to `in-progress`), or an error naming the six. */
+const resolveStatus = (value: string | null | undefined): Result<ProjectStatus | null | undefined> => {
+  if (value === undefined) return ok(undefined);
+  const status = toProjectStatus(value);
+  return status === undefined ? err(new Error(unknownStatusMessage(value ?? ''))) : ok(status);
+};
+
 export const createProject = async (
   reg: Pick<Registry, 'prisma'>,
   input: CreateProjectInput
 ): Promise<Result<{ readonly id: string; readonly path: string }>> => {
+  const status = resolveStatus(input.status);
+  if (!status.ok) return err(status.error);
   const owner = await resolveOwnerInput(reg, input);
   if (!owner.ok) return err(owner.error);
   if (input.parentId) {
@@ -165,7 +175,7 @@ export const createProject = async (
     data: {
       name: input.name,
       description: input.description,
-      status: input.status,
+      status: status.value ?? null,
       startDate: input.startDate,
       endDate: input.endDate,
       daysOptimistic: input.daysOptimistic,
@@ -199,6 +209,8 @@ export const updateProject = async (
   const writable = await ensureWritable(reg, 'PROJECT', id);
   if (!writable.ok) return err(writable.error);
 
+  const status = resolveStatus(input.status);
+  if (!status.ok) return err(status.error);
   const owner = await resolveOwnerInput(reg, input);
   if (!owner.ok) return err(owner.error);
   if (input.parentId) {
@@ -212,7 +224,7 @@ export const updateProject = async (
       ...(owner.value !== undefined && owner.value),
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
-      ...(input.status !== undefined && { status: input.status }),
+      ...(status.value !== undefined && { status: status.value }),
       ...(input.startDate !== undefined && { startDate: input.startDate }),
       ...(input.endDate !== undefined && { endDate: input.endDate }),
       ...(input.daysOptimistic !== undefined && { daysOptimistic: input.daysOptimistic }),
