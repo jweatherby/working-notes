@@ -200,6 +200,12 @@ table {
     white-space: nowrap;
   }
   tbody tr:hover td { background: var(--surface-hover); }
+  // Per-row actions, shown on hover or focus as in a .list-row; .active marks the row a side peek shows.
+  tbody tr {
+    .row-actions { display: inline-flex; align-items: center; gap: 2px; opacity: 0; transition: opacity var(--ease); }
+    &:hover .row-actions, &:focus-within .row-actions { opacity: 1; }
+    &.active td { background: var(--accent-soft); }
+  }
   td a { color: var(--text); font-weight: 500; }
   td a:hover { color: var(--accent); text-decoration: none; }
   // Number columns (the wiki's dataset table).

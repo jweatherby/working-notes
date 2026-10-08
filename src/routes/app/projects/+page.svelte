@@ -10,7 +10,10 @@
   import DisclosureButton from '$lib/ui/DisclosureButton.svelte';
   import ProjectForm from '$lib/project/components/ProjectForm.svelte';
   import DependencyMap from '$lib/project/components/DependencyMap.svelte';
+  import ProjectPeek from '$lib/project/components/ProjectPeek.svelte';
+  import PeekIcon from '$lib/ui/PeekIcon.svelte';
   import { openPopup, closePopup } from '$lib/ui/popup-url';
+  import { openPeek, PEEK_PARAM } from '$lib/ui/peek-url';
   import { statusBadgeClass } from '$lib/project/utils';
   import {
     defaultCollapseBase,
@@ -77,6 +80,8 @@
     return `${url.pathname}${url.search}`;
   });
 
+  const peekId = $derived(page.url.searchParams.get(PEEK_PARAM));
+
   const handleCreated = () => closePopup({ invalidate: true });
 </script>
 
@@ -116,7 +121,7 @@
         </thead>
         <tbody>
           {#each rows as { item: project, depth, context, children } (project.id)}
-            <tr class:context>
+            <tr class:context class:active={peekId === project.id}>
               <td>
                 <span class="project-name" style="--depth: {depth}">
                   {#if depth > 0}<span class="tree-indent">└</span>{/if}
@@ -129,6 +134,9 @@
                     <span class="disclosure-spacer"></span>
                   {/if}
                   <a href="/app/projects/{project.id}">{project.name}</a>{#if project.archivedAt} <span class="badge muted">Archived</span>{/if}
+                  <span class="row-actions">
+                    <button type="button" class="btn icon sm" aria-label="Peek at {project.name}" title="Peek" onclick={() => openPeek(project.id)}><PeekIcon /></button>
+                  </span>
                 </span>
               </td>
               <td class="text-2">
@@ -175,6 +183,10 @@
     {/each}
   {/if}
 </div>
+
+{#if peekId}
+  <ProjectPeek id={peekId} />
+{/if}
 
 <Popup id="new-project" title="Add project">
   <ProjectForm ownerOptions={data.ownerOptions} onSuccess={handleCreated} onCancel={() => closePopup()} />
