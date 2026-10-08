@@ -124,7 +124,7 @@
       <table class="project-table">
         <thead>
           <tr>
-            <th class="name-col">Name</th>
+            <th>Name</th>
             <th class="status-col">Status</th>
             {#if axis}<th class="timing-col"><TimelineHead {axis} /></th>{/if}
             {#if maxDays > 0}<th class="size-col">Size</th>{/if}
@@ -243,20 +243,17 @@
     gap: var(--sp-1);
   }
   .owner {
-    line-height: 1.2;
     color: var(--text-3);
     font-weight: 400;
     &:hover { color: var(--accent); }
   }
-  // Fixed column widths, so every group's table (and its timing axis) lines up.
+  // Fixed column widths, so every group's table (and its timing axis) lines up; Name takes what the others leave.
   .project-table {
     table-layout: fixed;
-    min-width: 680px;
-    // Dense rows, so the swimlane reads as one chart.
-    td { padding-top: calc(var(--sp-1) / 2); padding-bottom: calc(var(--sp-1) / 2); }
+    min-width: 720px;
   }
-  .name-col { width: 28%; }
-  .status-col { width: 100px; }
+  .status-col { width: 110px; }
+  .timing-col { width: 35%; }
   .size-col { width: 104px; }
   .disclosure-spacer {
     flex-shrink: 0;

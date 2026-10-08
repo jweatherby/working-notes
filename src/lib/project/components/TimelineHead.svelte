@@ -20,7 +20,6 @@
   .axis {
     position: relative;
     height: 1.4em;
-    overflow: hidden;
   }
   .tick {
     position: absolute;
