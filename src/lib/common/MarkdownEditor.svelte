@@ -21,13 +21,10 @@
   import { createImageDropPlugin } from '$lib/shared/components/milkdown-image-drop';
   import { imageResizeView } from '$lib/shared/components/milkdown-image-resize';
 
-  import type { Snippet } from 'svelte';
-
-  const { value, onChange, pendingImages, toolbarEnd } = $props<{
+  const { value, onChange, pendingImages } = $props<{
     value: string;
     onChange: (markdown: string) => void;
     pendingImages?: Map<string, File>;
-    toolbarEnd?: Snippet;
   }>();
 
   let editorEl: HTMLDivElement;
@@ -189,11 +186,6 @@
           &#10005;
         </button>
       </div>
-      {#if toolbarEnd}
-        <div class="toolbar-end">
-          {@render toolbarEnd()}
-        </div>
-      {/if}
     </div>
     {#if linkOpen}
       <div class="link-bar">
@@ -249,13 +241,6 @@
   .toolbar-group {
     display: flex;
     gap: 2px;
-  }
-
-  .toolbar-end {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
   }
 
   .link-bar {

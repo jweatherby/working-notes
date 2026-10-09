@@ -84,6 +84,8 @@
 
   let draft = $state(content);
   let resolvedContent = $state(content);
+  // The text last loaded or saved: the editor is dirty while the draft differs from it.
+  let saved = $state(content);
   let resolving = $state(hasStorageUrls(content));
   let mode = $state<'write' | 'editor' | 'preview'>('editor');
   let saving = $state(false);
@@ -99,11 +101,13 @@
       resolveStorageUrls(md).then((resolved) => {
         resolvedContent = resolved;
         draft = resolved;
+        saved = resolved;
         resolving = false;
       });
     } else {
       resolvedContent = md;
       draft = md;
+      saved = md;
       resolving = false;
     }
   });
@@ -124,7 +128,8 @@
     }
   };
 
-  const isDirty = $derived(draft !== resolvedContent);
+  // Against what was last saved, not the `content` prop: a wiki page saves without reloading, so its prop never changes.
+  const isDirty = $derived(draft !== saved);
 
   const uploadPendingImages = async (md: string): Promise<string> => {
     if (!onUploadImage) return md;
@@ -148,10 +153,13 @@
     if (!isDirty) return;
     saving = true;
     error = '';
+    // What the editor held when Save was pressed: typing during the save leaves it dirty.
+    const snapshot = draft;
     try {
-      let toSave = draft;
-      toSave = await uploadPendingImages(toSave);
+      const toSave = await uploadPendingImages(snapshot);
       await onSave(toSave);
+      // Unless a reload during the save already reset the draft and what's saved (docs reload, wiki pages don't).
+      if (draft === snapshot) saved = snapshot;
     } catch (e: unknown) {
       error = messageOf(e);
     } finally {
@@ -168,11 +176,6 @@
 </script>
 
 
-{#snippet exportLink()}
-  {#if exportHref && content.trim()}
-    <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
-  {/if}
-{/snippet}
 <section class="card doc-card">
   <div class="doc-header">
     {#if editingTitle}
@@ -213,36 +216,30 @@
     <div class="status" aria-busy="true">Loading…</div>
   {:else}
     <div class="doc-editor">
-      <div class="tabs">
-        <button type="button" class="tab" class:active={mode === 'editor'} onclick={() => setMode('editor')}>Editor</button>
-        <button type="button" class="tab" class:active={mode === 'write'} onclick={() => setMode('write')}>Markdown</button>
-        <button type="button" class="tab" class:active={mode === 'preview'} onclick={() => setMode('preview')}>Preview</button>
+      <!-- The view tabs, with the doc's actions at the right end; stays in view above the editor's own toolbar. -->
+      <div class="doc-bar">
+        <div class="tabs">
+          <button type="button" class="tab" class:active={mode === 'editor'} onclick={() => setMode('editor')}>Editor</button>
+          <button type="button" class="tab" class:active={mode === 'write'} onclick={() => setMode('write')}>Markdown</button>
+          <button type="button" class="tab" class:active={mode === 'preview'} onclick={() => setMode('preview')}>Preview</button>
+        </div>
+        <div class="doc-actions">
+          {#if exportHref && content.trim()}
+            <a class="btn ghost sm" href={exportHref} target="_blank" rel="noopener">Export PDF <ProBadge /></a>
+          {/if}
+          {#if mode !== 'preview'}
+            {#if isDirty}<span class="unsaved text-xs">● Unsaved</span>{/if}
+            <button type="button" class="btn primary sm" onclick={handleSave} disabled={saving || !isDirty} aria-busy={saving}>{saving ? 'Saving…' : 'Save'}</button>
+          {/if}
+        </div>
       </div>
       {#if mode === 'write'}
-        <div class="toolbar write-actions">
-          <span class="spacer"></span>
-          {@render exportLink()}
-          {#if isDirty}<span class="unsaved text-xs">● Unsaved</span>{/if}
-          <button type="button" class="btn primary sm" onclick={handleSave} disabled={saving || !isDirty} aria-busy={saving}>Save</button>
-        </div>
         <textarea class="doc-textarea mono" bind:value={draft} rows={20} placeholder="Write in markdown..."></textarea>
       {:else if mode === 'editor'}
         {#key resolvedContent}
-          <MarkdownEditor value={draft} onChange={(md) => (draft = md)} {pendingImages}>
-            {#snippet toolbarEnd()}
-              {@render exportLink()}
-              {#if isDirty}<span class="unsaved text-xs">● Unsaved</span>{/if}
-              <button type="button" class="btn primary sm" onclick={handleSave} disabled={saving || !isDirty} aria-busy={saving}>Save</button>
-            {/snippet}
-          </MarkdownEditor>
+          <MarkdownEditor value={draft} onChange={(md) => (draft = md)} {pendingImages} />
         {/key}
       {:else}
-        {#if exportHref && content.trim()}
-          <div class="toolbar write-actions">
-            <span class="spacer"></span>
-            {@render exportLink()}
-          </div>
-        {/if}
         <div class="doc-preview">
           <MarkdownRenderer content={draft} branding={chartBranding} />
         </div>
@@ -283,14 +280,29 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    // The page's sticky offset, captured here so the editor's toolbar can stick just below the bar.
+    --doc-sticky: var(--sticky-top, 0px);
+    --doc-bar-h: calc(var(--control-h) + var(--sp-2));
+    :global(.md-editor-container) { --sticky-top: calc(var(--doc-sticky) + var(--doc-bar-h)); }
   }
-  // Stays in view while a long doc scrolls, like the editor's toolbar.
-  .write-actions {
+  // Stays in view while a long doc scrolls, above the editor's sticky toolbar.
+  .doc-bar {
     position: sticky;
-    top: var(--sticky-top, 0);
-    z-index: var(--z-sticky);
-    padding: var(--sp-2) 0;
+    top: var(--doc-sticky);
+    z-index: calc(var(--z-sticky) + 1);
+    display: flex;
+    align-items: flex-end;
+    height: var(--doc-bar-h);
+    margin-bottom: var(--sp-2);
     background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    .tabs { flex: 1; align-self: stretch; align-items: flex-end; border-bottom: none; }
+  }
+  .doc-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding-bottom: var(--sp-1);
   }
   .doc-textarea {
     width: 100%;
